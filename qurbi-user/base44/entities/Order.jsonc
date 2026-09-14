@@ -1,0 +1,200 @@
+{
+  "name": "Order",
+  "type": "object",
+  "properties": {
+    "order_number": {
+      "type": "string"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "livestock_id": {
+            "type": "string"
+          },
+          "item_type": {
+            "type": "string",
+            "description": "Item kind; bulk identifies a complete Farmer BulkListing lot"
+          },
+          "bulk_listing_id": {
+            "type": "string"
+          },
+          "listing_name": {
+            "type": "string"
+          },
+          "male_count": {
+            "type": "number"
+          },
+          "female_count": {
+            "type": "number"
+          },
+          "total_animals": {
+            "type": "number"
+          },
+          "breed_breakdown": {
+            "type": "array",
+            "items": { "type": "object" }
+          },
+          "state": {
+            "type": "string"
+          },
+          "farmer_id": {
+            "type": "string",
+            "description": "Authenticated farmer account that owns this livestock item"
+          },
+          "farmer_name": {
+            "type": "string"
+          },
+          "animal": {
+            "type": "string"
+          },
+          "breed": {
+            "type": "string"
+          },
+          "grade": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "weight_min": {
+            "type": "number"
+          },
+          "weight_max": {
+            "type": "number"
+          },
+          "price_per_head": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "subtotal": {
+      "type": "number"
+    },
+    "delivery_fee": {
+      "type": "number",
+      "description": "Delivery fee charged (grouped per farmer)"
+    },
+    "total": {
+      "type": "number"
+    },
+    "is_test_order": {
+      "type": "boolean",
+      "default": false,
+      "description": "Admin-created non-payment order used only for controlled workflow testing"
+    },
+    "hidden_from_history": {
+      "type": "boolean",
+      "default": false,
+      "description": "Soft-hides cancelled or out-of-stock orders only from their buyer's order history"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "paid",
+        "cancelled",
+        "out_of_stock",
+        "to_pay",
+        "to_ship",
+        "processing",
+        "shipped",
+        "to_receive",
+        "delivering",
+        "completed",
+        "delivered",
+        "return_requested",
+        "refund_requested",
+        "return_refund",
+        "refunded"
+      ],
+      "default": "pending"
+    },
+    "fulfillment_method": {
+      "type": "string",
+      "enum": [
+        "pickup",
+        "delivery"
+      ],
+      "default": "delivery"
+    },
+    "stripe_session_id": {
+      "type": "string"
+    },
+    "payment_intent_id": {
+      "type": "string"
+    },
+    "buyer_name": {
+      "type": "string"
+    },
+    "buyer_email": {
+      "type": "string"
+    },
+    "buyer_phone": {
+      "type": "string"
+    },
+    "progress_images": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Order progress or delivery images uploaded by the farmer"
+    },
+    "tracking_photos": {
+      "type": "object",
+      "properties": {
+        "before": { "type": "object" },
+        "during": { "type": "object" },
+        "after": { "type": "object" },
+        "received": { "type": "object" }
+      },
+      "description": "Persistent staged tracking evidence. Each stage stores image_url, uploaded_by, and uploaded_at."
+    },
+    "refund_reason": {
+      "type": "string",
+      "description": "Reason supplied by the buyer when requesting a refund"
+    },
+    "refund_evidence": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Buyer-uploaded photo evidence attached to a refund request for Farmer Admin review"
+    },
+    "refund_status": {
+      "type": "string",
+      "enum": [
+        "pending_admin_approval",
+        "approved",
+        "rejected",
+        "completed"
+      ],
+      "description": "Admin-controlled refund review state"
+    },
+    "refund_admin_note": {
+      "type": "string",
+      "description": "Optional note supplied by an administrator when reviewing a refund"
+    },
+    "refund_reviewed_by": {
+      "type": "string",
+      "description": "Farmer app administrator who reviewed the refund request"
+    },
+    "refund_reviewed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Time the refund request was reviewed"
+    },
+    "buyer_id": {
+      "type": "string",
+      "description": "Authenticated account ID that owns this order"
+    }
+  },
+  "required": [
+    "buyer_id"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "name": "BulkListing",
+  "type": "object",
+  "properties": {
+    "ownerId": { "type": "string", "description": "Relationship to User.id for the farmer" },
+    "name": { "type": "string", "description": "Farmer-defined bulk listing name" },
+    "images": { "type": "array", "items": { "type": "string" } },
+    "videos": { "type": "array", "items": { "type": "string" } },
+    "coverImage": { "type": "string" },
+    "maleCount": { "type": "integer", "minimum": 0 },
+    "femaleCount": { "type": "integer", "minimum": 0 },
+    "breedBreakdown": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "species": { "type": "string", "enum": ["Cow", "Goat", "Sheep"] },
+          "breed": { "type": "string" },
+          "maleCount": { "type": "integer", "minimum": 0 },
+          "femaleCount": { "type": "integer", "minimum": 0 },
+          "count": { "type": "integer", "minimum": 1, "description": "Derived total for this breed: maleCount + femaleCount" }
+        },
+        "required": ["species", "breed", "maleCount", "femaleCount", "count"]
+      }
+    },
+    "state": { "type": "string", "description": "Malaysian state where the animals are located" },
+    "totalPrice": { "type": "number", "minimum": 0, "description": "Total farmer price for all animals in MYR" },
+    "status": { "type": "string", "enum": ["Available", "Paused", "Sold"], "default": "Available" },
+    "marketplaceVisible": { "type": "boolean", "default": true }
+  },
+  "required": ["ownerId", "name", "images", "maleCount", "femaleCount", "breedBreakdown", "state", "totalPrice", "status"],
+  "rls": {
+    "read": { "$or": [{ "data.ownerId": "{{user.id}}" }, { "user_condition": { "role": "admin" } }] },
+    "create": { "data.ownerId": "{{user.id}}" },
+    "update": { "$or": [{ "data.ownerId": "{{user.id}}" }, { "user_condition": { "role": "admin" } }] },
+    "delete": { "$or": [{ "data.ownerId": "{{user.id}}" }, { "user_condition": { "role": "admin" } }] }
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "name": "SpeciesRequest",
+  "type": "object",
+  "properties": {
+    "farmerId": {
+      "type": "string"
+    },
+    "livestockId": {
+      "type": "string"
+    },
+    "proposedName": {
+      "type": "string"
+    },
+    "referenceImage": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "Approved",
+        "Rejected"
+      ],
+      "default": "Pending"
+    },
+    "adminReason": {
+      "type": "string"
+    },
+    "reviewedBy": {
+      "type": "string"
+    },
+    "reviewedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "farmerId",
+    "proposedName",
+    "referenceImage",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "data.farmerId": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "data.farmerId": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

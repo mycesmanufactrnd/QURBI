@@ -1,0 +1,46 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "description": "The role of the user in the app",
+      "enum": [
+        "admin",
+        "user"
+      ]
+    },
+    "name": {
+      "type": "string",
+      "description": "Full name of the user"
+    },
+    "profilePhoto": {
+      "type": "string",
+      "description": "Profile photo URL"
+    },
+    "verificationStatus": {
+      "type": "string",
+      "enum": [
+        "Not Submitted",
+        "Pending",
+        "Approved",
+        "Rejected"
+      ],
+      "default": "Not Submitted",
+      "description": "Single source of truth for routing and access"
+    },
+    "firstSeenAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "First successful sign-in recorded by this app"
+    },
+    "lastLoginAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Most recent successful authentication check"
+    }
+  },
+  "required": [
+    "role"
+  ]
+}

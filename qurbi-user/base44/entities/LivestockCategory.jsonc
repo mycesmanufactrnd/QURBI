@@ -1,0 +1,17 @@
+{
+  "name": "LivestockCategory",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Category name (e.g. Cow, Lamb, Goat)"
+    },
+    "icon": {
+      "type": "string",
+      "description": "Emoji icon for the category"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "name": "Order",
+  "type": "object",
+  "properties": {
+    "orderNumber": {
+      "type": "string"
+    },
+    "livestockId": {
+      "type": "string"
+    },
+    "livestockName": {
+      "type": "string",
+      "description": "Species + breed snapshot for display"
+    },
+    "buyerName": {
+      "type": "string"
+    },
+    "buyerId": {
+      "type": "string",
+      "description": "Buyer user id"
+    },
+    "sellerId": {
+      "type": "string",
+      "description": "Farmer (seller) user id"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "Confirmed",
+        "Preparing Delivery",
+        "Completed",
+        "Cancelled"
+      ],
+      "default": "Pending"
+    },
+    "purchasePrice": {
+      "type": "number"
+    },
+    "purchaseDate": {
+      "type": "string",
+      "format": "date"
+    }
+  },
+  "required": [
+    "livestockId",
+    "status",
+    "orderNumber"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "data.sellerId": "{{user.id}}"
+        },
+        {
+          "data.buyerId": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {
+      "data.buyerId": "{{user.id}}"
+    },
+    "update": {
+      "$or": [
+        {
+          "data.sellerId": "{{user.id}}"
+        },
+        {
+          "data.buyerId": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

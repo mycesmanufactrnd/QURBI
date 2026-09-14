@@ -1,0 +1,85 @@
+{
+  "name": "FarmerProfile",
+  "type": "object",
+  "properties": {
+    "userId": {
+      "type": "string",
+      "description": "Relationship \u2192 Users.id (one profile per user)"
+    },
+    "applicantEmail": {
+      "type": "string",
+      "format": "email",
+      "description": "Email linked to this farmer profile"
+    },
+    "applicantEmailNormalized": {
+      "type": "string",
+      "description": "Lowercase trimmed email used for registration identity matching"
+    },
+    "phoneNumber": {
+      "type": "string"
+    },
+    "icNumber": {
+      "type": "string",
+      "description": "IC / identification number"
+    },
+    "farmName": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string"
+    },
+    "deliveryPreference": {
+      "type": "string",
+      "enum": [
+        "Self Delivery",
+        "AISYAH Delivery",
+        "Both"
+      ],
+      "description": "How the farmer can fulfil livestock deliveries"
+    }
+  },
+  "required": [
+    "userId",
+    "phoneNumber",
+    "farmName",
+    "address",
+    "state"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "data.userId": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {
+      "data.userId": "{{user.id}}"
+    },
+    "update": {
+      "$or": [
+        {
+          "data.userId": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

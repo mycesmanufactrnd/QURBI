@@ -1,0 +1,41 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "buyer_id": {
+      "type": "string",
+      "description": "Authenticated buyer account that owns this notification"
+    },
+    "event_key": {
+      "type": "string",
+      "description": "Stable key used to avoid creating the same notification twice"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["farmer_photo", "refund_approved", "refund_rejected"]
+    },
+    "title": { "type": "string" },
+    "message": { "type": "string" },
+    "order_id": { "type": "string" },
+    "order_number": { "type": "string" },
+    "item_name": { "type": "string" },
+    "event_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "is_read": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_cleared": {
+      "type": "boolean",
+      "default": false,
+      "description": "Buyer-scoped soft delete that preserves event deduplication"
+    },
+    "cleared_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": ["buyer_id", "event_key", "type", "title", "event_at"]
+}

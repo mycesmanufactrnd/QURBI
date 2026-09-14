@@ -1,0 +1,39 @@
+{
+  "name": "FarmVerification",
+  "type": "object",
+  "properties": {
+    "userId": { "type": "string", "description": "Relationship to Users.id" },
+    "applicantEmail": { "type": "string", "format": "email", "description": "Email used to identify the application across sessions" },
+    "applicantEmailNormalized": { "type": "string", "description": "Lowercase trimmed email used by backend duplicate checks" },
+    "icFront": { "type": "string", "description": "File URL of the front of the IC" },
+    "icBack": { "type": "string", "description": "File URL of the back of the IC" },
+    "selfieImage": { "type": "string", "description": "Required selfie URL for manual comparison with the IC photo" },
+    "identityReviewMethod": { "type": "string", "enum": ["Manual"] },
+    "identityReviewedAt": { "type": "string", "format": "date-time" },
+    "identityReviewedBy": { "type": "string", "description": "Email of the admin who completed the manual identity comparison" },
+    "farmerCertificate": { "type": "string", "description": "Optional farm certificate file URL" },
+    "policySignerName": { "type": "string" },
+    "policySignedDate": { "type": "string", "format": "date" },
+    "policySignature": { "type": "string", "description": "File URL of the digital signature" },
+    "policyVersion": { "type": "string" },
+    "policyAcceptedAt": { "type": "string", "format": "date-time" },
+    "policyConsents": { "type": "array", "items": { "type": "string" } },
+    "status": { "type": "string", "enum": ["Pending", "Approved", "Rejected"], "default": "Pending" },
+    "rejectionReason": { "type": "string" },
+    "reviewReason": { "type": "string", "description": "Required admin reason for either approval or rejection" },
+    "reviewedBy": { "type": "string", "description": "Email of the admin who reviewed" },
+    "reviewedAt": { "type": "string", "format": "date-time" }
+  },
+  "required": ["userId", "icFront", "icBack", "status"],
+  "rls": {
+    "read": {
+      "$or": [
+        { "data.userId": "{{user.id}}" },
+        { "user_condition": { "role": "admin" } }
+      ]
+    },
+    "create": { "data.userId": "{{user.id}}" },
+    "update": { "user_condition": { "role": "admin" } },
+    "delete": { "user_condition": { "role": "admin" } }
+  }
+}

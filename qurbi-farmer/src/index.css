@@ -1,0 +1,220 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 33 36% 95%;
+    --foreground: 27 12% 16%;
+    --card: 33 100% 99%;
+    --card-foreground: 27 12% 16%;
+    --popover: 33 100% 99%;
+    --popover-foreground: 27 12% 16%;
+    --primary: 28 18% 22%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 48% 88%;
+    --secondary-foreground: 28 18% 22%;
+    --muted: 30 25% 92%;
+    --muted-foreground: 27 10% 42%;
+    --accent: 30 51% 88%;
+    --accent-foreground: 28 18% 22%;
+    --destructive: 2 54% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 30 28% 85%;
+    --input: 30 28% 82%;
+    --ring: 28 18% 34%;
+    --chart-1: 28 18% 22%;
+    --chart-2: 30 51% 66%;
+    --chart-3: 43 62% 54%;
+    --chart-4: 151 27% 38%;
+    --chart-5: 2 54% 48%;
+    --radius: 1.125rem;
+    --font-heading: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-body: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --sidebar-background: 33 100% 99%;
+    --sidebar-foreground: 27 12% 16%;
+    --sidebar-primary: 28 18% 22%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 30 51% 88%;
+    --sidebar-accent-foreground: 28 18% 22%;
+    --sidebar-border: 30 28% 85%;
+    --sidebar-ring: 28 18% 34%;
+  }
+
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+    min-width: 320px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button,
+  a,
+  input,
+  textarea,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@layer components {
+  .soft-card {
+    @apply rounded-[1.25rem] border border-border/75 bg-card;
+    box-shadow: 0 4px 14px rgba(65, 54, 45, 0.07);
+  }
+
+  .brand-gradient {
+    background: linear-gradient(135deg, #41362D 0%, #6B594A 100%);
+  }
+
+  .brand-hero {
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 82% 18%, rgba(227, 193, 159, 0.22), transparent 34%),
+      linear-gradient(150deg, #41362D 0%, #6B594A 62%, #8A715B 100%);
+  }
+
+  .brand-hero::before,
+  .brand-hero::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    border: 1px solid rgba(227, 193, 159, 0.13);
+    border-radius: 999px 999px 0 0;
+  }
+
+  .brand-hero::before {
+    width: 15rem;
+    height: 15rem;
+    right: -5rem;
+    top: 2rem;
+    transform: rotate(-18deg);
+  }
+
+  .brand-hero::after {
+    width: 11rem;
+    height: 11rem;
+    right: 2rem;
+    top: 6rem;
+    transform: rotate(22deg);
+  }
+
+  .home-brand-hero {
+    /* Change this single value to control the abstract on every screen size. */
+    --home-abstract-opacity: 0.42;
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background: linear-gradient(145deg, #41362D 0%, #6B594A 68%, #8A715B 100%);
+    box-shadow:
+      0 12px 28px rgba(36, 29, 24, 0.18),
+      0 3px 10px rgba(36, 29, 24, 0.10);
+  }
+
+  .home-brand-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    background-image: url("/images/qurbi-geometric-reference.png");
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    opacity: var(--home-abstract-opacity);
+    mix-blend-mode: normal;
+    pointer-events: none;
+  }
+
+  .home-brand-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      linear-gradient(90deg, rgba(65, 54, 45, 0.52) 0%, rgba(65, 54, 45, 0.18) 55%, rgba(65, 54, 45, 0.28) 100%),
+      linear-gradient(180deg, transparent 55%, rgba(227, 193, 159, 0.12) 100%);
+    pointer-events: none;
+  }
+
+  @media (max-width: 640px) {
+    .home-brand-hero::before {
+      background-position: center;
+      background-size: cover;
+    }
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.35s ease-out both;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

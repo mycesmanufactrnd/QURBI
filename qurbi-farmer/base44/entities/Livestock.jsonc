@@ -1,0 +1,174 @@
+{
+  "name": "Livestock",
+  "type": "object",
+  "properties": {
+    "ownerId": {
+      "type": "string",
+      "description": "Relationship to User.id for the farmer who owns this listing"
+    },
+    "species": {
+      "type": "string",
+      "description": "Approved or farmer-proposed livestock species"
+    },
+    "speciesRequestId": { "type": "string", "description": "Relationship to SpeciesRequest while a proposed species is reviewed" },
+    "speciesApprovalStatus": {
+      "type": "string",
+      "enum": ["Approved", "Pending", "Rejected"],
+      "default": "Approved"
+    },
+    "breed": {
+      "type": "string",
+      "description": "Current buyer-facing breed name"
+    },
+    "breedId": {
+      "type": "string",
+      "description": "Relationship to an approved Breed record"
+    },
+    "breedRequestId": {
+      "type": "string",
+      "description": "Relationship to BreedRequest while a proposed breed is reviewed"
+    },
+    "breedApprovalStatus": {
+      "type": "string",
+      "enum": ["Approved", "Pending", "Rejected", "Unspecified"],
+      "default": "Approved"
+    },
+    "age": {
+      "type": "string",
+      "description": "Calculated display age retained for backwards compatibility"
+    },
+    "ageInputMode": {
+      "type": "string",
+      "enum": ["Birth Date", "Age"]
+    },
+    "birthDate": {
+      "type": "string",
+      "format": "date"
+    },
+    "ageValue": {
+      "type": "number",
+      "minimum": 0
+    },
+    "ageUnit": {
+      "type": "string",
+      "enum": ["Months", "Years"]
+    },
+    "ageRecordedAt": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the farmer entered a manual age, used for automatic age progression"
+    },
+    "gender": {
+      "type": "string",
+      "enum": ["Male", "Female"]
+    },
+    "state": {
+      "type": "string",
+      "description": "Malaysian state where the livestock is located"
+    },
+    "farmLocation": {
+      "type": "string",
+      "description": "Legacy marketplace location populated with the selected state"
+    },
+    "price": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Fixed farmer selling price in MYR"
+    },
+    "color": { "type": "string" },
+    "description": { "type": "string" },
+    "images": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Up to 10 image URLs"
+    },
+    "videos": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Up to 2 livestock video URLs"
+    },
+    "coverImage": {
+      "type": "string",
+      "description": "Selected cover image URL"
+    },
+    "weight": { "type": "string" },
+    "height": { "type": "string" },
+    "bodyLength": { "type": "string" },
+    "chestGirth": { "type": "string" },
+    "tagNumber": {
+      "type": "string",
+      "description": "Any livestock identification tag number"
+    },
+    "rfid": { "type": "string" },
+    "feedDetails": {
+      "type": "string",
+      "description": "Food, feed and supplements given to the animal"
+    },
+    "specialNotes": { "type": "string" },
+    "healthRecord": {
+      "type": "string",
+      "description": "Legacy field retained to protect existing data; no longer editable in Phase 1"
+    },
+    "vaccinationRecord": {
+      "type": "string",
+      "description": "Legacy field retained to protect existing data; no longer editable in Phase 1"
+    },
+    "earTag": {
+      "type": "string",
+      "description": "Legacy tag field retained to protect existing data"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["Available", "Reserved", "Sold", "Sick"],
+      "default": "Available"
+    },
+    "marketplaceVisible": {
+      "type": "boolean",
+      "default": true,
+      "description": "Computed visibility flag for the buyer app"
+    },
+    "marketplaceVisibilityReason": {
+      "type": "string"
+    },
+    "marketplaceEligibleFrom": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the animal reaches the QURBI post-weaning marketplace age threshold; this is not a Qurban eligibility date"
+    },
+    "disabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Admin can disable a listing"
+    },
+    "policySignerName": { "type": "string" },
+    "policySignedDate": { "type": "string", "format": "date" },
+    "policySignature": {
+      "type": "string",
+      "description": "File URL of the signed policy signature"
+    },
+    "policyVersion": { "type": "string" },
+    "policyAcceptedAt": { "type": "string", "format": "date-time" }
+  },
+  "required": ["ownerId", "species", "breed", "age", "gender", "state", "price", "status"],
+  "rls": {
+    "read": {
+      "$or": [
+        { "data.ownerId": "{{user.id}}" },
+        { "user_condition": { "role": "admin" } }
+      ]
+    },
+    "create": { "data.ownerId": "{{user.id}}" },
+    "update": {
+      "$or": [
+        { "data.ownerId": "{{user.id}}" },
+        { "user_condition": { "role": "admin" } }
+      ]
+    },
+    "delete": {
+      "$or": [
+        { "data.ownerId": "{{user.id}}" },
+        { "user_condition": { "role": "admin" } }
+      ]
+    }
+  }
+}

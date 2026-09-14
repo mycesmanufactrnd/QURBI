@@ -1,0 +1,105 @@
+{
+  "name": "FarmerNotification",
+  "type": "object",
+  "properties": {
+    "farmerId": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "Breed Approved",
+        "Breed Rejected",
+        "Species Approved",
+        "Species Rejected",
+        "New Order",
+        "Refund Requested",
+        "Refund Approved",
+        "Refund Rejected",
+        "Order Completed",
+        "General"
+      ]
+    },
+    "title": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "livestockId": {
+      "type": "string"
+    },
+    "breedRequestId": {
+      "type": "string"
+    },
+    "speciesRequestId": {
+      "type": "string"
+    },
+    "orderId": {
+      "type": "string",
+      "description": "QURBI User order ID used for navigation and idempotency"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "Normal",
+        "Important"
+      ],
+      "default": "Normal"
+    },
+    "isRead": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "farmerId",
+    "type",
+    "title",
+    "message",
+    "isRead"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.farmerId": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.farmerId": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.farmerId": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
