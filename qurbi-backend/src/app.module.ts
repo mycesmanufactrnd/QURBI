@@ -8,16 +8,6 @@ import { APP_GUARD } from "@nestjs/core";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { TasksService } from "./TaskScheduling/task.service";
 import { ScheduleModule } from "@nestjs/schedule";
-// import { encryptResponseInterceptor } from "./interceptors/encryptres.interceptor";
-// import { DecryptPayloadInterceptor } from "./interceptors/decrypt.interceptor";
-
-// import { PIndicatorData } from "./entities/pindicatordata.entity";
-// import { PIndicatorDataModule } from "./PIndicatorData/pindicatordata.module";
-// import { JIareadate } from "./entities/ji_area_date.entity";
-// import { JIScheduleWeek } from "./entities/cleaning_schedule_week.entity";
-
-// app module akan connect to DB,  and sync.
-// pp module define semua entity yang wujud.
 import { GoogleDriveModule } from './google-drive/google-drive.module';
 /*
   HOLD UP, looking and adding for modules/entities?
