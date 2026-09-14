@@ -28,13 +28,18 @@ import { StringValue } from "ms";
       type: "mysql",
       // logger: new TypeOrmLogger(),
       // logging: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-      // maxQueryExecutionTime: 1000, 
+      // maxQueryExecutionTime: 1000,
       host: process.env.DB_HOST,
       port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 3306,
       username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      synchronize: process.env.DB_SYNC == "true" ? true : false,
+      database: process.env.DB_DATABASE,
+      charset: "utf8mb4",
+      // DEV ONLY: synchronize auto-generates/alters tables from the entities on
+      // every boot. Great for iterating on the schema now, but it can drop or
+      // rewrite columns without warning — turn this off (use migrations
+      // instead) before this ever points at a database with real data.
+      synchronize: true,
       autoLoadEntities: true,
       entities: APP_ENTITIES,
       // debug:true,
