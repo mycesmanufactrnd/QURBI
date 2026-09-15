@@ -16,8 +16,8 @@ directly to MySQL or retain a runtime dependency on Base44.
 | --- | --- | --- | --- |
 | Authentication | `base44.auth` | `/api/auth/register`, `/api/auth/login`, `/api/auth/me` | Backend and Farmer frontend migrated; User frontend owned by Aqil |
 | Users and roles | `User` | `users` table and `/api/users` | Entity/CRUD ready; ownership review pending |
-| Farmer profiles | `FarmerProfile` | `farmer_profiles` | Entity/CRUD ready |
-| Farmer verification | `FarmVerification` | `farm_verifications` | Entity/CRUD ready |
+| Farmer profiles | `FarmerProfile` | `farmer_profiles` | Farmer frontend data flow migrated to Axios/NestJS |
+| Farmer verification | `FarmVerification` | `farm_verifications` | Data submission/history migrated; document upload endpoint pending |
 | Species and breeds | `Species`, `Breed` and requests | catalog/request modules | Entity/CRUD ready |
 | Individual livestock | `Livestock` | livestock module | Backend ownership, 14-day expiry and 24-hour reservation rules ready; frontend data calls pending |
 | Bulk selling | `BulkListing` | bulk-listings module | Entity/CRUD ready; compatibility audit pending |

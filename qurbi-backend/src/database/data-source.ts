@@ -8,7 +8,7 @@ export default new DataSource({
   port: Number(process.env.DB_PORT || 3306),
   username: process.env.DB_USERNAME || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_DATABASE || 'qurbi',
+  database: process.env.DB_DATABASE || 'qurbidb',
   charset: 'utf8mb4',
   entities: ALL_ENTITIES,
   migrations: ['src/database/migrations/*{.ts,.js}'],

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
+import { farmVerificationApi, farmerProfileApi } from "@/api/farmerApi";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -39,7 +40,8 @@ export default function FarmerRegistrationPolicy() {
   const status = userVal(user, "verificationStatus");
   const draftReady = Boolean(
     draft?.form?.name?.trim() && draft?.form?.phoneNumber?.trim() && draft?.form?.icNumber?.trim()
-    && draft?.form?.farmName?.trim() && draft?.form?.address?.trim() && draft?.form?.state
+    && draft?.form?.farmName?.trim() && draft?.form?.address?.trim() && draft?.form?.city?.trim()
+    && draft?.form?.state && draft?.form?.postcode?.trim()
     && draft?.form?.deliveryPreference && draft?.docs?.icFront && draft?.docs?.icBack && draft?.docs?.selfieImage
   );
 
@@ -49,7 +51,7 @@ export default function FarmerRegistrationPolicy() {
 
   if (status === "Approved") return <Navigate to="/" replace />;
   if (status === "Pending") return <Navigate to="/pending" replace />;
-  if (status === "Rejected") return <Navigate to="/rejected" replace />;
+  // Rejected farmers may prepare and submit a new verification attempt.
   if (!draftReady) return null;
 
   const allAccepted = POLICY_POINTS.every((point) => accepted.includes(point.id));
@@ -72,31 +74,36 @@ export default function FarmerRegistrationPolicy() {
         setSignatureUrl(uploadedSignature);
       }
 
-      const submission = await base44.functions.invoke("submitFarmerVerification", {
-        profile: {
-          phoneNumber: draft.form.phoneNumber,
-          icNumber: draft.form.icNumber,
-          farmName: draft.form.farmName,
-          address: draft.form.address,
-          state: draft.form.state,
-          deliveryPreference: draft.form.deliveryPreference,
-        },
-        verification: {
+      const profilePayload = {
+        farmName: draft.form.farmName.trim(),
+        farmAddressLine: draft.form.address.trim(),
+        farmCity: draft.form.city.trim(),
+        farmState: draft.form.state,
+        farmPostcode: draft.form.postcode.trim(),
+      };
+      const existingProfile = user?.farmerProfile || await farmerProfileApi.findByUserId(user.id);
+      if (existingProfile?.id) {
+        await farmerProfileApi.update(existingProfile.id, profilePayload);
+      } else {
+        await farmerProfileApi.create(profilePayload);
+      }
+
+      await farmVerificationApi.submit({
+        signatureUrl: uploadedSignature,
+        documents: {
           icFront: draft.docs.icFront,
           icBack: draft.docs.icBack,
           selfieImage: draft.docs.selfieImage,
+          phoneNumber: draft.form.phoneNumber.trim(),
+          icNumber: draft.form.icNumber.trim(),
+          deliveryPreference: draft.form.deliveryPreference,
           policySignerName: name.trim(),
           policySignedDate: date,
-          policySignature: uploadedSignature,
           policyVersion: FARMER_POLICY_VERSION,
           policyConsents: POLICY_POINTS.map((point) => point.id),
           farmerCertificate: draft.docs.farmerCertificate || "",
         },
       });
-
-      if (submission.data?.created) try {
-        await base44.functions.invoke("notifyAdminNewFarmer", { farmerName: draft.form.name, farmName: draft.form.farmName, state: draft.form.state });
-      } catch { /* Notification failure must not create a duplicate registration. */ }
       clearFarmerVerificationDraft();
       await checkUserAuth();
       navigate("/pending", { replace: true });

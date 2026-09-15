@@ -1,22 +1,22 @@
 import React from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
-import { base44 } from "@/api/base44Client";
+import { farmVerificationApi, latestVerification } from "@/api/farmerApi";
 import BrandLogo from "@/components/agri/BrandLogo";
 import StatusBadge from "@/components/agri/StatusBadge";
 import { XCircle, LogOut, RefreshCw, Loader2 } from "lucide-react";
 
 export default function VerificationRejected() {
   const navigate = useNavigate();
-  const { user, logout, checkUserAuth } = useAuth();
+  const { user, logout } = useAuth();
   const status = user?.data?.verificationStatus || user?.verificationStatus;
   const [reapplying, setReapplying] = React.useState(false);
   const [reason, setReason] = React.useState("");
 
   React.useEffect(() => {
     if (!user?.id) return;
-    base44.entities.FarmVerification.filter({ userId: user.id }, "-created_date", 1)
-      .then((rows) => setReason(rows?.[0]?.rejectionReason || "No reason was provided. Please contact QURBI support before resubmitting."))
+    farmVerificationApi.listMine({ page: 1, limit: 1 })
+      .then((page) => setReason(latestVerification(page)?.rejectionReason || "No reason was provided. Please contact QURBI support before resubmitting."))
       .catch(() => setReason("The rejection reason could not be loaded."));
   }, [user?.id]);
 
@@ -24,15 +24,9 @@ export default function VerificationRejected() {
   if (status === "Pending") return <Navigate to="/pending" replace />;
   if (status === "Not Submitted") return <Navigate to="/verify" replace />;
 
-  const reapply = async () => {
+  const reapply = () => {
     setReapplying(true);
-    try {
-      await base44.auth.updateMe({ verificationStatus: "Not Submitted" });
-      await checkUserAuth();
-      navigate("/verify", { replace: true });
-    } catch {
-      setReapplying(false);
-    }
+    navigate("/verify", { replace: true, state: { reapply: true } });
   };
 
   return (

@@ -1,64 +1,111 @@
 /// <reference types="vite/client" />
 
+import axios from "axios";
+
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api").replace(/\/$/, "");
 
 export const ACCESS_TOKEN_KEY = "qurbi_access_token";
+export const REFRESH_TOKEN_KEY = "qurbi_refresh_token";
 
-export class ApiError extends Error {
-  constructor(message, status, data) {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-    this.data = data;
-  }
-}
-
-export function getAccessToken() {
+function readToken(key) {
   try {
-    return localStorage.getItem(ACCESS_TOKEN_KEY);
+    return localStorage.getItem(key);
   } catch {
     return null;
   }
 }
 
-export function setAccessToken(token) {
+function writeToken(key, token) {
   try {
-    if (token) localStorage.setItem(ACCESS_TOKEN_KEY, token);
-    else localStorage.removeItem(ACCESS_TOKEN_KEY);
+    if (token) localStorage.setItem(key, token);
+    else localStorage.removeItem(key);
   } catch {
-    // Storage can be unavailable in restricted browser contexts.
+    // Storage may be unavailable in restricted browser contexts.
   }
 }
 
-export async function apiRequest(path, options = {}) {
-  const token = getAccessToken();
-  const headers = new Headers(options.headers);
-  if (options.body && !(options.body instanceof FormData)) {
-    headers.set("Content-Type", "application/json");
-  }
-  if (token) headers.set("Authorization", `Bearer ${token}`);
+export const getAccessToken = () => readToken(ACCESS_TOKEN_KEY);
+export const getRefreshToken = () => readToken(REFRESH_TOKEN_KEY);
 
-  const response = await fetch(`${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`, {
-    ...options,
-    headers,
-    body:
-      options.body && !(options.body instanceof FormData) && typeof options.body !== "string"
-        ? JSON.stringify(options.body)
-        : options.body,
-  });
+export function setSessionTokens({ accessToken, refreshToken } = {}) {
+  writeToken(ACCESS_TOKEN_KEY, accessToken);
+  writeToken(REFRESH_TOKEN_KEY, refreshToken);
+}
 
-  const data = response.status === 204 ? null : await response.json().catch(() => null);
-  if (!response.ok) {
-    const message = Array.isArray(data?.message)
-      ? data.message.join(". ")
-      : data?.message || "Unable to complete the request";
-    throw new ApiError(message, response.status, data);
+export function clearSessionTokens() {
+  writeToken(ACCESS_TOKEN_KEY, null);
+  writeToken(REFRESH_TOKEN_KEY, null);
+}
+
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  headers: { "Content-Type": "application/json" },
+});
+
+apiClient.interceptors.request.use((config) => {
+  const accessToken = getAccessToken();
+  if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
+  return config;
+});
+
+let refreshRequest = null;
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    const refreshToken = getRefreshToken();
+    const isAuthRequest = originalRequest?.url?.includes("/auth/login") ||
+      originalRequest?.url?.includes("/auth/refresh");
+
+    if (error.response?.status !== 401 || originalRequest?._retry || !refreshToken || isAuthRequest) {
+      return Promise.reject(error);
+    }
+
+    originalRequest._retry = true;
+    try {
+      refreshRequest ||= axios
+        .post(`${API_BASE_URL}/auth/refresh`, { refreshToken })
+        .then(({ data }) => {
+          setSessionTokens(data);
+          return data.accessToken;
+        })
+        .finally(() => {
+          refreshRequest = null;
+        });
+
+      const accessToken = await refreshRequest;
+      originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+      return apiClient(originalRequest);
+    } catch (refreshError) {
+      clearSessionTokens();
+      return Promise.reject(refreshError);
+    }
+  },
+);
+
+function errorMessage(error) {
+  const message = error.response?.data?.message;
+  if (Array.isArray(message)) return message.join(". ");
+  return message || error.message || "Unable to complete the request";
+}
+
+async function unwrap(request) {
+  try {
+    const response = await request;
+    return response.data;
+  } catch (error) {
+    error.message = errorMessage(error);
+    throw error;
   }
-  return data;
 }
 
 export const authApi = {
-  login: (credentials) => apiRequest("/auth/login", { method: "POST", body: credentials }),
-  register: (details) => apiRequest("/auth/register", { method: "POST", body: details }),
-  me: () => apiRequest("/auth/me"),
+  register: (details) => unwrap(apiClient.post("/auth/register", details)),
+  login: (credentials) => unwrap(apiClient.post("/auth/login", credentials)),
+  me: () => unwrap(apiClient.get("/auth/me")),
+  refresh: (refreshToken) => unwrap(apiClient.post("/auth/refresh", { refreshToken })),
+  logout: (refreshToken) => unwrap(apiClient.post("/auth/logout", { refreshToken })),
 };
+
+export default apiClient;

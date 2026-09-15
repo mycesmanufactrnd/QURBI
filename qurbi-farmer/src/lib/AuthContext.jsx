@@ -1,16 +1,28 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { authApi, getAccessToken, setAccessToken } from "@/api/apiClient";
+import {
+  authApi,
+  clearSessionTokens,
+  getAccessToken,
+  getRefreshToken,
+  setSessionTokens,
+} from "@/api/apiClient";
 
 const AuthContext = createContext(null);
 const ALLOWED_ROLES = new Set(["farmer", "admin"]);
 
 function normalizeUser(user) {
   if (!user) return null;
+  const verificationStatus = {
+    unverified: "Not Submitted",
+    pending: "Pending",
+    verified: "Approved",
+    rejected: "Rejected",
+  }[user.farmerProfile?.verificationStatus] || "Not Submitted";
   return {
     ...user,
     full_name: user.fullName,
     display_name: user.fullName,
-    data: { ...(user.data || {}), name: user.fullName },
+    data: { ...(user.data || {}), name: user.fullName, verificationStatus },
   };
 }
 
@@ -22,7 +34,7 @@ export const AuthProvider = ({ children }) => {
   const [authChecked, setAuthChecked] = useState(false);
 
   const clearAuth = useCallback(() => {
-    setAccessToken(null);
+    clearSessionTokens();
     setUser(null);
     setIsAuthenticated(false);
   }, []);
@@ -32,7 +44,7 @@ export const AuthProvider = ({ children }) => {
       clearAuth();
       throw new Error("This account does not have access to the QURBI Farmer portal.");
     }
-    setAccessToken(session.accessToken);
+    setSessionTokens(session);
     setUser(normalizeUser(session.user));
     setIsAuthenticated(true);
     setAuthError(null);
@@ -80,11 +92,15 @@ export const AuthProvider = ({ children }) => {
   }, [acceptSession]);
 
   const register = useCallback(async (details) => {
-    const session = await authApi.register({ ...details, role: "farmer" });
+    const credentials = { email: details.email, password: details.password };
+    await authApi.register({ ...details, role: "farmer" });
+    const session = await authApi.login(credentials);
     return acceptSession(session);
   }, [acceptSession]);
 
   const logout = useCallback((shouldRedirect = true) => {
+    const refreshToken = getRefreshToken();
+    if (refreshToken) authApi.logout(refreshToken).catch(() => {});
     clearAuth();
     setAuthError(null);
     setAuthChecked(true);
