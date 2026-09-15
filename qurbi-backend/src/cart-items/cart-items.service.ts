@@ -46,6 +46,11 @@ export class CartItemsService {
       },
     });
     if (existing) {
+      // A lot is bought whole — re-adding an already-carted lot is a no-op,
+      // never a quantity bump.
+      if (input.itemType === OrderItemType.BULK_LISTING) {
+        return existing;
+      }
       existing.quantity += input.quantity;
       return this.repository.save(existing);
     }
@@ -64,6 +69,11 @@ export class CartItemsService {
 
   async updateQuantity(userId: string, itemId: string, quantity: number): Promise<CartItem> {
     const item = await this.findOwnedItem(userId, itemId);
+    if (item.itemType === OrderItemType.BULK_LISTING && quantity !== 1) {
+      throw new BadRequestException(
+        'A bulk listing is purchased as a whole lot; quantity must be 1',
+      );
+    }
     item.quantity = quantity;
     return this.repository.save(item);
   }
@@ -94,8 +104,17 @@ export class CartItemsService {
     if (input.itemType === OrderItemType.LIVESTOCK && !hasLivestock) {
       throw new BadRequestException('itemType livestock requires livestockId');
     }
-    if (input.itemType === OrderItemType.BULK_SHARE && !hasBulkListing) {
-      throw new BadRequestException('itemType bulk_share requires bulkListingId');
+    if (input.itemType === OrderItemType.BULK_LISTING) {
+      if (!hasBulkListing) {
+        throw new BadRequestException('itemType bulk_listing requires bulkListingId');
+      }
+      // A lot is one unit, not a repeatable SKU — you can't buy "2 of" a
+      // specific group of animals.
+      if (input.quantity !== 1) {
+        throw new BadRequestException(
+          'A bulk listing is purchased as a whole lot; quantity must be 1',
+        );
+      }
     }
   }
 }
