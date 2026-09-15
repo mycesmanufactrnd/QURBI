@@ -4,6 +4,7 @@ import { User, UserRole, UserStatus } from '../entities';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { UpdateMeDto } from './dto/update-me.dto';
 
 @Injectable()
 export class AuthService {
@@ -22,7 +23,7 @@ export class AuthService {
       phone: input.phone?.trim() || null,
       role,
       status: UserStatus.ACTIVE,
-      emailVerified: false,
+      emailVerifiedAt: null,
     });
     return this.session(user);
   }
@@ -48,6 +49,17 @@ export class AuthService {
 
   me(userId: string) {
     return this.usersService.findOne(userId);
+  }
+
+  updateMe(userId: string, input: UpdateMeDto) {
+    return this.usersService.update(userId, {
+      ...(input.fullName === undefined
+        ? {}
+        : { fullName: input.fullName.trim() }),
+      ...(input.phone === undefined
+        ? {}
+        : { phone: input.phone.trim() || null }),
+    });
   }
 
   private async session(user: User) {

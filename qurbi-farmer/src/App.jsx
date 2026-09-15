@@ -9,6 +9,7 @@ import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from '@/components/ProtectedRoute';
 // Page imports
 import Login from "@/pages/Login";
+import Register from "@/pages/Register";
 import FarmerVerification from "@/pages/FarmerVerification";
 import FarmerRegistrationPolicy from "@/pages/FarmerRegistrationPolicy";
 import VerificationPending from "@/pages/VerificationPending";
@@ -66,6 +67,7 @@ const AuthenticatedApp = () => {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
 
       {/* Authenticated area */}
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>

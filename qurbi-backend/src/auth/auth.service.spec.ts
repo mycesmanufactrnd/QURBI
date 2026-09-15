@@ -23,6 +23,7 @@ describe('AuthService', () => {
     verifyPassword: jest.fn(),
     recordLogin: jest.fn(),
     findOne: jest.fn(),
+    update: jest.fn(),
   };
   const jwt = { signAsync: jest.fn().mockResolvedValue('signed-token') };
   const service = new AuthService(
@@ -62,5 +63,23 @@ describe('AuthService', () => {
         password: 'wrong-password',
       }),
     ).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('only updates editable fields on the authenticated user', async () => {
+    users.update.mockResolvedValue({
+      ...buyer,
+      fullName: 'Updated Buyer',
+      phone: '0123456789',
+    });
+
+    await service.updateMe(buyer.id, {
+      fullName: ' Updated Buyer ',
+      phone: ' 0123456789 ',
+    });
+
+    expect(users.update).toHaveBeenCalledWith(buyer.id, {
+      fullName: 'Updated Buyer',
+      phone: '0123456789',
+    });
   });
 });
