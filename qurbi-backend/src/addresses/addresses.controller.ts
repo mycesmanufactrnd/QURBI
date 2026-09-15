@@ -1,39 +1,42 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import type { DeepPartial } from 'typeorm';
-import { Address } from '../entities';
+import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { AddressesService } from './addresses.service';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
+import { CreateAddressDto } from './dto/create-address.dto';
+import { UpdateAddressDto } from './dto/update-address.dto';
 
+// The owner is always the authenticated caller — never a query/body field.
 @Controller('addresses')
 export class AddressesController {
   constructor(private readonly addressesService: AddressesService) {}
 
   @Post()
-  create(@Body() body: DeepPartial<Address>) {
-    return this.addressesService.create(body);
+  create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateAddressDto) {
+    return this.addressesService.create({ ...body, userId: user.id });
   }
 
   @Get()
-  findAll(@Query('userId') userId?: string) {
-    return userId ? this.addressesService.findByUser(userId) : this.addressesService.findAll();
+  findAll(@CurrentUser() user: AuthenticatedUser) {
+    return this.addressesService.findByUser(user.id);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.addressesService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.addressesService.findOwned(id, user);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() body: DeepPartial<Address>) {
-    return this.addressesService.update(id, body);
+  update(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser, @Body() body: UpdateAddressDto) {
+    return this.addressesService.updateOwned(id, user, body);
   }
 
   @Patch(':id/set-default')
-  setDefault(@Param('id') id: string, @Body() body: { userId: string }) {
-    return this.addressesService.setDefault(body.userId, id);
+  setDefault(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.addressesService.setDefault(user, id);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.addressesService.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.addressesService.removeOwned(id, user);
   }
 }

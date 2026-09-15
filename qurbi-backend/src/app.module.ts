@@ -16,7 +16,6 @@ import { GoogleDriveModule } from './google-drive/google-drive.module';
 import { APP_ENTITIES } from './app.entities';
 import { APP_MODULES } from "./app.modules";
 import { jwtConstants } from "./auth/jwt.constants";
-import { StringValue } from "ms";
 
 @Module({
   imports: [
@@ -40,14 +39,14 @@ import { StringValue } from "ms";
       // rewrite columns without warning — turn this off (use migrations
       // instead) before this ever points at a database with real data.
       synchronize: true,
-      autoLoadEntities: true,
       entities: APP_ENTITIES,
       // debug:true,
     }),
     JwtModule.register({
+      global: true,
       secret: jwtConstants.secret,
       signOptions: {
-        expiresIn: (process.env.DAY_TOKEN ? process.env.DAY_TOKEN : "7d") as StringValue,
+        expiresIn: jwtConstants.accessTtl,
       },
     }),
     ThrottlerModule.forRoot([
