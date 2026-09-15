@@ -15,8 +15,10 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { SpeciesRequestsModule } from './species-requests/species-requests.module';
 import { BreedRequestsModule } from './breed-requests/breed-requests.module';
 import { AddressesModule } from './addresses/addresses.module';
+import { AuthModule } from './auth/auth.module';
 
 export const APP_MODULES = [
+  AuthModule,
   UsersModule,
   FarmerProfilesModule,
   FarmVerificationsModule,

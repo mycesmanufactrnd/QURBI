@@ -29,12 +29,18 @@ export class UsersService extends BaseCrudService<User> {
 
   async create(data: CreateUserInput): Promise<User> {
     const { password, ...rest } = data;
-    const existing = await this.repository.findOne({ where: { email: rest.email } });
+    const existing = await this.repository.findOne({
+      where: { email: rest.email },
+    });
     if (existing) {
       throw new ConflictException(`Email ${rest.email} is already registered`);
     }
-    const passwordHash = password ? await bcrypt.hash(password, BCRYPT_SALT_ROUNDS) : null;
-    const saved = await this.repository.save(this.repository.create({ ...rest, passwordHash }));
+    const passwordHash = password
+      ? await bcrypt.hash(password, BCRYPT_SALT_ROUNDS)
+      : null;
+    const saved = await this.repository.save(
+      this.repository.create({ ...rest, passwordHash }),
+    );
     // select: false only hides passwordHash from queries, not from an entity
     // instance returned directly by save() — re-fetch so the response matches
     // every other read path and never echoes the hash back to the caller.
@@ -53,5 +59,9 @@ export class UsersService extends BaseCrudService<User> {
   async verifyPassword(user: User, password: string): Promise<boolean> {
     if (!user.passwordHash) return false;
     return bcrypt.compare(password, user.passwordHash);
+  }
+
+  async recordLogin(id: string): Promise<void> {
+    await this.repository.update(id, { lastLoginAt: new Date() });
   }
 }

@@ -1,68 +1,126 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { OrderStatus } from '../entities';
-import { CheckoutInput, OrdersService } from './orders.service';
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { Roles } from '../auth/roles.decorator';
+import type { AuthenticatedUser } from '../auth/auth.types';
+import { OrderStatus, UserRole } from '../entities';
+import { OrdersService } from './orders.service';
+import type { CheckoutInput } from './orders.service';
 
-// buyerId/farmerId are read from the query string / body until auth guards
-// exist; once they do these should read from req.user.id + role instead.
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Post('checkout')
-  checkout(@Body() body: { buyerId: string } & CheckoutInput) {
-    const { buyerId, ...input } = body;
-    return this.ordersService.checkout(buyerId, input);
+  @Roles(UserRole.BUYER)
+  checkout(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() input: CheckoutInput,
+  ) {
+    return this.ordersService.checkout(user.sub, input);
   }
 
   @Get()
-  findAll(@Query('buyerId') buyerId?: string, @Query('farmerId') farmerId?: string) {
-    if (buyerId) return this.ordersService.findAllForBuyer(buyerId);
-    if (farmerId) return this.ordersService.findAllForFarmer(farmerId);
-    return [];
+  findAll(@CurrentUser() user: AuthenticatedUser) {
+    return this.ordersService.findAllForActor(user);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.ordersService.findOne(id);
+  findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.ordersService.findOneForActor(id, user);
   }
 
   @Patch(':id/status')
-  updateStatus(
+  @Roles(UserRole.FARMER, UserRole.ADMIN)
+  async updateStatus(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body()
-    body: { status: OrderStatus; note?: string; images?: string[]; location?: string; userId?: string },
+    body: {
+      status: OrderStatus;
+      note?: string;
+      images?: string[];
+      location?: string;
+    },
   ) {
-    return this.ordersService.updateStatus(id, body.status, body);
+    if (user.role === UserRole.FARMER) {
+      await this.ordersService.assertFarmerOwns(id, user.sub);
+      const farmerStatuses = new Set([
+        OrderStatus.PREPARING,
+        OrderStatus.IN_TRANSIT,
+        OrderStatus.DELIVERED,
+      ]);
+      if (!farmerStatuses.has(body.status)) {
+        throw new ForbiddenException('Farmers cannot apply this order status');
+      }
+    }
+    return this.ordersService.updateStatus(id, body.status, {
+      ...body,
+      userId: user.sub,
+    });
   }
 
   @Patch(':id/cancel')
-  cancel(@Param('id') id: string, @Body() body: { reason: string; userId?: string }) {
-    return this.ordersService.cancel(id, body.reason, body.userId);
+  @Roles(UserRole.BUYER)
+  async cancel(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() body: { reason: string },
+  ) {
+    await this.ordersService.assertBuyerOwns(id, user.sub);
+    return this.ordersService.cancel(id, body.reason, user.sub);
   }
 
   @Patch(':id/received')
-  markReceived(
+  @Roles(UserRole.BUYER)
+  async markReceived(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-    @Body() body: { proofImages: string[]; userId?: string },
+    @Body() body: { proofImages: string[] },
   ) {
-    return this.ordersService.markReceived(id, body.proofImages, body.userId);
+    await this.ordersService.assertBuyerOwns(id, user.sub);
+    return this.ordersService.markReceived(id, body.proofImages, user.sub);
   }
 
   @Patch(':id/refund-request')
-  requestRefund(@Param('id') id: string, @Body() body: { reason: string }) {
+  @Roles(UserRole.BUYER)
+  async requestRefund(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() body: { reason: string },
+  ) {
+    await this.ordersService.assertBuyerOwns(id, user.sub);
     return this.ordersService.requestRefund(id, body.reason);
   }
 
   @Patch(':id/refund-review')
+  @Roles(UserRole.ADMIN)
   reviewRefund(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-    @Body() body: { approve: boolean; reviewedByUserId: string; note?: string },
+    @Body() body: { approve: boolean; note?: string },
   ) {
-    return this.ordersService.reviewRefund(id, body);
+    return this.ordersService.reviewRefund(id, {
+      ...body,
+      reviewedByUserId: user.sub,
+    });
   }
 
   @Patch(':id/hide-from-buyer-history')
-  hideFromBuyerHistory(@Param('id') id: string, @Body() body: { hidden: boolean }) {
+  @Roles(UserRole.BUYER)
+  async hideFromBuyerHistory(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() body: { hidden: boolean },
+  ) {
+    await this.ordersService.assertBuyerOwns(id, user.sub);
     return this.ordersService.hideFromBuyerHistory(id, body.hidden);
   }
 }

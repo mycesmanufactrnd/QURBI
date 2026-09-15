@@ -1,42 +1,79 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import type { DeepPartial } from 'typeorm';
 import { Livestock } from '../entities';
-import { stripUndefined } from '../common/strip-undefined';
 import { LivestockService } from './livestock.service';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { Public } from '../auth/public.decorator';
+import { Roles } from '../auth/roles.decorator';
+import type { AuthenticatedUser } from '../auth/auth.types';
+import { UserRole } from '../entities';
 
 @Controller('livestock')
 export class LivestockController {
   constructor(private readonly livestockService: LivestockService) {}
 
   @Post()
-  create(@Body() body: DeepPartial<Livestock>) {
-    return this.livestockService.create(body);
+  @Roles(UserRole.FARMER)
+  create(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: DeepPartial<Livestock>,
+  ) {
+    return this.livestockService.createForFarmer(user.sub, body);
   }
 
   @Get()
-  findAll(
-    @Query('farmerId') farmerId?: string,
-    @Query('speciesId') speciesId?: string,
-    @Query('categoryId') categoryId?: string,
-    @Query('status') status?: Livestock['status'],
-  ) {
-    return this.livestockService.findAll(
-      stripUndefined({ farmerId, speciesId, categoryId, status }),
-    );
+  @Public()
+  findMarketplace() {
+    return this.livestockService.findMarketplace();
+  }
+
+  @Get('mine')
+  @Roles(UserRole.FARMER)
+  findMine(@CurrentUser() user: AuthenticatedUser) {
+    return this.livestockService.findMine(user.sub);
   }
 
   @Get(':id')
+  @Public()
   findOne(@Param('id') id: string) {
-    return this.livestockService.findOneAndTrackView(id);
+    return this.livestockService.findMarketplaceOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() body: DeepPartial<Livestock>) {
-    return this.livestockService.update(id, body);
+  @Roles(UserRole.FARMER)
+  update(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() body: DeepPartial<Livestock>,
+  ) {
+    return this.livestockService.updateOwned(id, user.sub, body);
+  }
+
+  @Post(':id/renew')
+  @Roles(UserRole.FARMER)
+  renew(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() body: DeepPartial<Livestock>,
+  ) {
+    return this.livestockService.renew(id, user.sub, body);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  @Roles(UserRole.FARMER)
+  async remove(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
+    await this.livestockService.updateOwned(id, user.sub, {});
     return this.livestockService.remove(id);
   }
 }

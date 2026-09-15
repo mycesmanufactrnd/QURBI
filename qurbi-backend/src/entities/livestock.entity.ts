@@ -1,6 +1,6 @@
-import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { BaseEntity } from './base.entity';
-import { LivestockStatus, LivestockSex } from './enums';
+import { LivestockStatus, LivestockSex, ReservationState } from './enums';
 import { User } from './user.entity';
 import { Species } from './species.entity';
 import { Breed } from './breed.entity';
@@ -71,8 +71,38 @@ export class Livestock extends BaseEntity {
   @Column({ type: 'varchar', length: 500, nullable: true })
   videoUrl: string | null;
 
-  @Column({ type: 'enum', enum: LivestockStatus, default: LivestockStatus.DRAFT })
+  @Column({
+    type: 'enum',
+    enum: LivestockStatus,
+    default: LivestockStatus.DRAFT,
+  })
   status: LivestockStatus;
+
+  @Column({ type: 'boolean', default: false })
+  disabled: boolean;
+
+  @Column({ type: 'datetime', precision: 6, nullable: true })
+  listingPublishedAt: Date | null;
+
+  @Index()
+  @Column({ type: 'datetime', precision: 6, nullable: true })
+  listingExpiresAt: Date | null;
+
+  @Column({ type: 'datetime', precision: 6, nullable: true })
+  listingRenewedAt: Date | null;
+
+  @Column({ type: 'enum', enum: ReservationState, nullable: true })
+  reservationState: ReservationState | null;
+
+  @Column({ type: 'varchar', length: 36, nullable: true })
+  reservationOrderId: string | null;
+
+  @Column({ type: 'varchar', length: 36, nullable: true, select: false })
+  reservationBuyerId: string | null;
+
+  @Index()
+  @Column({ type: 'datetime', precision: 6, nullable: true })
+  reservationExpiresAt: Date | null;
 
   // Health records, feed type, vaccination history — free-form, farmer-defined.
   @Column({ type: 'json', nullable: true })

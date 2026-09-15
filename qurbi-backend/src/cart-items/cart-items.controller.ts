@@ -1,22 +1,33 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { OrderItemType } from '../entities';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { Roles } from '../auth/roles.decorator';
+import type { AuthenticatedUser } from '../auth/auth.types';
+import { OrderItemType, UserRole } from '../entities';
 import { CartItemsService } from './cart-items.service';
 
-// userId is read from the query string / body until auth guards exist.
 @Controller('cart-items')
+@Roles(UserRole.BUYER)
 export class CartItemsController {
   constructor(private readonly cartItemsService: CartItemsService) {}
 
   @Get()
-  findAllForUser(@Query('userId') userId: string) {
-    return this.cartItemsService.findAllForUser(userId);
+  findAllForUser(@CurrentUser() user: AuthenticatedUser) {
+    return this.cartItemsService.findAllForUser(user.sub);
   }
 
   @Post()
   addItem(
+    @CurrentUser() user: AuthenticatedUser,
     @Body()
     body: {
-      userId: string;
       itemType: OrderItemType;
       livestockId?: string;
       bulkListingId?: string;
@@ -24,19 +35,20 @@ export class CartItemsController {
       metadata?: Record<string, any>;
     },
   ) {
-    return this.cartItemsService.addItem(body);
+    return this.cartItemsService.addItem({ ...body, userId: user.sub });
   }
 
   @Patch(':id')
   updateQuantity(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-    @Body() body: { userId: string; quantity: number },
+    @Body() body: { quantity: number },
   ) {
-    return this.cartItemsService.updateQuantity(body.userId, id, body.quantity);
+    return this.cartItemsService.updateQuantity(user.sub, id, body.quantity);
   }
 
   @Delete(':id')
-  removeItem(@Param('id') id: string, @Query('userId') userId: string) {
-    return this.cartItemsService.removeItem(userId, id);
+  removeItem(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.cartItemsService.removeItem(user.sub, id);
   }
 }

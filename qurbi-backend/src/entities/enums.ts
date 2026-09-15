@@ -30,6 +30,13 @@ export enum LivestockSex {
   FEMALE = 'female',
 }
 
+export enum ReservationState {
+  ACTIVE = 'active',
+  EXPIRED = 'expired',
+  RELEASED = 'released',
+  COMPLETED = 'completed',
+}
+
 // Not in the original spec list, but bulk_listings needs its own lifecycle:
 // share sales don't map cleanly onto LivestockStatus (draft/available/... is
 // single-animal language, a bulk listing needs to track "sold out" vs "cancelled").
