@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { useLocation, useNavigate, Navigate } from "react-router-dom";
-import { farmVerificationApi, farmerProfileApi, latestVerification, verificationDocuments } from "@/api/farmerApi";
+import { useNavigate, Navigate } from "react-router-dom";
+import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,12 +20,11 @@ const STEPS = [
 ];
 
 const EMPTY_FORM = {
-  name: "", phoneNumber: "", icNumber: "", farmName: "", address: "", city: "", state: "", postcode: "", deliveryPreference: "",
+  name: "", phoneNumber: "", icNumber: "", farmName: "", address: "", state: "", deliveryPreference: "",
 };
 
 export default function FarmerVerification() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { user } = useAuth();
   const savedDraft = getFarmerVerificationDraft();
   const [form, setForm] = useState(() => savedDraft?.form || {
@@ -42,31 +41,29 @@ export default function FarmerVerification() {
       return;
     }
     Promise.all([
-      farmerProfileApi.findByUserId(user.id),
-      farmVerificationApi.listMine({ page: 1, limit: 1 }),
+      base44.entities.FarmerProfile.filter({ userId: user.id }, "-created_date", 1),
+      base44.entities.FarmVerification.filter({ userId: user.id }, "-created_date", 1),
     ])
-      .then(([profile, verificationPage]) => {
-        const verification = latestVerification(verificationPage);
-        const saved = verificationDocuments(verification);
+      .then(([profiles, verifications]) => {
+        const profile = profiles?.[0];
+        const verification = verifications?.[0];
         if (profile) {
           setForm({
             name: userVal(user, "name") || user?.full_name || "",
-            phoneNumber: saved.phoneNumber || user?.phone || "",
-            icNumber: saved.icNumber || "",
+            phoneNumber: profile.phoneNumber || "",
+            icNumber: profile.icNumber || "",
             farmName: profile.farmName || "",
-            address: profile.farmAddressLine || "",
-            city: profile.farmCity || "",
-            state: profile.farmState || "",
-            postcode: profile.farmPostcode || "",
-            deliveryPreference: saved.deliveryPreference || "",
+            address: profile.address || "",
+            state: profile.state || "",
+            deliveryPreference: profile.deliveryPreference || "",
           });
         }
         if (verification) {
           setDocs({
-            icFront: saved.icFront || null,
-            icBack: saved.icBack || null,
-            selfieImage: saved.selfieImage || null,
-            farmerCertificate: saved.farmerCertificate || null,
+            icFront: verification.icFront || null,
+            icBack: verification.icBack || null,
+            selfieImage: verification.selfieImage || null,
+            farmerCertificate: verification.farmerCertificate || null,
           });
         }
       })
@@ -77,8 +74,7 @@ export default function FarmerVerification() {
   const set = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
   const valid = Boolean(
     form.name.trim() && form.phoneNumber.trim() && form.icNumber.trim() && form.farmName.trim()
-    && form.address.trim() && form.city.trim() && form.state && form.postcode.trim()
-    && form.deliveryPreference && docs.icFront && docs.icBack && docs.selfieImage
+    && form.address.trim() && form.state && form.deliveryPreference && docs.icFront && docs.icBack && docs.selfieImage
   );
 
   const next = () => {
@@ -90,7 +86,7 @@ export default function FarmerVerification() {
   const status = userVal(user, "verificationStatus");
   if (status === "Approved") return <Navigate to="/" replace />;
   if (status === "Pending") return <Navigate to="/pending" replace />;
-  if (status === "Rejected" && !location.state?.reapply) return <Navigate to="/rejected" replace />;
+  if (status === "Rejected") return <Navigate to="/rejected" replace />;
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-7 h-7 animate-spin text-primary" /></div>;
 
@@ -120,14 +116,12 @@ export default function FarmerVerification() {
           <Field label="IC Number" required><Input value={form.icNumber} onChange={set("icNumber")} placeholder="XXXXXX-XX-XXXX" className="h-12" /></Field>
           <Field label="Farm Name" required><Input value={form.farmName} onChange={set("farmName")} placeholder="QURBI Livestock Farm" className="h-12" /></Field>
           <Field label="Farm Address" required><Input value={form.address} onChange={set("address")} placeholder="Lot 12, Jalan..." className="h-12" /></Field>
-          <Field label="City" required><Input value={form.city} onChange={set("city")} placeholder="Kuantan" className="h-12" /></Field>
           <Field label="State" required>
             <Select value={form.state} onValueChange={(state) => setForm((current) => ({ ...current, state }))}>
               <SelectTrigger className="h-12"><SelectValue placeholder="Select state" /></SelectTrigger>
               <SelectContent>{MALAYSIA_STATES.map((state) => <SelectItem key={state} value={state}>{state}</SelectItem>)}</SelectContent>
             </Select>
           </Field>
-          <Field label="Postcode" required><Input value={form.postcode} onChange={set("postcode")} inputMode="numeric" placeholder="25000" className="h-12" /></Field>
           <Field label="Delivery Method" required>
             <DeliveryMethodCards value={form.deliveryPreference} onChange={(deliveryPreference) => setForm((current) => ({ ...current, deliveryPreference }))} />
             <p className="text-xs text-muted-foreground">You can change this later from your profile.</p>

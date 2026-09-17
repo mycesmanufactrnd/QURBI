@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
-import { farmVerificationApi, farmerProfileApi, latestVerification, verificationDocuments } from "@/api/farmerApi";
+import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Image } from "@/components/ui/image";
@@ -10,16 +10,17 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import StatusBadge from "@/components/agri/StatusBadge";
+import DeliveryPreference from "@/components/agri/DeliveryPreference";
 import { MALAYSIA_STATES, VERIFICATION_STATUSES, initials, userVal } from "@/lib/agri";
 import {
   LogOut, Mail, Phone, Home as HomeIcon, MapPin, Shield, ChevronRight, Pencil, Loader2,
 } from "lucide-react";
 
-const EMPTY_FORM = { name: "", phoneNumber: "", farmName: "", address: "", city: "", state: "", postcode: "" };
+const EMPTY_FORM = { name: "", phoneNumber: "", farmName: "", address: "", state: "" };
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, checkUserAuth } = useAuth();
   const { toast } = useToast();
   const [profile, setProfile] = useState(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -29,23 +30,8 @@ export default function Profile() {
 
   useEffect(() => {
     if (!user?.id) return;
-    Promise.all([
-      farmerProfileApi.findByUserId(user.id),
-      farmVerificationApi.listMine({ page: 1, limit: 1 }),
-    ])
-      .then(([farmerProfile, verificationPage]) => {
-        if (!farmerProfile) return setProfile(null);
-        const documents = verificationDocuments(latestVerification(verificationPage));
-        setProfile({
-          ...farmerProfile,
-          phoneNumber: documents.phoneNumber || user.phone || "",
-          address: farmerProfile.farmAddressLine || "",
-          city: farmerProfile.farmCity || "",
-          state: farmerProfile.farmState || "",
-          postcode: farmerProfile.farmPostcode || "",
-          deliveryPreference: documents.deliveryPreference || "",
-        });
-      })
+    base44.entities.FarmerProfile.filter({ userId: user.id })
+      .then((data) => setProfile(data?.[0] || null))
       .catch(() => setProfile(null));
   }, [user?.id]);
 
@@ -60,9 +46,7 @@ export default function Profile() {
       phoneNumber: profile?.phoneNumber || "",
       farmName: profile?.farmName || "",
       address: profile?.address || "",
-      city: profile?.city || "",
       state: profile?.state || "",
-      postcode: profile?.postcode || "",
     });
     setSaveError("");
     setEditOpen(true);
@@ -74,32 +58,30 @@ export default function Profile() {
   };
 
   const formValid = Boolean(
-    form.farmName.trim() && form.address.trim() && form.city.trim()
-    && form.state && form.postcode.trim()
+    form.name.trim() && form.phoneNumber.trim() && form.farmName.trim()
+    && form.address.trim() && form.state
   );
 
   const saveProfile = async () => {
     if (!profile?.id || !formValid || saving) return;
 
+    const nextName = form.name.trim();
     const profileChanges = {
+      phoneNumber: form.phoneNumber.trim(),
       farmName: form.farmName.trim(),
       address: form.address.trim(),
-      city: form.city.trim(),
       state: form.state,
-      postcode: form.postcode.trim(),
     };
 
     setSaving(true);
     setSaveError("");
     try {
-      await farmerProfileApi.update(profile.id, {
-        farmName: profileChanges.farmName,
-        farmAddressLine: profileChanges.address,
-        farmCity: profileChanges.city,
-        farmState: profileChanges.state,
-        farmPostcode: profileChanges.postcode,
-      });
+      await Promise.all([
+        base44.auth.updateMe({ name: nextName }),
+        base44.entities.FarmerProfile.update(profile.id, profileChanges),
+      ]);
       setProfile((current) => ({ ...current, ...profileChanges }));
+      await checkUserAuth();
       setEditOpen(false);
       toast({ title: "Profile updated", description: "Your farmer information has been saved." });
     } catch (error) {
@@ -121,7 +103,7 @@ export default function Profile() {
       <section className="home-brand-hero mt-4 rounded-[1.75rem] p-5 text-primary-foreground shadow-[0_8px_24px_rgba(65,54,45,0.18)]">
         <div className="relative z-10 flex items-center gap-3.5">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/25 bg-white/15 text-lg font-extrabold shadow-sm">
-            {user?.avatarUrl || userVal(user, "profilePhoto") ? <Image src={user?.avatarUrl || userVal(user, "profilePhoto")} fittingType="fill" className="h-full w-full" /> : initials(name)}
+            {userVal(user, "profilePhoto") ? <Image src={userVal(user, "profilePhoto")} fittingType="fill" className="h-full w-full" /> : initials(name)}
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/55">Farmer account</p>
@@ -153,11 +135,14 @@ export default function Profile() {
         <Row icon={Phone} label="Phone" value={profile?.phoneNumber || "—"} />
         <Row icon={HomeIcon} label="Farm Name" value={profile?.farmName || "—"} />
         <Row icon={MapPin} label="Farm Address" value={profile?.address || "—"} />
-        <Row icon={MapPin} label="City" value={profile?.city || "—"} />
         <Row icon={MapPin} label="State" value={profile?.state || "—"} />
-        <Row icon={MapPin} label="Postcode" value={profile?.postcode || "—"} />
-        <Row icon={HomeIcon} label="Delivery Method" value={profile?.deliveryPreference || "—"} />
       </div>
+
+      {profile && (
+        <div className="mt-4">
+          <DeliveryPreference profile={profile} />
+        </div>
+      )}
 
       <button
         onClick={() => logout()}
@@ -178,16 +163,14 @@ export default function Profile() {
           <div className="space-y-4 py-1">
             <p className="text-xs text-muted-foreground"><span className="font-bold text-destructive">*</span> Required field</p>
             <Field label="Full Name" required>
-              <Input value={form.name} disabled className="h-11" />
-              <p className="text-xs text-muted-foreground">Account name editing will be enabled when the backend profile endpoint is available.</p>
+              <Input value={form.name} onChange={setField("name")} autoComplete="name" className="h-11" />
             </Field>
             <Field label="Email">
               <Input value={user?.email || ""} disabled className="h-11" />
               <p className="text-xs text-muted-foreground">Email is linked to your account and cannot be changed here.</p>
             </Field>
             <Field label="Phone Number" required>
-              <Input value={form.phoneNumber} disabled className="h-11" />
-              <p className="text-xs text-muted-foreground">Phone editing is currently locked to protect verification details.</p>
+              <Input value={form.phoneNumber} onChange={setField("phoneNumber")} inputMode="tel" autoComplete="tel" className="h-11" />
             </Field>
             <Field label="Farm Name" required>
               <Input value={form.farmName} onChange={setField("farmName")} className="h-11" />
@@ -195,17 +178,11 @@ export default function Profile() {
             <Field label="Farm Address" required>
               <Input value={form.address} onChange={setField("address")} autoComplete="street-address" className="h-11" />
             </Field>
-            <Field label="City" required>
-              <Input value={form.city} onChange={setField("city")} className="h-11" />
-            </Field>
             <Field label="State" required>
               <Select value={form.state} onValueChange={(state) => setForm((current) => ({ ...current, state }))}>
                 <SelectTrigger className="h-11"><SelectValue placeholder="Select state" /></SelectTrigger>
                 <SelectContent>{MALAYSIA_STATES.map((state) => <SelectItem key={state} value={state}>{state}</SelectItem>)}</SelectContent>
               </Select>
-            </Field>
-            <Field label="Postcode" required>
-              <Input value={form.postcode} onChange={setField("postcode")} inputMode="numeric" className="h-11" />
             </Field>
             <div className="rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
               IC details remain locked because they are part of identity verification. Contact an administrator if they are incorrect.
