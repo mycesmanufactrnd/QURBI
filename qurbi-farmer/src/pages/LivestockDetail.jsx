@@ -8,8 +8,9 @@ import ConfirmDialog from "@/components/agri/ConfirmDialog";
 import SectionHeader from "@/components/agri/SectionHeader";
 import StatusBadge from "@/components/agri/StatusBadge";
 import { Image } from "@/components/ui/image";
-import { formatAge, formatMYR, malaysiaState } from "@/lib/agri";
+import { formatAge, formatMYR, listingExpiry, listingExpiryLabel, malaysiaState } from "@/lib/agri";
 import { cn } from "@/lib/utils";
+import { hasActivePaymentReservation, reservationExpiryLabel } from "@/lib/livestockReservation";
 
 const STATUS_TONE = { Available: "success", Reserved: "warning", Sold: "muted", Sick: "danger" };
 
@@ -25,7 +26,9 @@ export default function LivestockDetail() {
   const [deleting, setDeleting] = useState(false);
 
   const load = () =>
-    base44.entities.Livestock.get(id)
+    base44.functions.invoke("checkLivestockReservation", { livestockId: id })
+      .catch(() => null)
+      .then(() => base44.entities.Livestock.get(id))
       .then(async (data) => {
         setItem(data);
         setActiveImg(0);
@@ -65,6 +68,9 @@ export default function LivestockDetail() {
   const images = item.images?.length ? item.images : (item.coverImage ? [item.coverImage] : []);
   const videos = item.videos?.length ? item.videos : [];
   const location = malaysiaState(item.state, item.farmLocation, farmState);
+  const paymentReserved = hasActivePaymentReservation(item);
+  const expiry = listingExpiry(item);
+  const listingExpired = item.status === "Available" && expiry.expired;
 
   return (
     <div className="animate-fade-in">
@@ -76,7 +82,7 @@ export default function LivestockDetail() {
             <h1 className="truncate text-xl font-extrabold tracking-tight">Livestock details</h1>
           </div>
         </div>
-        <button type="button" onClick={() => navigate(`/livestock/${id}/edit`)} className="flex min-h-11 items-center gap-2 rounded-2xl bg-secondary/70 px-3.5 text-sm font-bold text-primary hover:bg-secondary"><Pencil className="h-4 w-4" /><span className="hidden sm:inline">Edit</span></button>
+        {!paymentReserved && <button type="button" onClick={() => navigate(`/livestock/${id}/edit`)} className="flex min-h-11 items-center gap-2 rounded-2xl bg-secondary/70 px-3.5 text-sm font-bold text-primary hover:bg-secondary"><Pencil className="h-4 w-4" /><span className="hidden sm:inline">Edit</span></button>}
       </header>
 
       <div className="mt-5 grid items-start gap-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(22rem,.92fr)] lg:gap-8">
@@ -128,6 +134,12 @@ export default function LivestockDetail() {
 
           <ApprovalMessages item={item} />
 
+          {!paymentReserved && listingExpired && <section className="rounded-2xl bg-destructive/10 p-4 text-destructive"><p className="text-sm font-extrabold">Listing expired</p><p className="mt-1 text-xs leading-5">This animal stopped appearing to buyers on {listingExpiryLabel(item)}. Review the price and details, confirm it is still available, then renew it for another 14 days.</p></section>}
+
+          {!paymentReserved && item.status === "Available" && !expiry.expired && expiry.expiresAt && <section className="soft-card p-4"><p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">Listing renewal</p><p className="mt-1 text-sm font-semibold">Visible to buyers until {listingExpiryLabel(item)} ({expiry.daysRemaining} day{expiry.daysRemaining === 1 ? "" : "s"} left).</p></section>}
+
+          {paymentReserved && <section className="rounded-2xl bg-amber-100/75 p-4 text-amber-900"><p className="text-sm font-extrabold">Temporary payment reservation</p><p className="mt-1 text-xs leading-5">A buyer is completing payment. This listing cannot be edited, deleted, or sold again until {reservationExpiryLabel(item)}.</p></section>}
+
           {farmAddress && (
             <section className="soft-card flex items-start gap-3 p-4">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-secondary/70 text-primary"><MapPin className="h-5 w-5" /></span>
@@ -144,13 +156,13 @@ export default function LivestockDetail() {
 
           <SpecGrid item={item} />
 
-          <section className="soft-card p-3">
+          {!paymentReserved && <section className="soft-card p-3">
             <p className="px-1 pb-3 text-xs font-semibold text-muted-foreground">Manage this livestock listing</p>
             <div className="flex gap-2">
-              <button type="button" onClick={() => navigate(`/livestock/${id}/edit`)} className="brand-gradient flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-bold text-white shadow-[0_4px_12px_rgba(65,54,45,0.15)]"><Pencil className="h-[18px] w-[18px]" />Edit listing</button>
+              <button type="button" onClick={() => navigate(`/livestock/${id}/edit`)} className="brand-gradient flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-bold text-white shadow-[0_4px_12px_rgba(65,54,45,0.15)]"><Pencil className="h-[18px] w-[18px]" />{listingExpired ? "Update & renew" : "Edit listing"}</button>
               <button type="button" onClick={() => setConfirmDelete(true)} aria-label="Delete listing" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-destructive/10 text-destructive transition-colors hover:bg-destructive/20"><Trash2 className="h-5 w-5" /></button>
             </div>
-          </section>
+          </section>}
         </div>
       </div>
 

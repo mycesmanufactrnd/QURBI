@@ -10,7 +10,7 @@ import { ArrowLeft, Loader2, ShieldCheck } from "lucide-react";
 import SignaturePad from "@/components/agri/SignaturePad";
 import StepIndicator from "@/components/agri/StepIndicator";
 import ReviewSummary from "@/components/agri/ReviewSummary";
-import { marketplaceVisibility, SELLER_POLICY_VERSION, userVal } from "@/lib/agri";
+import { marketplaceVisibility, newListingWindow, SELLER_POLICY_VERSION, userVal } from "@/lib/agri";
 import { getDraft, clearDraft } from "@/lib/livestockDraft";
 
 export default function LivestockPolicy() {
@@ -105,6 +105,8 @@ export default function LivestockPolicy() {
           };
         }
       }
+      const listingWindow = newListingWindow();
+      reviewAwareData = { ...reviewAwareData, ...listingWindow };
       const visibility = marketplaceVisibility(reviewAwareData);
       reviewAwareData = {
         ...reviewAwareData,

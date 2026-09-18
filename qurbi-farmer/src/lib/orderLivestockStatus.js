@@ -37,6 +37,7 @@ export async function reconcileOrderLivestockStatuses(orders, livestock) {
   const updates = [];
   const reconciled = (livestock || []).map((item) => {
     const desiredStatus = desiredById.get(item.id);
+    if (item.reservationState === "Active") return item;
     if (!desiredStatus || item.status === desiredStatus) return item;
     updates.push(base44.entities.Livestock.update(item.id, { status: desiredStatus }));
     return { ...item, status: desiredStatus };
