@@ -1,38 +1,3 @@
-# QURBI Backend
-
-Shared NestJS API for the QURBI User, Farmer and Superadmin applications. The
-local development database is MySQL/MariaDB provided by XAMPP.
-
-## Local XAMPP setup
-
-1. Start MySQL in the XAMPP Control Panel.
-2. Open phpMyAdmin and create a database named `qurbi` using `utf8mb4`.
-3. Copy `.env.example` to `.env` and replace `JWT_SECRET` with a long random value.
-4. Install dependencies with `npm ci`.
-5. Run the API with `npm run start:dev`.
-
-The default API URL is `http://localhost:3000/api`. Health check:
-`GET /api`.
-
-For a disposable local database, `.env.example` enables `DB_SYNC=true`. Before
-sharing or preserving database data, generate and commit a migration and set
-`DB_SYNC=false`:
-
-```bash
-npm run migration:generate -- src/database/migrations/InitialSchema
-npm run migration:run
-```
-
-Current authentication endpoints:
-
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `GET /api/auth/me` with `Authorization: Bearer <token>`
-
-See the repository-level `MIGRATION.md` for the Base44 replacement status.
-
----
-
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>

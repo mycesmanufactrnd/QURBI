@@ -37,7 +37,7 @@ function getDummyHash(): Promise<string> {
   if (!dummyHashPromise) {
     dummyHashPromise = argon2.hash(randomBytes(32).toString('hex'), { type: argon2.argon2id });
   }
-  return dummyHashPromise;
+  return dummyHashPromise!;
 }
 
 function hashToken(rawToken: string): string {
