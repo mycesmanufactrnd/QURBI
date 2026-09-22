@@ -1,3 +1,4 @@
+import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { FarmerProfilesModule } from './farmer-profiles/farmer-profiles.module';
 import { FarmVerificationsModule } from './farm-verifications/farm-verifications.module';
@@ -15,10 +16,11 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { SpeciesRequestsModule } from './species-requests/species-requests.module';
 import { BreedRequestsModule } from './breed-requests/breed-requests.module';
 import { AddressesModule } from './addresses/addresses.module';
-import { AuthModule } from './auth/auth.module';
+import { UploadsModule } from './uploads/uploads.module';
 
 export const APP_MODULES = [
   AuthModule,
+  UploadsModule,
   UsersModule,
   FarmerProfilesModule,
   FarmVerificationsModule,

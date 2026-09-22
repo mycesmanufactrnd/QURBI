@@ -1,14 +1,21 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import * as bcrypt from 'bcryptjs';
-import { DeepPartial, Repository } from 'typeorm';
-import { User } from '../entities';
+import { DeepPartial, FindOptionsWhere, Repository } from 'typeorm';
+import { User, UserRole, UserStatus } from '../entities';
 import { BaseCrudService } from '../common/base-crud.service';
+import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
+import { Paginated, PageQuery, resolvePage } from '../common/pagination';
 
-const BCRYPT_SALT_ROUNDS = 10;
+// Password lifecycle (register/login/change-password) is owned entirely by
+// AuthModule (argon2id) — this service is profile CRUD only and must never
+// accept or set passwordHash directly, or a /users write could plant a hash
+// in a format AuthService.login()'s argon2.verify() can't parse.
+type UserWriteInput = Omit<DeepPartial<User>, 'passwordHash'>;
 
-type CreateUserInput = DeepPartial<User> & { password?: string };
-type UpdateUserInput = DeepPartial<User> & { password?: string };
+export interface AdminUsersQuery extends PageQuery {
+  role?: UserRole;
+  status?: UserStatus;
+}
 
 @Injectable()
 export class UsersService extends BaseCrudService<User> {
@@ -16,52 +23,51 @@ export class UsersService extends BaseCrudService<User> {
     super(repository);
   }
 
-  // passwordHash is `select: false` on the entity, so it never leaks through
-  // findAll/findOne by default — only this explicit lookup (used by the auth
-  // flow) opts back in.
-  findByEmailWithPassword(email: string): Promise<User | null> {
-    return this.repository
-      .createQueryBuilder('user')
-      .addSelect('user.passwordHash')
-      .where('user.email = :email', { email })
-      .getOne();
+  create(data: UserWriteInput): Promise<User> {
+    return super.create(data);
   }
 
-  async create(data: CreateUserInput): Promise<User> {
-    const { password, ...rest } = data;
-    const existing = await this.repository.findOne({
-      where: { email: rest.email },
+  // Admin-only listing (enforced by @Roles on the controller route) — the
+  // one place a filter is applied instead of an ownership scope, since
+  // there's no owner to scope to here, only an admin allowed to see everyone.
+  async findAllForAdmin(query: AdminUsersQuery): Promise<Paginated<User>> {
+    const { page, limit, skip, take } = resolvePage(query);
+    const where: FindOptionsWhere<User> = {};
+    if (query.role) where.role = query.role;
+    if (query.status) where.status = query.status;
+
+    const [data, total] = await this.repository.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      skip,
+      take,
     });
-    if (existing) {
-      throw new ConflictException(`Email ${rest.email} is already registered`);
+    return { data, total, page, limit };
+  }
+
+  // Fetches a user and confirms `viewer` is that user (or an admin). Anyone
+  // else gets the exact same 404 a made-up id would return.
+  async findOwned(id: string, viewer: AuthenticatedUser): Promise<User> {
+    const user = await this.findOne(id);
+    if (viewer.role !== UserRole.ADMIN && user.id !== viewer.id) {
+      throw new NotFoundException(`User ${id} not found`);
     }
-    const passwordHash = password
-      ? await bcrypt.hash(password, BCRYPT_SALT_ROUNDS)
-      : null;
-    const saved = await this.repository.save(
-      this.repository.create({ ...rest, passwordHash }),
-    );
-    // select: false only hides passwordHash from queries, not from an entity
-    // instance returned directly by save() — re-fetch so the response matches
-    // every other read path and never echoes the hash back to the caller.
-    return this.findOne(saved.id);
+    return user;
   }
 
-  async update(id: string, data: UpdateUserInput): Promise<User> {
-    const { password, ...rest } = data;
-    const patch: DeepPartial<User> = { ...rest };
-    if (password) {
-      patch.passwordHash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
+  // role/status are privilege-bearing fields — a non-admin actor (editing
+  // their own row, the only row findOwned lets them reach) can never touch
+  // them, self-elevation included.
+  async updateOwned(id: string, viewer: AuthenticatedUser, data: UserWriteInput): Promise<User> {
+    await this.findOwned(id, viewer);
+    if (viewer.role !== UserRole.ADMIN && (data.role !== undefined || data.status !== undefined)) {
+      throw new ForbiddenException('Only an admin can change role or status');
     }
-    return super.update(id, patch);
+    return super.update(id, data);
   }
 
-  async verifyPassword(user: User, password: string): Promise<boolean> {
-    if (!user.passwordHash) return false;
-    return bcrypt.compare(password, user.passwordHash);
-  }
-
-  async recordLogin(id: string): Promise<void> {
-    await this.repository.update(id, { lastLoginAt: new Date() });
+  async removeOwned(id: string, viewer: AuthenticatedUser): Promise<void> {
+    const user = await this.findOwned(id, viewer);
+    await this.repository.remove(user);
   }
 }

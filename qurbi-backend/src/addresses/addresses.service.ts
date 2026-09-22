@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DeepPartial, Repository } from 'typeorm';
-import { Address } from '../entities';
+import { Address, UserRole } from '../entities';
 import { BaseCrudService } from '../common/base-crud.service';
+import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 
 @Injectable()
 export class AddressesService extends BaseCrudService<Address> {
@@ -12,6 +13,21 @@ export class AddressesService extends BaseCrudService<Address> {
 
   findByUser(userId: string): Promise<Address[]> {
     return this.repository.find({ where: { userId }, order: { createdAt: 'DESC' } });
+  }
+
+  // Fetches an address and confirms `viewer` owns it (or is an admin). Anyone
+  // else gets the exact same 404 a made-up id would return.
+  async findOwned(id: string, viewer: AuthenticatedUser): Promise<Address> {
+    const address = await this.findOne(id);
+    this.assertOwner(address, viewer);
+    return address;
+  }
+
+  private assertOwner(address: Address, viewer: AuthenticatedUser): void {
+    if (viewer.role === UserRole.ADMIN) return;
+    if (address.userId !== viewer.id) {
+      throw new NotFoundException(`Address ${address.id} not found`);
+    }
   }
 
   // Only one address can be the default per user — creating/flagging one as
@@ -25,9 +41,9 @@ export class AddressesService extends BaseCrudService<Address> {
     });
   }
 
-  async update(id: string, data: DeepPartial<Address>): Promise<Address> {
+  async updateOwned(id: string, viewer: AuthenticatedUser, data: DeepPartial<Address>): Promise<Address> {
+    const address = await this.findOwned(id, viewer);
     if (data.isDefault) {
-      const address = await this.findOne(id);
       await this.repository.manager.transaction(async (manager) => {
         await manager.update(Address, { userId: address.userId }, { isDefault: false });
         await manager.update(Address, { id }, data);
@@ -37,9 +53,15 @@ export class AddressesService extends BaseCrudService<Address> {
     return super.update(id, data);
   }
 
-  async setDefault(userId: string, addressId: string): Promise<Address> {
+  async removeOwned(id: string, viewer: AuthenticatedUser): Promise<void> {
+    const address = await this.findOwned(id, viewer);
+    await this.repository.remove(address);
+  }
+
+  async setDefault(viewer: AuthenticatedUser, addressId: string): Promise<Address> {
+    const address = await this.findOwned(addressId, viewer);
     return this.repository.manager.transaction(async (manager) => {
-      await manager.update(Address, { userId }, { isDefault: false });
+      await manager.update(Address, { userId: address.userId }, { isDefault: false });
       await manager.update(Address, { id: addressId }, { isDefault: true });
       return manager.findOneByOrFail(Address, { id: addressId });
     });

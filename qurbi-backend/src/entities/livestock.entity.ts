@@ -1,6 +1,6 @@
-import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
-import { LivestockStatus, LivestockSex, ReservationState } from './enums';
+import { LivestockStatus, LivestockSex, RequestStatus } from './enums';
 import { User } from './user.entity';
 import { Species } from './species.entity';
 import { Breed } from './breed.entity';
@@ -56,6 +56,11 @@ export class Livestock extends BaseEntity {
   @Column({ type: 'int', nullable: true })
   ageMonths: number | null;
 
+  @Column({ type: 'date', nullable: true })
+  birthDate: string | null;
+
+  // Always kilograms — the frontend's single `weight` field is converted to
+  // this unit by the adapter before it ever reaches the API.
   @Column({ type: 'decimal', precision: 8, scale: 2, nullable: true })
   weightKg: string | null;
 
@@ -68,41 +73,42 @@ export class Livestock extends BaseEntity {
   @Column({ type: 'json' })
   images: string[];
 
-  @Column({ type: 'varchar', length: 500, nullable: true })
-  videoUrl: string | null;
+  // Multiple videos, not one — matches the frontend's uploader, which lets a
+  // farmer attach several clips per listing.
+  @Column({ type: 'json', nullable: true })
+  videos: string[] | null;
 
-  @Column({
-    type: 'enum',
-    enum: LivestockStatus,
-    default: LivestockStatus.DRAFT,
-  })
+  @Column({ type: 'enum', enum: LivestockStatus, default: LivestockStatus.DRAFT })
   status: LivestockStatus;
 
+  // marketplaceVisible/marketplaceVisibilityReason are NOT columns — they're
+  // derived at read time (see LivestockService.computeMarketplaceVisibility)
+  // from the facts below, which live here because the server has to be able
+  // to filter/enforce on them, not just display them. Everything else the
+  // frontend carries per-listing (color, height, bodyLength, chestGirth,
+  // rfid, feedDetails, specialNotes, healthRecord, vaccinationRecord, the
+  // per-listing e-signature/policy fields) is purely descriptive and stays in
+  // `attributes` below instead of getting its own column.
+  @Column({ type: 'datetime', precision: 6, nullable: true })
+  marketplaceEligibleFrom: Date | null;
+
+  // Admin override: a block is a real, independent decision (not derivable
+  // from anything else), so unlike marketplaceVisible it IS a stored column.
+  // When set, it wins over every other visibility condition.
   @Column({ type: 'boolean', default: false })
-  disabled: boolean;
+  adminBlocked: boolean;
 
-  @Column({ type: 'datetime', precision: 6, nullable: true })
-  listingPublishedAt: Date | null;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  adminBlockReason: string | null;
 
-  @Index()
-  @Column({ type: 'datetime', precision: 6, nullable: true })
-  listingExpiresAt: Date | null;
+  // A listing's species/breed can each be pending admin approval
+  // independently (e.g. a newly-requested breed) — both gate
+  // marketplaceVisible, so both need to be queryable, not buried in JSON.
+  @Column({ type: 'enum', enum: RequestStatus, default: RequestStatus.PENDING })
+  speciesApprovalStatus: RequestStatus;
 
-  @Column({ type: 'datetime', precision: 6, nullable: true })
-  listingRenewedAt: Date | null;
-
-  @Column({ type: 'enum', enum: ReservationState, nullable: true })
-  reservationState: ReservationState | null;
-
-  @Column({ type: 'varchar', length: 36, nullable: true })
-  reservationOrderId: string | null;
-
-  @Column({ type: 'varchar', length: 36, nullable: true, select: false })
-  reservationBuyerId: string | null;
-
-  @Index()
-  @Column({ type: 'datetime', precision: 6, nullable: true })
-  reservationExpiresAt: Date | null;
+  @Column({ type: 'enum', enum: RequestStatus, default: RequestStatus.PENDING })
+  breedApprovalStatus: RequestStatus;
 
   // Health records, feed type, vaccination history — free-form, farmer-defined.
   @Column({ type: 'json', nullable: true })

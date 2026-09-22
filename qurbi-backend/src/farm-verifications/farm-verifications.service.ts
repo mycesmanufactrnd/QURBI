@@ -1,8 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DeepPartial, Repository } from 'typeorm';
-import { FarmerProfile, FarmVerification, VerificationStatus } from '../entities';
+import { DeepPartial, FindOptionsWhere, Repository } from 'typeorm';
+import { FarmerProfile, FarmVerification, UserRole, VerificationStatus } from '../entities';
 import { BaseCrudService } from '../common/base-crud.service';
+import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
+import { Paginated, PageQuery, resolvePage } from '../common/pagination';
+
+export interface FarmVerificationsQuery extends PageQuery {
+  farmerProfileId?: string;
+  status?: VerificationStatus;
+}
 
 @Injectable()
 export class FarmVerificationsService extends BaseCrudService<FarmVerification> {
@@ -21,15 +28,56 @@ export class FarmVerificationsService extends BaseCrudService<FarmVerification> 
     });
   }
 
+  // Restricts a non-admin viewer to their own farmer profile's submissions —
+  // admins can list everyone's, or one farmer's via farmerProfileId. The
+  // status filter and pagination are applied on top of that scope, never in
+  // place of it: a non-admin's farmerProfileId is always their own,
+  // regardless of what (if anything) they pass in.
+  async findAllForViewer(viewer: AuthenticatedUser, query: FarmVerificationsQuery): Promise<Paginated<FarmVerification>> {
+    const { page, limit, skip, take } = resolvePage(query);
+    const where: FindOptionsWhere<FarmVerification> = {};
+    if (query.status) where.status = query.status;
+
+    if (viewer.role === UserRole.ADMIN) {
+      if (query.farmerProfileId) where.farmerProfileId = query.farmerProfileId;
+    } else {
+      const profile = await this.requireOwnProfile(viewer);
+      where.farmerProfileId = profile.id;
+    }
+
+    const [data, total] = await this.repository.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      skip,
+      take,
+    });
+    return { data, total, page, limit };
+  }
+
+  // Fetches a submission and confirms `viewer` owns the farmer profile it
+  // belongs to (or is an admin). Contains verification documents (IC,
+  // selfie, certificates), so this is the one place a leak would be worst.
+  async findOwned(id: string, viewer: AuthenticatedUser): Promise<FarmVerification> {
+    const verification = await this.findOne(id);
+    if (viewer.role === UserRole.ADMIN) return verification;
+    const profile = await this.requireOwnProfile(viewer);
+    if (verification.farmerProfileId !== profile.id) {
+      throw new NotFoundException(`FarmVerification ${id} not found`);
+    }
+    return verification;
+  }
+
   // Submitting a new attempt bumps the profile straight to PENDING so the
   // buyer-facing badge updates immediately, ahead of admin review.
-  async submit(data: DeepPartial<FarmVerification>): Promise<FarmVerification> {
+  async submitForViewer(viewer: AuthenticatedUser, data: DeepPartial<FarmVerification>): Promise<FarmVerification> {
+    const profile = await this.requireOwnProfile(viewer);
     const verification = await this.create({
       ...data,
+      farmerProfileId: profile.id,
       status: VerificationStatus.PENDING,
       submittedAt: new Date(),
     });
-    await this.farmerProfileRepository.update(verification.farmerProfileId, {
+    await this.farmerProfileRepository.update(profile.id, {
       verificationStatus: VerificationStatus.PENDING,
     });
     return verification;
@@ -39,13 +87,13 @@ export class FarmVerificationsService extends BaseCrudService<FarmVerification> 
   // just the audit trail of the attempt, so review must keep both in sync.
   async review(
     id: string,
-    input: { approve: boolean; reviewedByUserId: string; rejectionReason?: string },
+    input: { approve: boolean; reviewerId: string; rejectionReason?: string },
   ): Promise<FarmVerification> {
     const verification = await this.findOne(id);
     const status = input.approve ? VerificationStatus.VERIFIED : VerificationStatus.REJECTED;
 
     verification.status = status;
-    verification.reviewedByUserId = input.reviewedByUserId;
+    verification.reviewedByUserId = input.reviewerId;
     verification.reviewedAt = new Date();
     verification.rejectionReason = input.approve ? null : (input.rejectionReason ?? null);
     await this.repository.save(verification);
@@ -60,5 +108,13 @@ export class FarmVerificationsService extends BaseCrudService<FarmVerification> 
     await this.farmerProfileRepository.save(profile);
 
     return verification;
+  }
+
+  private async requireOwnProfile(viewer: AuthenticatedUser): Promise<FarmerProfile> {
+    const profile = await this.farmerProfileRepository.findOne({ where: { userId: viewer.id } });
+    if (!profile) {
+      throw new NotFoundException('You do not have a farmer profile');
+    }
+    return profile;
   }
 }

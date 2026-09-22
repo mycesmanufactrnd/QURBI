@@ -1,255 +1,174 @@
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, DeepPartial, EntityManager, Repository } from 'typeorm';
 import {
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import {
-  DeepPartial,
-  EntityManager,
-  FindOptionsWhere,
-  LessThanOrEqual,
-  MoreThan,
-  Repository,
-} from 'typeorm';
-import { Livestock, LivestockStatus, ReservationState } from '../entities';
+  FarmerProfile,
+  Livestock,
+  LivestockStatus,
+  RequestStatus,
+  UserRole,
+  VerificationStatus,
+} from '../entities';
 import { BaseCrudService } from '../common/base-crud.service';
-import {
-  hasActiveReservation,
-  isListingExpired,
-  listingWindow,
-} from './listing-policy';
+import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
+import { Paginated, PageQuery, resolvePage } from '../common/pagination';
+
+export interface DerivedMarketplaceVisibility {
+  marketplaceVisible: boolean;
+  marketplaceVisibilityReason: string | null;
+}
+
+export type LivestockWithVisibility = Livestock & DerivedMarketplaceVisibility;
+
+export interface LivestockQuery extends PageQuery {
+  farmerId?: string;
+  speciesId?: string;
+  categoryId?: string;
+  status?: LivestockStatus;
+  adminBlocked?: boolean;
+}
 
 @Injectable()
 export class LivestockService extends BaseCrudService<Livestock> {
-  constructor(@InjectRepository(Livestock) repository: Repository<Livestock>) {
+  constructor(
+    @InjectRepository(Livestock) repository: Repository<Livestock>,
+    @InjectDataSource() private readonly dataSource: DataSource,
+  ) {
     super(repository);
   }
 
-  createForFarmer(
-    farmerId: string,
-    data: DeepPartial<Livestock>,
-  ): Promise<Livestock> {
-    const now = new Date();
-    const window = listingWindow(now);
-    return this.repository.save(
-      this.repository.create({
-        ...data,
-        farmerId,
-        status: LivestockStatus.AVAILABLE,
-        disabled: false,
-        ...window,
-        listingRenewedAt: null,
-        reservationState: null,
-        reservationOrderId: null,
-        reservationBuyerId: null,
-        reservationExpiresAt: null,
-      }),
+  // The public browse query: only listings that pass every marketplace
+  // condition, UNLESS the viewer is an admin (sees everything) or a farmer
+  // looking at their own inventory (query.farmerId === viewer.id — sees their
+  // own listings regardless of visibility, e.g. still-pending ones).
+  // adminBlocked/status/etc. are applied on top of that scope, never in
+  // place of it — a non-admin can never use them to see past their own scope,
+  // at worst they narrow it down to nothing (e.g. adminBlocked=true as a
+  // buyer: blocked listings are never in the buyer-visible set anyway).
+  async findAllForViewer(query: LivestockQuery, viewer: AuthenticatedUser): Promise<Paginated<LivestockWithVisibility>> {
+    const { page, limit, skip, take } = resolvePage(query);
+    const isOwnInventory = viewer.role === UserRole.FARMER && query.farmerId === viewer.id;
+    const isAdmin = viewer.role === UserRole.ADMIN;
+    const showEverything = isAdmin || isOwnInventory;
+
+    const qb = this.repository
+      .createQueryBuilder('livestock')
+      .leftJoinAndSelect('livestock.species', 'species')
+      .leftJoinAndSelect('livestock.breed', 'breed')
+      .leftJoinAndSelect('livestock.category', 'category')
+      .innerJoin(FarmerProfile, 'farmerProfile', 'farmerProfile.userId = livestock.farmerId')
+      .addSelect('farmerProfile.verificationStatus')
+      .orderBy('livestock.createdAt', 'DESC');
+
+    if (query.farmerId) qb.andWhere('livestock.farmerId = :farmerId', { farmerId: query.farmerId });
+    if (query.speciesId) qb.andWhere('livestock.speciesId = :speciesId', { speciesId: query.speciesId });
+    if (query.categoryId) qb.andWhere('livestock.categoryId = :categoryId', { categoryId: query.categoryId });
+    if (query.status) qb.andWhere('livestock.status = :status', { status: query.status });
+    if (query.adminBlocked !== undefined) {
+      qb.andWhere('livestock.adminBlocked = :adminBlocked', { adminBlocked: query.adminBlocked });
+    }
+
+    if (!showEverything) {
+      qb.andWhere('livestock.adminBlocked = false')
+        .andWhere('farmerProfile.verificationStatus = :verified', { verified: VerificationStatus.VERIFIED })
+        .andWhere('livestock.speciesApprovalStatus = :approved', { approved: RequestStatus.APPROVED })
+        .andWhere('(livestock.breedId IS NULL OR livestock.breedApprovalStatus = :approved)', {
+          approved: RequestStatus.APPROVED,
+        })
+        .andWhere('(livestock.marketplaceEligibleFrom IS NULL OR livestock.marketplaceEligibleFrom <= :now)', {
+          now: new Date(),
+        });
+    }
+
+    const total = await qb.getCount();
+    qb.skip(skip).take(take);
+    const rows = await qb.getRawAndEntities();
+    const data = rows.entities.map((listing, index) => {
+      const verificationStatus = rows.raw[index].farmerProfile_verificationStatus as VerificationStatus;
+      return this.withDerivedVisibility(listing, verificationStatus);
+    });
+    return { data, total, page, limit };
+  }
+
+  async findOneWithVisibility(id: string): Promise<LivestockWithVisibility> {
+    const listing = await this.findOne(id);
+    const farmerProfile = await this.dataSource
+      .getRepository(FarmerProfile)
+      .findOne({ where: { userId: listing.farmerId } });
+    return this.withDerivedVisibility(
+      listing,
+      farmerProfile?.verificationStatus ?? VerificationStatus.UNVERIFIED,
     );
   }
 
-  findMarketplace(now = new Date()): Promise<Livestock[]> {
-    return this.repository.find({
-      where: {
-        status: LivestockStatus.AVAILABLE,
-        disabled: false,
-        listingExpiresAt: MoreThan(now),
-      },
-      relations: { species: true, breed: true, category: true },
-      order: { createdAt: 'DESC' },
-    });
+  // Computes the same visible/reason pair the browse query filters on, purely
+  // from facts that live elsewhere (farmer verification, species/breed
+  // approval, eligibility date) plus the one real stored fact, the admin
+  // block — never stored itself, so it can never drift from those sources.
+  private withDerivedVisibility(
+    listing: Livestock,
+    farmerVerificationStatus: VerificationStatus,
+  ): LivestockWithVisibility {
+    return Object.assign(listing, computeMarketplaceVisibility(listing, farmerVerificationStatus));
   }
 
-  findMine(farmerId: string): Promise<Livestock[]> {
-    return this.findAll({ farmerId });
-  }
-
-  async findMarketplaceOne(id: string): Promise<Livestock> {
-    const listing = await this.repository.findOne({
-      where: {
-        id,
-        status: LivestockStatus.AVAILABLE,
-        disabled: false,
-        listingExpiresAt: MoreThan(new Date()),
-      },
-      relations: { species: true, breed: true, category: true },
-    });
-    if (!listing)
-      throw new NotFoundException('Livestock listing is not available');
-    await this.repository.increment({ id }, 'viewCount', 1);
-    listing.viewCount += 1;
-    return listing;
+  async createForFarmer(farmerId: string, data: DeepPartial<Livestock>): Promise<Livestock> {
+    return this.create({ ...data, farmerId });
   }
 
   async updateOwned(
     id: string,
-    farmerId: string,
+    viewer: AuthenticatedUser,
     data: DeepPartial<Livestock>,
   ): Promise<Livestock> {
-    const listing = await this.findOne(id);
-    if (listing.farmerId !== farmerId) {
-      throw new ForbiddenException('This livestock belongs to another farmer');
+    const listing = await this.findOwned(id, viewer);
+    if (data.status === LivestockStatus.SOLD) {
+      throw new BadRequestException('status SOLD can only be set by completing a purchase');
     }
-    if (hasActiveReservation(listing)) {
-      throw new ConflictException(
-        'This livestock is locked while a buyer completes payment',
-      );
-    }
-    const safeData = { ...data };
-    const serverManagedFields: (keyof Livestock)[] = [
-      'farmerId',
-      'reservationState',
-      'reservationOrderId',
-      'reservationBuyerId',
-      'reservationExpiresAt',
-      'listingPublishedAt',
-      'listingExpiresAt',
-      'listingRenewedAt',
-      'disabled',
-      'isFeatured',
-      'soldAt',
-    ];
-    for (const field of serverManagedFields) delete safeData[field];
-    return this.update(id, safeData);
+    return super.update(listing.id, data);
   }
 
-  async renew(
-    id: string,
-    farmerId: string,
-    data: DeepPartial<Livestock>,
-  ): Promise<Livestock> {
-    const listing = await this.findOne(id);
-    if (listing.farmerId !== farmerId) {
-      throw new ForbiddenException('This livestock belongs to another farmer');
-    }
-    if (hasActiveReservation(listing)) {
-      throw new ConflictException(
-        'This livestock is locked while a buyer completes payment',
-      );
-    }
-    if (listing.status === LivestockStatus.SOLD) {
-      throw new ConflictException('A sold livestock cannot be renewed');
-    }
+  async removeOwned(id: string, viewer: AuthenticatedUser): Promise<void> {
+    const listing = await this.findOwned(id, viewer);
+    await this.repository.remove(listing);
+  }
 
-    const now = new Date();
-    const window = listingWindow(now);
-    const updated = await this.updateOwned(id, farmerId, data);
+  // Fetches a listing and confirms `viewer` owns it (or is an admin). Anyone
+  // else gets the exact same 404 a made-up id would return.
+  private async findOwned(id: string, viewer: AuthenticatedUser): Promise<Livestock> {
+    const listing = await this.findOne(id);
+    if (viewer.role !== UserRole.ADMIN && listing.farmerId !== viewer.id) {
+      throw new NotFoundException(`Livestock ${id} not found`);
+    }
+    return listing;
+  }
+
+  // Admin override: force a listing off the marketplace (or clear that
+  // override) regardless of what the derived rule would otherwise compute.
+  async setMarketplaceBlock(id: string, blocked: boolean, reason: string | null): Promise<LivestockWithVisibility> {
+    await this.findOne(id);
     await this.repository.update(id, {
-      status: LivestockStatus.AVAILABLE,
-      ...window,
-      listingRenewedAt: now,
+      adminBlocked: blocked,
+      adminBlockReason: blocked ? reason : null,
     });
-    return this.findOne(updated.id);
+    return this.findOneWithVisibility(id);
   }
 
-  async reserveForOrder(
-    id: string,
-    orderId: string,
-    buyerId: string,
-    expiresAt: Date,
-    manager: EntityManager,
-  ): Promise<Livestock> {
-    const repository = manager.getRepository(Livestock);
-    const listing = await repository.findOne({
-      where: { id },
-      lock: { mode: 'pessimistic_write' },
-    });
-    if (!listing)
-      throw new ConflictException('Livestock listing no longer exists');
-
-    const now = new Date();
-    if (
-      listing.status === LivestockStatus.RESERVED &&
-      listing.reservationState === ReservationState.ACTIVE &&
-      listing.reservationOrderId === orderId &&
-      listing.reservationExpiresAt &&
-      listing.reservationExpiresAt > now
-    )
-      return listing;
-
-    const reservationExpired =
-      listing.reservationExpiresAt && listing.reservationExpiresAt <= now;
-    if (listing.status === LivestockStatus.RESERVED && reservationExpired) {
-      listing.status = LivestockStatus.AVAILABLE;
-      listing.reservationState = ReservationState.EXPIRED;
-    }
-
-    if (
-      listing.disabled ||
-      listing.status !== LivestockStatus.AVAILABLE ||
-      isListingExpired(listing, now)
-    ) {
-      throw new ConflictException(
-        'Livestock listing is unavailable or expired',
-      );
-    }
-
-    listing.status = LivestockStatus.RESERVED;
-    listing.reservationState = ReservationState.ACTIVE;
-    listing.reservationOrderId = orderId;
-    listing.reservationBuyerId = buyerId;
-    listing.reservationExpiresAt = expiresAt;
-    return repository.save(listing);
+  // Admin-only, same shape as setMarketplaceBlock: isFeatured is a homepage
+  // curation decision, not something a farmer can grant their own listing.
+  async setFeatured(id: string, featured: boolean): Promise<LivestockWithVisibility> {
+    await this.findOne(id);
+    await this.repository.update(id, { isFeatured: featured });
+    return this.findOneWithVisibility(id);
   }
 
-  async releaseOrderReservations(
-    orderId: string,
-    manager: EntityManager,
-    state = ReservationState.RELEASED,
-  ): Promise<void> {
-    await manager.getRepository(Livestock).update(
-      {
-        reservationOrderId: orderId,
-        status: LivestockStatus.RESERVED,
-        reservationState: ReservationState.ACTIVE,
-      },
-      {
-        status: LivestockStatus.AVAILABLE,
-        reservationState: state,
-      },
-    );
-  }
-
-  async finalizeOrderReservations(
-    orderId: string,
-    manager: EntityManager,
-  ): Promise<void> {
-    await manager.getRepository(Livestock).update(
-      {
-        reservationOrderId: orderId,
-        status: LivestockStatus.RESERVED,
-        reservationState: ReservationState.ACTIVE,
-      },
-      {
-        status: LivestockStatus.SOLD,
-        reservationState: ReservationState.COMPLETED,
-        soldAt: new Date(),
-      },
-    );
-  }
-
-  async releaseExpiredReservations(now = new Date()): Promise<number> {
-    const result = await this.repository.update(
-      {
-        status: LivestockStatus.RESERVED,
-        reservationState: ReservationState.ACTIVE,
-        reservationExpiresAt: LessThanOrEqual(now),
-      },
-      {
-        status: LivestockStatus.AVAILABLE,
-        reservationState: ReservationState.EXPIRED,
-      },
-    );
-    return result.affected || 0;
-  }
-
-  findAll(where?: FindOptionsWhere<Livestock>): Promise<Livestock[]> {
-    return this.repository.find({
-      where,
-      relations: { species: true, breed: true, category: true },
-      order: { createdAt: 'DESC' },
-    });
+  // Public "view" endpoint: fetch and bump viewCount in one call so browsing
+  // the buyer app organically tracks popularity.
+  async findOneAndTrackView(id: string): Promise<LivestockWithVisibility> {
+    const listing = await this.findOneWithVisibility(id);
+    await this.repository.increment({ id }, 'viewCount', 1);
+    listing.viewCount += 1;
+    return listing;
   }
 
   // Used by the order checkout flow inside its own transaction, hence the
@@ -258,4 +177,55 @@ export class LivestockService extends BaseCrudService<Livestock> {
     const repo = manager ? manager.getRepository(Livestock) : this.repository;
     await repo.update(id, { status: LivestockStatus.SOLD, soldAt: new Date() });
   }
+
+  // Inverse of markSold — used when an order containing this listing is
+  // cancelled or refunded. Row-locked like markSold's counterpart on
+  // BulkListing, since two concurrent cancel/refund operations on orders
+  // that (somehow) share a listing must not both release it. Always sets
+  // AVAILABLE specifically (never restores some prior status), and is a
+  // no-op if the listing is already available.
+  async releaseToAvailable(id: string, manager?: EntityManager): Promise<void> {
+    const run = async (entityManager: EntityManager): Promise<void> => {
+      const listing = await entityManager
+        .createQueryBuilder(Livestock, 'livestock')
+        .setLock('pessimistic_write')
+        .where('livestock.id = :id', { id })
+        .getOne();
+
+      if (!listing) return; // order item pointed at a listing that no longer exists
+      if (listing.status === LivestockStatus.AVAILABLE) return; // idempotent no-op
+
+      listing.status = LivestockStatus.AVAILABLE;
+      listing.soldAt = null;
+      await entityManager.save(listing);
+    };
+
+    if (manager) return run(manager);
+    return this.dataSource.transaction(run);
+  }
+}
+
+export function computeMarketplaceVisibility(
+  listing: Pick<
+    Livestock,
+    'adminBlocked' | 'adminBlockReason' | 'speciesApprovalStatus' | 'breedApprovalStatus' | 'breedId' | 'marketplaceEligibleFrom'
+  >,
+  farmerVerificationStatus: VerificationStatus,
+): DerivedMarketplaceVisibility {
+  if (listing.adminBlocked) {
+    return { marketplaceVisible: false, marketplaceVisibilityReason: listing.adminBlockReason ?? 'Blocked by admin' };
+  }
+  if (farmerVerificationStatus !== VerificationStatus.VERIFIED) {
+    return { marketplaceVisible: false, marketplaceVisibilityReason: 'Farmer is not verified' };
+  }
+  if (listing.speciesApprovalStatus !== RequestStatus.APPROVED) {
+    return { marketplaceVisible: false, marketplaceVisibilityReason: 'Species is pending approval' };
+  }
+  if (listing.breedId && listing.breedApprovalStatus !== RequestStatus.APPROVED) {
+    return { marketplaceVisible: false, marketplaceVisibilityReason: 'Breed is pending approval' };
+  }
+  if (listing.marketplaceEligibleFrom && listing.marketplaceEligibleFrom > new Date()) {
+    return { marketplaceVisible: false, marketplaceVisibilityReason: 'Not yet eligible for marketplace' };
+  }
+  return { marketplaceVisible: true, marketplaceVisibilityReason: null };
 }

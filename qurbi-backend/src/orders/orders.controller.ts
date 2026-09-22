@@ -1,126 +1,123 @@
-import {
-  Body,
-  Controller,
-  ForbiddenException,
-  Get,
-  Param,
-  Patch,
-  Post,
-} from '@nestjs/common';
-import { CurrentUser } from '../auth/current-user.decorator';
-import { Roles } from '../auth/roles.decorator';
-import type { AuthenticatedUser } from '../auth/auth.types';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { OrderStatus, UserRole } from '../entities';
-import { OrdersService } from './orders.service';
-import type { CheckoutInput } from './orders.service';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
+import { AdminOrdersQuery, OrdersService } from './orders.service';
+import { toPageInt } from '../common/pagination';
+import { CheckoutDto } from './dto/checkout.dto';
+import { CancelOrderDto } from './dto/cancel-order.dto';
+import { SetOrderStatusDto } from './dto/set-order-status.dto';
+import { MarkReceivedDto } from './dto/mark-received.dto';
+import { RequestRefundDto } from './dto/request-refund.dto';
+import { ReviewRefundDto } from './dto/review-refund.dto';
+import { HideFromBuyerHistoryDto } from './dto/hide-from-buyer-history.dto';
 
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
+  // The buyer is always the authenticated caller — never a body field.
   @Post('checkout')
-  @Roles(UserRole.BUYER)
-  checkout(
-    @CurrentUser() user: AuthenticatedUser,
-    @Body() input: CheckoutInput,
-  ) {
-    return this.ordersService.checkout(user.sub, input);
+  checkout(@CurrentUser() user: AuthenticatedUser, @Body() body: CheckoutDto) {
+    return this.ordersService.checkout(user.id, body);
   }
 
   @Get()
   findAll(@CurrentUser() user: AuthenticatedUser) {
-    return this.ordersService.findAllForActor(user);
+    if (user.role === UserRole.BUYER) return this.ordersService.findAllForBuyer(user.id);
+    if (user.role === UserRole.FARMER) return this.ordersService.findAllForFarmer(user.id);
+    return []; // admins use GET /orders/admin instead
+  }
+
+  // Registered before ':id' so the literal path "admin" is matched here, not
+  // swallowed by the :id param route below.
+  @Roles(UserRole.ADMIN)
+  @UseGuards(RolesGuard)
+  @Get('admin')
+  findAllForAdmin(
+    @Query('status') status?: OrderStatus,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const query: AdminOrdersQuery = {
+      status,
+      dateFrom,
+      dateTo,
+      page: toPageInt(page),
+      limit: toPageInt(limit),
+    };
+    return this.ordersService.findAllForAdmin(query);
   }
 
   @Get(':id')
-  findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
-    return this.ordersService.findOneForActor(id, user);
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.ordersService.findOne(id, user);
   }
 
+  // Admin-only generic escape hatch — still bound by the transition table
+  // inside OrdersService (see applyStatusChange).
+  @Roles(UserRole.ADMIN)
+  @UseGuards(RolesGuard)
   @Patch(':id/status')
-  @Roles(UserRole.FARMER, UserRole.ADMIN)
-  async updateStatus(
-    @CurrentUser() user: AuthenticatedUser,
+  updateStatus(@Param('id') id: string, @Body() body: SetOrderStatusDto) {
+    return this.ordersService.updateStatus(id, body.status, body);
+  }
+
+  // Farmer (own order) or admin, moving one step along the fulfilment track.
+  @Patch(':id/advance')
+  advance(
     @Param('id') id: string,
-    @Body()
-    body: {
-      status: OrderStatus;
-      note?: string;
-      images?: string[];
-      location?: string;
-    },
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: SetOrderStatusDto,
   ) {
-    if (user.role === UserRole.FARMER) {
-      await this.ordersService.assertFarmerOwns(id, user.sub);
-      const farmerStatuses = new Set([
-        OrderStatus.PREPARING,
-        OrderStatus.IN_TRANSIT,
-        OrderStatus.DELIVERED,
-      ]);
-      if (!farmerStatuses.has(body.status)) {
-        throw new ForbiddenException('Farmers cannot apply this order status');
-      }
-    }
-    return this.ordersService.updateStatus(id, body.status, {
-      ...body,
-      userId: user.sub,
-    });
+    const { status, ...opts } = body;
+    return this.ordersService.advanceStatus(id, user, status, opts);
   }
 
   @Patch(':id/cancel')
-  @Roles(UserRole.BUYER)
-  async cancel(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
-    @Body() body: { reason: string },
-  ) {
-    await this.ordersService.assertBuyerOwns(id, user.sub);
-    return this.ordersService.cancel(id, body.reason, user.sub);
+  cancel(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser, @Body() body: CancelOrderDto) {
+    return this.ordersService.cancel(id, user, body.reason);
   }
 
   @Patch(':id/received')
-  @Roles(UserRole.BUYER)
-  async markReceived(
-    @CurrentUser() user: AuthenticatedUser,
+  markReceived(
     @Param('id') id: string,
-    @Body() body: { proofImages: string[] },
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: MarkReceivedDto,
   ) {
-    await this.ordersService.assertBuyerOwns(id, user.sub);
-    return this.ordersService.markReceived(id, body.proofImages, user.sub);
+    return this.ordersService.markReceived(id, user, body.proofImages);
   }
 
   @Patch(':id/refund-request')
-  @Roles(UserRole.BUYER)
-  async requestRefund(
-    @CurrentUser() user: AuthenticatedUser,
+  requestRefund(
     @Param('id') id: string,
-    @Body() body: { reason: string },
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: RequestRefundDto,
   ) {
-    await this.ordersService.assertBuyerOwns(id, user.sub);
-    return this.ordersService.requestRefund(id, body.reason);
+    return this.ordersService.requestRefund(id, user, body.reason);
   }
 
-  @Patch(':id/refund-review')
   @Roles(UserRole.ADMIN)
+  @UseGuards(RolesGuard)
+  @Patch(':id/refund-review')
   reviewRefund(
-    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-    @Body() body: { approve: boolean; note?: string },
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: ReviewRefundDto,
   ) {
-    return this.ordersService.reviewRefund(id, {
-      ...body,
-      reviewedByUserId: user.sub,
-    });
+    return this.ordersService.reviewRefund(id, user, body);
   }
 
   @Patch(':id/hide-from-buyer-history')
-  @Roles(UserRole.BUYER)
-  async hideFromBuyerHistory(
-    @CurrentUser() user: AuthenticatedUser,
+  hideFromBuyerHistory(
     @Param('id') id: string,
-    @Body() body: { hidden: boolean },
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: HideFromBuyerHistoryDto,
   ) {
-    await this.ordersService.assertBuyerOwns(id, user.sub);
-    return this.ordersService.hideFromBuyerHistory(id, body.hidden);
+    return this.ordersService.hideFromBuyerHistory(id, user, body.hidden);
   }
 }

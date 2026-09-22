@@ -41,6 +41,9 @@ export class User extends BaseEntity {
   @Column({ type: 'varchar', length: 255, nullable: true, unique: true })
   googleId: string | null;
 
+  // Null = not verified. A timestamp instead of a boolean so "when" is never
+  // lost, and there's only one fact to keep in sync (no separate bool that
+  // could drift from a verifiedAt date).
   @Column({ type: 'datetime', precision: 6, nullable: true })
   emailVerifiedAt: Date | null;
 
