@@ -8,7 +8,7 @@ import { XCircle, LogOut, RefreshCw, Loader2 } from "lucide-react";
 
 export default function VerificationRejected() {
   const navigate = useNavigate();
-  const { user, logout, checkUserAuth } = useAuth();
+  const { user, logout } = useAuth();
   const status = user?.data?.verificationStatus || user?.verificationStatus;
   const [reapplying, setReapplying] = React.useState(false);
   const [reason, setReason] = React.useState("");
@@ -27,8 +27,6 @@ export default function VerificationRejected() {
   const reapply = async () => {
     setReapplying(true);
     try {
-      await base44.auth.updateMe({ verificationStatus: "Not Submitted" });
-      await checkUserAuth();
       navigate("/verify", { replace: true });
     } catch {
       setReapplying(false);

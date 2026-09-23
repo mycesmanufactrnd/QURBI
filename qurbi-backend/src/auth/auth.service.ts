@@ -9,6 +9,8 @@ import { jwtConstants } from './jwt.constants';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
+import { FirebaseLoginDto } from './dto/firebase-login.dto';
+import { FirebaseAdminService } from './firebase-admin.service';
 
 export interface RequestMeta {
   userAgent?: string | null;
@@ -58,6 +60,7 @@ export class AuthService {
     @InjectRepository(FarmerProfile)
     private readonly farmerProfileRepository: Repository<FarmerProfile>,
     private readonly jwtService: JwtService,
+    private readonly firebaseAdminService: FirebaseAdminService,
   ) {}
 
   async register(dto: RegisterDto): Promise<SafeUser> {
@@ -96,6 +99,50 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
+    const tokens = await this.issueTokenPair(user, meta);
+    return { ...tokens, user: sanitize(user) };
+  }
+
+  async loginWithFirebase(
+    dto: FirebaseLoginDto,
+    meta: RequestMeta,
+  ): Promise<TokenPair & { user: SafeUser }> {
+    const identity = await this.firebaseAdminService.verifyIdToken(dto.idToken);
+    if (!identity.email || !identity.email_verified) {
+      throw new UnauthorizedException('A verified email address is required');
+    }
+
+    const email = identity.email.toLowerCase();
+    let user = await this.userRepository.findOne({ where: { googleId: identity.uid } });
+    user ??= await this.userRepository.findOne({ where: { email } });
+
+    if (user?.googleId && user.googleId !== identity.uid) {
+      throw new UnauthorizedException('This email is linked to another Google account');
+    }
+
+    if (!user) {
+      user = this.userRepository.create({
+        email,
+        passwordHash: null,
+        fullName: (identity.name || email.split('@')[0]).slice(0, 150),
+        role: UserRole.FARMER,
+        status: UserStatus.ACTIVE,
+        avatarUrl: identity.picture || null,
+        googleId: identity.uid,
+        emailVerifiedAt: new Date(),
+        lastLoginAt: new Date(),
+      });
+    } else {
+      if (user.status !== UserStatus.ACTIVE) {
+        throw new UnauthorizedException('Account is not active');
+      }
+      user.googleId ??= identity.uid;
+      user.avatarUrl ??= identity.picture || null;
+      user.emailVerifiedAt ??= new Date();
+      user.lastLoginAt = new Date();
+    }
+
+    user = await this.userRepository.save(user);
     const tokens = await this.issueTokenPair(user, meta);
     return { ...tokens, user: sanitize(user) };
   }

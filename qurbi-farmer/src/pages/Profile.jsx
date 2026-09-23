@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import { base44 } from "@/api/base44Client";
+import apiClient from "@/api/apiClient";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Image } from "@/components/ui/image";
@@ -77,7 +78,7 @@ export default function Profile() {
     setSaveError("");
     try {
       await Promise.all([
-        base44.auth.updateMe({ name: nextName }),
+        apiClient.patch(`/users/${user.id}`, { fullName: nextName }),
         base44.entities.FarmerProfile.update(profile.id, profileChanges),
       ]);
       setProfile((current) => ({ ...current, ...profileChanges }));

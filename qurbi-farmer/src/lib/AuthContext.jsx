@@ -6,6 +6,8 @@ import {
   getRefreshToken,
   setSessionTokens,
 } from "@/api/apiClient";
+import { signInWithPopup, signOut } from "firebase/auth";
+import { firebaseAuth, googleProvider } from "@/lib/firebase";
 
 const AuthContext = createContext(null);
 const ALLOWED_ROLES = new Set(["farmer", "admin"]);
@@ -98,9 +100,22 @@ export const AuthProvider = ({ children }) => {
     return acceptSession(session);
   }, [acceptSession]);
 
+  const loginWithGoogle = useCallback(async () => {
+    const credential = await signInWithPopup(firebaseAuth, googleProvider);
+    try {
+      const idToken = await credential.user.getIdToken();
+      const session = await authApi.firebase(idToken);
+      return acceptSession(session);
+    } catch (error) {
+      await signOut(firebaseAuth).catch(() => {});
+      throw error;
+    }
+  }, [acceptSession]);
+
   const logout = useCallback((shouldRedirect = true) => {
     const refreshToken = getRefreshToken();
     if (refreshToken) authApi.logout(refreshToken).catch(() => {});
+    signOut(firebaseAuth).catch(() => {});
     clearAuth();
     setAuthError(null);
     setAuthChecked(true);
@@ -122,6 +137,7 @@ export const AuthProvider = ({ children }) => {
       appPublicSettings: null,
       authChecked,
       login,
+      loginWithGoogle,
       register,
       logout,
       navigateToLogin,

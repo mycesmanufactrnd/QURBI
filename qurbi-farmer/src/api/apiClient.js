@@ -56,6 +56,7 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config;
     const refreshToken = getRefreshToken();
     const isAuthRequest = originalRequest?.url?.includes("/auth/login") ||
+      originalRequest?.url?.includes("/auth/firebase") ||
       originalRequest?.url?.includes("/auth/refresh");
 
     if (error.response?.status !== 401 || originalRequest?._retry || !refreshToken || isAuthRequest) {
@@ -106,6 +107,7 @@ export const authApi = {
   me: () => unwrap(apiClient.get("/auth/me")),
   refresh: (refreshToken) => unwrap(apiClient.post("/auth/refresh", { refreshToken })),
   logout: (refreshToken) => unwrap(apiClient.post("/auth/logout", { refreshToken })),
+  firebase: (idToken) => unwrap(apiClient.post("/auth/firebase", { idToken })),
 };
 
 export default apiClient;

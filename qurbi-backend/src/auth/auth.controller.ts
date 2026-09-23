@@ -8,6 +8,7 @@ import type { AuthenticatedUser } from './decorators/current-user.decorator';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
+import { FirebaseLoginDto } from './dto/firebase-login.dto';
 
 // Roughly 5 attempts/minute on the credential-guessing endpoints, tighter
 // than the app-wide throttler default.
@@ -30,6 +31,14 @@ export class AuthController {
   @Post('login')
   login(@Body() dto: LoginDto, @Req() req: Request) {
     return this.authService.login(dto, extractMeta(req));
+  }
+
+  @Public()
+  @Throttle(AUTH_THROTTLE)
+  @HttpCode(HttpStatus.OK)
+  @Post('firebase')
+  firebaseLogin(@Body() dto: FirebaseLoginDto, @Req() req: Request) {
+    return this.authService.loginWithFirebase(dto, extractMeta(req));
   }
 
   @Public()
