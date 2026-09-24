@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,7 @@ export default function AddLivestock() {
     const draft = getDraft();
     const resolveRegisteredState = () =>
       user?.id
-        ? base44.entities.FarmerProfile.filter({ userId: user.id })
+        ? qurbi.entities.FarmerProfile.filter({ userId: user.id })
             .then((rows) => rows?.[0]?.state || "")
             .catch(() => "")
         : Promise.resolve("");
@@ -50,7 +50,7 @@ export default function AddLivestock() {
       />
       <StepIndicator current={1} className="mt-6" />
 
-      <div className="mt-4 pb-16 lg:pb-0">
+      <div className="mt-4">
         <LivestockForm
           ref={formRef}
           initial={initial}
@@ -61,8 +61,8 @@ export default function AddLivestock() {
         />
       </div>
 
-      <div className="fixed bottom-[76px] inset-x-0 z-30 lg:static lg:z-auto lg:bg-transparent lg:border-0 lg:px-0 lg:mt-6 bg-background/95 backdrop-blur border-t border-border p-3">
-        <div className="flex gap-3">
+      <div className="mt-6 pb-2">
+        <div className="soft-card flex gap-3 rounded-2xl p-3">
           <Button variant="outline" onClick={() => navigate("/livestock")} className="flex-1 h-12 rounded-2xl">
             Back
           </Button>

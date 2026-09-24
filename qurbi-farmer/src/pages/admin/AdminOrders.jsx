@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 import StatusBadge from "@/components/agri/StatusBadge";
 import EmptyState from "@/components/agri/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -46,7 +46,7 @@ export default function AdminOrders() {
   const load = () => {
     setLoading(true);
     setError("");
-    base44.functions.invoke("fetchAdminBuyerOrders")
+    qurbi.functions.invoke("fetchAdminBuyerOrders")
       .then((response) => setOrders(response.data?.orders || []))
       .catch((loadError) => setError(loadError.response?.data?.error || loadError.message || "Orders could not be loaded"))
       .finally(() => setLoading(false));
@@ -65,7 +65,7 @@ export default function AdminOrders() {
     if (!review || !reason.trim() || submitting) return;
     setSubmitting(true);
     try {
-      const response = await base44.functions.invoke("reviewBuyerRefund", {
+      const response = await qurbi.functions.invoke("reviewBuyerRefund", {
         orderId: review.order.id,
         decision: review.decision,
         reason: reason.trim(),

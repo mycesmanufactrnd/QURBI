@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
 import { BadgeCheck, Boxes, ChevronRight, Clock, PackageCheck, Plus, ShoppingBag, TrendingUp } from "lucide-react";
 import EmptyState from "@/components/agri/EmptyState";
@@ -13,6 +13,7 @@ import { Image } from "@/components/ui/image";
 import { formatMYR, greeting, initials, userVal } from "@/lib/agri";
 import { reconcileOrderLivestockStatuses } from "@/lib/orderLivestockStatus";
 import CowSilhouetteIcon from "@/components/agri/CowSilhouetteIcon";
+import { refreshExpiredReservations } from "@/lib/livestockReservation";
 
 const ORDER_META = {
   paid: ["To Ship", "info"], to_ship: ["To Ship", "info"], processing: ["Shipping", "primary"],
@@ -34,10 +35,12 @@ export default function Home() {
     const fetchData = async () => {
       try {
         // Keep order reconciliation before livestock statistics so Sold/Available remains current.
-        const orderResponse = await base44.functions.invoke("fetchFarmerOrders", {});
+        const orderResponse = await qurbi.functions.invoke("fetchFarmerOrders", {});
         const nextOrders = orderResponse.data?.orders;
         if (!Array.isArray(nextOrders)) throw new Error("The order service returned an invalid response.");
-        const storedLivestock = await base44.entities.Livestock.list("-created_date", 500);
+        const storedLivestock = await refreshExpiredReservations(
+          await qurbi.entities.Livestock.list("-created_date", 500),
+        );
         const nextLivestock = await reconcileOrderLivestockStatuses(nextOrders, storedLivestock);
         if (!mounted) return;
         setLivestock(nextLivestock || []);

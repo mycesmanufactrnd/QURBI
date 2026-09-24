@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 import { Boxes, Plus } from "lucide-react";
 import LivestockCard from "@/components/agri/LivestockCard";
 import EmptyState from "@/components/agri/EmptyState";
 import CowSilhouetteIcon from "@/components/agri/CowSilhouetteIcon";
 import ConfirmDialog from "@/components/agri/ConfirmDialog";
-import { LIVESTOCK_STATUSES } from "@/lib/agri";
+import { listingExpiry, LIVESTOCK_STATUSES } from "@/lib/agri";
 import { cn } from "@/lib/utils";
+import { refreshExpiredReservations } from "@/lib/livestockReservation";
 
 export default function MyLivestock() {
   const navigate = useNavigate();
@@ -19,19 +20,26 @@ export default function MyLivestock() {
 
   const load = () => {
     setLoading(true);
-    base44.entities.Livestock.list("-created_date", 100)
+    qurbi.entities.Livestock.list("-created_date", 100)
+      .then((d) => refreshExpiredReservations(d || []))
       .then((d) => setItems(d || []))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => { load(); }, []);
 
-  const filtered = filter === "All" ? items : items.filter((i) => i.status === filter);
+  const filtered = filter === "All"
+    ? items
+    : filter === "Expired"
+      ? items.filter((i) => i.status === "Available" && listingExpiry(i).expired)
+      : filter === "Available"
+        ? items.filter((i) => i.status === "Available" && !listingExpiry(i).expired)
+        : items.filter((i) => i.status === filter);
 
   const doDelete = async () => {
     setDeleting(true);
     try {
-      await base44.entities.Livestock.delete(toDelete.id);
+      await qurbi.entities.Livestock.delete(toDelete.id);
       setItems((prev) => prev.filter((i) => i.id !== toDelete.id));
       setToDelete(null);
     } catch (err) {
@@ -60,7 +68,7 @@ export default function MyLivestock() {
 
       {/* Filter chips */}
       <div className="no-scrollbar -mx-5 mt-5 flex gap-2 overflow-x-auto px-5 pb-1 lg:mx-0 lg:px-0">
-        {["All", ...LIVESTOCK_STATUSES].map((s) => (
+        {["All", "Expired", ...LIVESTOCK_STATUSES].map((s) => (
           <button
             key={s}
             onClick={() => setFilter(s)}

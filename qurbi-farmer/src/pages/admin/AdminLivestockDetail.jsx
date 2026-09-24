@@ -4,7 +4,7 @@ import {
   AlertCircle, ArrowLeft, Ban, Building2, CalendarDays, CheckCircle2, Hash, Loader2, Mail, MapPin,
   Palette, Ruler, ShieldCheck, Tag, UserRound, Utensils, Weight,
 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 import SectionHeader from "@/components/agri/SectionHeader";
 import StatusBadge from "@/components/agri/StatusBadge";
 import { Image } from "@/components/ui/image";
@@ -24,17 +24,17 @@ export default function AdminLivestockDetail() {
   const [updatingVisibility, setUpdatingVisibility] = useState(false);
 
   useEffect(() => {
-    base44.entities.Livestock.get(id)
+    qurbi.entities.Livestock.get(id)
       .then(async (livestock) => {
         const [user, profiles] = await Promise.all([
-          base44.entities.User.get(livestock.ownerId).catch(() => null),
-          base44.entities.FarmerProfile.filter({ userId: livestock.ownerId }, "-created_date", 1).catch(() => []),
+          qurbi.entities.User.get(livestock.ownerId).catch(() => null),
+          qurbi.entities.FarmerProfile.filter({ userId: livestock.ownerId }, "-created_date", 1).catch(() => []),
         ]);
         const farmerProfile = profiles?.[0] || null;
         const correctState = malaysiaState(livestock.state, livestock.farmLocation, farmerProfile?.state);
         let normalizedLivestock = livestock;
         if (correctState && livestock.state !== correctState) {
-          await base44.entities.Livestock.update(livestock.id, { state: correctState }).catch(() => null);
+          await qurbi.entities.Livestock.update(livestock.id, { state: correctState }).catch(() => null);
           normalizedLivestock = { ...livestock, state: correctState };
         }
         setItem(normalizedLivestock);
@@ -52,7 +52,7 @@ export default function AdminLivestockDetail() {
       if (!state) throw new Error("This listing has no state. Ask the farmer to update the livestock location first.");
 
       const update = { disabled: !item.disabled, state };
-      await base44.entities.Livestock.update(id, update);
+      await qurbi.entities.Livestock.update(id, update);
       setItem((current) => ({ ...current, ...update }));
     } catch (error) {
       alert(error.message || "Failed to update listing visibility");

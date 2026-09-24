@@ -1,8 +1,9 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, EntityManager, FindOptionsWhere, Repository } from 'typeorm';
-import { BulkListing, BulkListingStatus } from '../entities';
+import { DataSource, DeepPartial, EntityManager, FindOptionsWhere, Repository } from 'typeorm';
+import { BulkListing, BulkListingStatus, UserRole } from '../entities';
 import { BaseCrudService } from '../common/base-crud.service';
+import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 
 @Injectable()
 export class BulkListingsService extends BaseCrudService<BulkListing> {
@@ -13,24 +14,75 @@ export class BulkListingsService extends BaseCrudService<BulkListing> {
     super(repository);
   }
 
-  findAll(where?: FindOptionsWhere<BulkListing>): Promise<BulkListing[]> {
+  // A farmer's own DRAFT lots are only visible to them (or an admin) — same
+  // "own inventory sees everything, everyone else doesn't see drafts" shape
+  // as LivestockService.findAllForViewer.
+  findAllForViewer(
+    where: FindOptionsWhere<BulkListing> | undefined,
+    viewer: AuthenticatedUser,
+  ): Promise<BulkListing[]> {
+    const isOwnInventory = viewer.role === UserRole.FARMER && where?.farmerId === viewer.id;
+    const isAdmin = viewer.role === UserRole.ADMIN;
+    const finalWhere =
+      isAdmin || isOwnInventory
+        ? where
+        : { ...where, status: BulkListingStatus.OPEN };
+
     return this.repository.find({
-      where,
+      where: finalWhere,
       relations: { species: true, breed: true },
       order: { createdAt: 'DESC' },
     });
   }
 
-  // Reserves `quantity` shares atomically. Must run under a row lock:
-  // without it, two buyers checking out at the same instant can both read
-  // "1 share left" and both succeed, overselling the animal. Pass `manager`
-  // when this is one step of a larger transaction (e.g. order checkout) so it
-  // joins that transaction instead of opening a nested one.
-  async reserveShares(
-    id: string,
-    quantity: number,
-    manager?: EntityManager,
-  ): Promise<BulkListing> {
+  async createForFarmer(farmerId: string, data: DeepPartial<BulkListing>): Promise<BulkListing> {
+    if (data.status === BulkListingStatus.SOLD || data.status === BulkListingStatus.CANCELLED) {
+      throw new BadRequestException('a new bulk listing can only start as DRAFT or OPEN');
+    }
+    return this.create({ ...data, farmerId });
+  }
+
+  async findOneForViewer(id: string, viewer: AuthenticatedUser): Promise<BulkListing> {
+    const listing = await this.findOne(id);
+    const canSeeHidden =
+      viewer.role === UserRole.ADMIN ||
+      (viewer.role === UserRole.FARMER && listing.farmerId === viewer.id);
+    if (!canSeeHidden && listing.status !== BulkListingStatus.OPEN) {
+      throw new NotFoundException(`BulkListing ${id} not found`);
+    }
+    return listing;
+  }
+
+  async updateOwned(id: string, viewer: AuthenticatedUser, data: DeepPartial<BulkListing>): Promise<BulkListing> {
+    const listing = await this.findOwned(id, viewer);
+    if (data.status === BulkListingStatus.SOLD) {
+      throw new BadRequestException('status SOLD can only be set by completing a purchase');
+    }
+    return super.update(listing.id, data);
+  }
+
+  async removeOwned(id: string, viewer: AuthenticatedUser): Promise<void> {
+    const listing = await this.findOwned(id, viewer);
+    await this.repository.remove(listing);
+  }
+
+  // Fetches a lot and confirms `viewer` owns it (or is an admin). Anyone else
+  // gets the exact same 404 a made-up id would return.
+  private async findOwned(id: string, viewer: AuthenticatedUser): Promise<BulkListing> {
+    const listing = await this.findOne(id);
+    if (viewer.role !== UserRole.ADMIN && listing.farmerId !== viewer.id) {
+      throw new NotFoundException(`BulkListing ${id} not found`);
+    }
+    return listing;
+  }
+
+  // A lot is bought whole by exactly one buyer — this is a binary
+  // OPEN -> SOLD flip, not a share decrement. Still needs the row lock: two
+  // buyers checking out the same lot at the same instant could otherwise
+  // both read "still open" and both succeed. Pass `manager` when this is one
+  // step of a larger transaction (e.g. order checkout) so it joins that
+  // transaction instead of opening a nested one.
+  async markSold(id: string, manager?: EntityManager): Promise<BulkListing> {
     const run = async (entityManager: EntityManager): Promise<BulkListing> => {
       const listing = await entityManager
         .createQueryBuilder(BulkListing, 'bulk_listing')
@@ -41,18 +93,11 @@ export class BulkListingsService extends BaseCrudService<BulkListing> {
       if (!listing) {
         throw new NotFoundException(`BulkListing ${id} not found`);
       }
-      if (listing.sharesSold + quantity > listing.totalShares) {
-        throw new ConflictException(
-          `Only ${listing.totalShares - listing.sharesSold} share(s) left on this listing`,
-        );
+      if (listing.status !== BulkListingStatus.OPEN) {
+        throw new ConflictException(`BulkListing ${id} is no longer available for purchase`);
       }
 
-      listing.sharesSold += quantity;
-      listing.status =
-        listing.sharesSold >= listing.totalShares
-          ? BulkListingStatus.FULFILLED
-          : BulkListingStatus.OPEN;
-
+      listing.status = BulkListingStatus.SOLD;
       return entityManager.save(listing);
     };
 
@@ -60,30 +105,24 @@ export class BulkListingsService extends BaseCrudService<BulkListing> {
     return this.dataSource.transaction(run);
   }
 
-  // Inverse of reserveShares — used when an order containing bulk shares is
-  // cancelled/refunded and the shares need to go back on sale.
-  async releaseShares(
-    id: string,
-    quantity: number,
-    manager?: EntityManager,
-  ): Promise<BulkListing> {
-    const run = async (entityManager: EntityManager): Promise<BulkListing> => {
+  // Inverse of markSold — used when an order containing this lot is
+  // cancelled or refunded. Same row-lock discipline as markSold, since two
+  // concurrent cancel/refund operations must not both release it. Always
+  // sets OPEN specifically (never restores some prior status), and is a
+  // no-op if the lot is already open.
+  async releaseToOpen(id: string, manager?: EntityManager): Promise<void> {
+    const run = async (entityManager: EntityManager): Promise<void> => {
       const listing = await entityManager
         .createQueryBuilder(BulkListing, 'bulk_listing')
         .setLock('pessimistic_write')
         .where('bulk_listing.id = :id', { id })
         .getOne();
 
-      if (!listing) {
-        throw new NotFoundException(`BulkListing ${id} not found`);
-      }
+      if (!listing) return; // order item pointed at a lot that no longer exists
+      if (listing.status === BulkListingStatus.OPEN) return; // idempotent no-op
 
-      listing.sharesSold = Math.max(0, listing.sharesSold - quantity);
-      if (listing.status === BulkListingStatus.FULFILLED) {
-        listing.status = BulkListingStatus.OPEN;
-      }
-
-      return entityManager.save(listing);
+      listing.status = BulkListingStatus.OPEN;
+      await entityManager.save(listing);
     };
 
     if (manager) return run(manager);

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
+import apiClient from "@/api/apiClient";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Image } from "@/components/ui/image";
@@ -30,7 +31,7 @@ export default function Profile() {
 
   useEffect(() => {
     if (!user?.id) return;
-    base44.entities.FarmerProfile.filter({ userId: user.id })
+    qurbi.entities.FarmerProfile.filter({ userId: user.id })
       .then((data) => setProfile(data?.[0] || null))
       .catch(() => setProfile(null));
   }, [user?.id]);
@@ -43,7 +44,7 @@ export default function Profile() {
   const openEditor = () => {
     setForm({
       name,
-      phoneNumber: profile?.phoneNumber || "",
+      phoneNumber: user?.phone || "",
       farmName: profile?.farmName || "",
       address: profile?.address || "",
       state: profile?.state || "",
@@ -66,8 +67,11 @@ export default function Profile() {
     if (!profile?.id || !formValid || saving) return;
 
     const nextName = form.name.trim();
+    const userChanges = {
+      fullName: nextName,
+      phone: form.phoneNumber.trim(),
+    };
     const profileChanges = {
-      phoneNumber: form.phoneNumber.trim(),
       farmName: form.farmName.trim(),
       address: form.address.trim(),
       state: form.state,
@@ -77,8 +81,8 @@ export default function Profile() {
     setSaveError("");
     try {
       await Promise.all([
-        base44.auth.updateMe({ name: nextName }),
-        base44.entities.FarmerProfile.update(profile.id, profileChanges),
+        apiClient.patch(`/users/${user.id}`, userChanges),
+        qurbi.entities.FarmerProfile.update(profile.id, profileChanges),
       ]);
       setProfile((current) => ({ ...current, ...profileChanges }));
       await checkUserAuth();
@@ -132,7 +136,7 @@ export default function Profile() {
 
       <div className="soft-card mt-4 divide-y divide-border/70 overflow-hidden">
         <Row icon={Mail} label="Email" value={user?.email} />
-        <Row icon={Phone} label="Phone" value={profile?.phoneNumber || "—"} />
+        <Row icon={Phone} label="Phone" value={user?.phone || "—"} />
         <Row icon={HomeIcon} label="Farm Name" value={profile?.farmName || "—"} />
         <Row icon={MapPin} label="Farm Address" value={profile?.address || "—"} />
         <Row icon={MapPin} label="State" value={profile?.state || "—"} />

@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Notification, NotificationAudience } from '../entities';
+import { Notification, NotificationAudience, UserRole } from '../entities';
 import { BaseCrudService } from '../common/base-crud.service';
+import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 
 @Injectable()
 export class NotificationsService extends BaseCrudService<Notification> {
@@ -19,7 +20,18 @@ export class NotificationsService extends BaseCrudService<Notification> {
     });
   }
 
-  async markRead(id: string): Promise<Notification> {
+  // Fetches a notification and confirms `viewer` owns it (or is an admin).
+  // Anyone else gets the exact same 404 a made-up id would return.
+  private async findOwned(id: string, viewer: AuthenticatedUser): Promise<Notification> {
+    const notification = await this.findOne(id);
+    if (viewer.role !== UserRole.ADMIN && notification.userId !== viewer.id) {
+      throw new NotFoundException(`Notification ${id} not found`);
+    }
+    return notification;
+  }
+
+  async markRead(id: string, viewer: AuthenticatedUser): Promise<Notification> {
+    await this.findOwned(id, viewer);
     await this.repository.update(id, { isRead: true, readAt: new Date() });
     return this.findOne(id);
   }
@@ -32,7 +44,8 @@ export class NotificationsService extends BaseCrudService<Notification> {
   }
 
   // Soft delete — "clear all" must never destroy the underlying record.
-  async clear(id: string): Promise<Notification> {
+  async clear(id: string, viewer: AuthenticatedUser): Promise<Notification> {
+    await this.findOwned(id, viewer);
     await this.repository.update(id, { isCleared: true });
     return this.findOne(id);
   }

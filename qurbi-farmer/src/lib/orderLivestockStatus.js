@@ -1,4 +1,4 @@
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 
 export function livestockStatusForOrder(order) {
   const status = String(order?.status || "").toLowerCase();
@@ -37,8 +37,9 @@ export async function reconcileOrderLivestockStatuses(orders, livestock) {
   const updates = [];
   const reconciled = (livestock || []).map((item) => {
     const desiredStatus = desiredById.get(item.id);
+    if (item.reservationState === "Active") return item;
     if (!desiredStatus || item.status === desiredStatus) return item;
-    updates.push(base44.entities.Livestock.update(item.id, { status: desiredStatus }));
+    updates.push(qurbi.entities.Livestock.update(item.id, { status: desiredStatus }));
     return { ...item, status: desiredStatus };
   });
 

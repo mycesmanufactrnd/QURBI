@@ -1,35 +1,47 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import type { DeepPartial } from 'typeorm';
-import { BulkListing } from '../entities';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { BulkListing, UserRole } from '../entities';
 import { stripUndefined } from '../common/strip-undefined';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 import { BulkListingsService } from './bulk-listings.service';
+import { CreateBulkListingDto } from './dto/create-bulk-listing.dto';
+import { UpdateBulkListingDto } from './dto/update-bulk-listing.dto';
 
 @Controller('bulk-listings')
 export class BulkListingsController {
   constructor(private readonly bulkListingsService: BulkListingsService) {}
 
+  // Farmer-only: the owner is always the authenticated caller, never a body field.
+  @Roles(UserRole.FARMER)
+  @UseGuards(RolesGuard)
   @Post()
-  create(@Body() body: DeepPartial<BulkListing>) {
-    return this.bulkListingsService.create(body);
+  create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateBulkListingDto) {
+    return this.bulkListingsService.createForFarmer(user.id, body);
   }
 
   @Get()
-  findAll(@Query('farmerId') farmerId?: string, @Query('status') status?: BulkListing['status']) {
-    return this.bulkListingsService.findAll(stripUndefined({ farmerId, status }));
+  findAll(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('farmerId') farmerId?: string,
+    @Query('status') status?: BulkListing['status'],
+  ) {
+    return this.bulkListingsService.findAllForViewer(stripUndefined({ farmerId, status }), user);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.bulkListingsService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.bulkListingsService.findOneForViewer(id, user);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() body: DeepPartial<BulkListing>) {
-    return this.bulkListingsService.update(id, body);
+  update(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser, @Body() body: UpdateBulkListingDto) {
+    return this.bulkListingsService.updateOwned(id, user, body);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.bulkListingsService.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.bulkListingsService.removeOwned(id, user);
   }
 }

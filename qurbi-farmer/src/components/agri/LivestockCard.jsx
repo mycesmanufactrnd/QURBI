@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { Pencil, Trash2 } from "lucide-react";
 import { Image } from "@/components/ui/image";
 import StatusBadge from "@/components/agri/StatusBadge";
-import { formatMYR } from "@/lib/agri";
+import { formatMYR, listingExpiry, listingExpiryLabel } from "@/lib/agri";
 import { cn } from "@/lib/utils";
+import { hasActivePaymentReservation, reservationExpiryLabel } from "@/lib/livestockReservation";
 
 const STATUS_TONE = {
   Available: "success",
@@ -15,6 +16,9 @@ const STATUS_TONE = {
 
 export default function LivestockCard({ livestock, onEdit, onDelete, onView, footerActions, actions = true, compact = false, statusPlacement = "image" }) {
   const navigate = useNavigate();
+  const paymentReserved = hasActivePaymentReservation(livestock);
+  const expiry = listingExpiry(livestock);
+  const listingExpired = livestock.status === "Available" && expiry.expired;
   const cover = livestock.coverImage || livestock.images?.[0];
   const go = () => {
     if (onView) onView(livestock);
@@ -46,9 +50,12 @@ export default function LivestockCard({ livestock, onEdit, onDelete, onView, foo
           {statusPlacement === "content" && (
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <StatusBadge tone={STATUS_TONE[livestock.status] || "muted"} dot>{livestock.status || "Unknown"}</StatusBadge>
+              {listingExpired && <StatusBadge tone="danger">Expired</StatusBadge>}
               {livestock.disabled && <StatusBadge tone="danger">Disabled</StatusBadge>}
             </div>
           )}
+          {paymentReserved && <p className="mb-3 text-xs font-semibold text-amber-800">Payment reserved until {reservationExpiryLabel(livestock)}</p>}
+          {!paymentReserved && livestock.status === "Available" && <p className={cn("mb-3 text-xs font-semibold", listingExpired ? "text-destructive" : "text-muted-foreground")}>{listingExpired ? `Expired ${listingExpiryLabel(livestock)} — update & renew to sell again` : expiry.daysRemaining !== null ? `${expiry.daysRemaining} day${expiry.daysRemaining === 1 ? "" : "s"} left before renewal` : "14-day renewal window will begin when published"}</p>}
           <div className="flex items-end justify-between gap-4">
             <div className="min-w-0">
               <h2 className="truncate text-xl font-extrabold leading-tight text-primary">{livestock.species || "Livestock"}</h2>
@@ -63,8 +70,8 @@ export default function LivestockCard({ livestock, onEdit, onDelete, onView, foo
         <div className="flex gap-2 border-t border-border/65 bg-muted/20 p-3">
           {actions && <>
             <button type="button" onClick={go} className="brand-gradient flex min-h-11 flex-1 items-center justify-center rounded-2xl px-4 text-sm font-bold text-white shadow-[0_4px_12px_rgba(65,54,45,0.14)]">View details</button>
-            <button type="button" onClick={edit} aria-label={`Edit ${livestock.breed || "livestock"}`} title="Edit" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-secondary/65 text-primary transition-colors hover:bg-secondary"><Pencil className="h-[18px] w-[18px]" /></button>
-            {onDelete && <button type="button" onClick={() => onDelete(livestock)} aria-label={`Delete ${livestock.breed || "livestock"}`} title="Delete" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-destructive/10 text-destructive transition-colors hover:bg-destructive/20"><Trash2 className="h-[18px] w-[18px]" /></button>}
+            {!paymentReserved && <button type="button" onClick={edit} aria-label={`Edit ${livestock.breed || "livestock"}`} title="Edit" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-secondary/65 text-primary transition-colors hover:bg-secondary"><Pencil className="h-[18px] w-[18px]" /></button>}
+            {onDelete && !paymentReserved && <button type="button" onClick={() => onDelete(livestock)} aria-label={`Delete ${livestock.breed || "livestock"}`} title="Delete" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-destructive/10 text-destructive transition-colors hover:bg-destructive/20"><Trash2 className="h-[18px] w-[18px]" /></button>}
           </>}
           {footerActions}
         </div>

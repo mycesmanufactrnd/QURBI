@@ -1,42 +1,41 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { OrderItemType } from '../entities';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { CartItemsService } from './cart-items.service';
+import { UserRole } from '../entities';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
+import { AddCartItemDto } from './dto/add-cart-item.dto';
+import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 
-// userId is read from the query string / body until auth guards exist.
+// The owning cart is always the authenticated caller's — never a query/body field.
 @Controller('cart-items')
+@Roles(UserRole.BUYER)
+@UseGuards(RolesGuard)
 export class CartItemsController {
   constructor(private readonly cartItemsService: CartItemsService) {}
 
   @Get()
-  findAllForUser(@Query('userId') userId: string) {
-    return this.cartItemsService.findAllForUser(userId);
+  findAllForUser(@CurrentUser() user: AuthenticatedUser) {
+    return this.cartItemsService.findAllForUser(user.id);
   }
 
   @Post()
-  addItem(
-    @Body()
-    body: {
-      userId: string;
-      itemType: OrderItemType;
-      livestockId?: string;
-      bulkListingId?: string;
-      quantity: number;
-      metadata?: Record<string, any>;
-    },
-  ) {
-    return this.cartItemsService.addItem(body);
+  addItem(@CurrentUser() user: AuthenticatedUser, @Body() body: AddCartItemDto) {
+    return this.cartItemsService.addItem({ ...body, userId: user.id });
   }
 
   @Patch(':id')
   updateQuantity(
     @Param('id') id: string,
-    @Body() body: { userId: string; quantity: number },
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: UpdateCartItemDto,
   ) {
-    return this.cartItemsService.updateQuantity(body.userId, id, body.quantity);
+    return this.cartItemsService.updateQuantity(user.id, id, body.quantity);
   }
 
   @Delete(':id')
-  removeItem(@Param('id') id: string, @Query('userId') userId: string) {
-    return this.cartItemsService.removeItem(userId, id);
+  removeItem(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.cartItemsService.removeItem(user.id, id);
   }
 }

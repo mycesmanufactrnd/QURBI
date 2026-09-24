@@ -1,7 +1,12 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
-import { OrderStatus } from '../entities';
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { UserRole } from '../entities';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 import { OrdersService } from '../orders/orders.service';
 import { OrderTrackingEventsService } from './order-tracking-events.service';
+import { CreateOrderTrackingEventDto } from './dto/create-order-tracking-event.dto';
 
 @Controller('order-tracking-events')
 export class OrderTrackingEventsController {
@@ -10,33 +15,30 @@ export class OrderTrackingEventsController {
     private readonly ordersService: OrdersService,
   ) {}
 
+  // OrdersService.findOne enforces buyer/farmer/admin party membership (404
+  // for anyone else) before we ever touch this order's tracking timeline.
   @Get()
-  findAllForOrder(@Query('orderId') orderId: string) {
+  async findAllForOrder(@Query('orderId') orderId: string, @CurrentUser() user: AuthenticatedUser) {
+    await this.ordersService.findOne(orderId, user);
     return this.orderTrackingEventsService.findAllForOrder(orderId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.orderTrackingEventsService.findOne(id);
+  async findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    const event = await this.orderTrackingEventsService.findOne(id);
+    await this.ordersService.findOne(event.orderId, user);
+    return event;
   }
 
-  // Adding an event always goes through OrdersService.updateStatus so the
-  // order's `status` column and its tracking timeline can never drift apart —
-  // even a same-status update (e.g. a new courier location) is a legitimate
-  // additional row.
+  // Delegates to OrdersService.updateStatus, which is now the admin-only
+  // generic status writer — so this route is admin-only too, for the same
+  // reason. Farmer/buyer fulfilment actions go through their own dedicated
+  // orders/* endpoints instead.
+  @Roles(UserRole.ADMIN)
+  @UseGuards(RolesGuard)
   @Post()
-  create(
-    @Body()
-    body: {
-      orderId: string;
-      status: OrderStatus;
-      note?: string;
-      images?: string[];
-      location?: string;
-      userId?: string;
-    },
-  ) {
-    const { orderId, ...opts } = body;
-    return this.ordersService.updateStatus(orderId, body.status, opts);
+  create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateOrderTrackingEventDto) {
+    const { orderId, status, ...opts } = body;
+    return this.ordersService.updateStatus(orderId, status, { ...opts, userId: user.id });
   }
 }

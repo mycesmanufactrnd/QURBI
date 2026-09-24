@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 import { Bell, CheckCheck, CheckCircle2, ChevronRight, Loader2, PackageCheck, ShieldAlert, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import EmptyState from "@/components/agri/EmptyState";
@@ -14,22 +14,22 @@ export default function Notifications() {
 
   const load = () => {
     setLoading(true);
-    base44.entities.FarmerNotification.list("-created_date", 200)
+    qurbi.entities.FarmerNotification.list("-created_date", 200)
       .then((rows) => setItems(rows || []))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
-    base44.functions.invoke("syncFarmerNotifications")
+    qurbi.functions.invoke("syncFarmerNotifications")
       .catch(() => null)
       .finally(() => load());
-    const unsubscribe = base44.entities.FarmerNotification.subscribe(() => load());
+    const unsubscribe = qurbi.entities.FarmerNotification.subscribe(() => load());
     return unsubscribe;
   }, []);
 
   const openNotification = async (notification) => {
     if (!notification.isRead) {
-      await base44.entities.FarmerNotification.update(notification.id, { isRead: true });
+      await qurbi.entities.FarmerNotification.update(notification.id, { isRead: true });
       setItems((current) => current.map((item) => item.id === notification.id ? { ...item, isRead: true } : item));
     }
     if (notification.orderId) navigate(`/orders/${notification.orderId}`);
@@ -41,7 +41,7 @@ export default function Notifications() {
     if (!unread.length) return;
     setMarking(true);
     try {
-      await Promise.all(unread.map((item) => base44.entities.FarmerNotification.update(item.id, { isRead: true })));
+      await Promise.all(unread.map((item) => qurbi.entities.FarmerNotification.update(item.id, { isRead: true })));
       setItems((current) => current.map((item) => ({ ...item, isRead: true })));
     } finally {
       setMarking(false);

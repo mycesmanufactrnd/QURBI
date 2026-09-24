@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BadgeCheck, ChevronRight, Clock, Loader2, ShoppingBag, Tags, UserCheck, Users } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { farmVerificationApi, farmerProfileApi, livestockApi, orderApi, userApi } from "@/api/apiClient";
 import { useAuth } from "@/lib/AuthContext";
 import CowSilhouetteIcon from "@/components/agri/CowSilhouetteIcon";
 import EmptyState from "@/components/agri/EmptyState";
@@ -12,29 +12,33 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [farmers, setFarmers] = useState([]);
-  const [profiles, setProfiles] = useState([]);
-  const [livestock, setLivestock] = useState([]);
-  const [orders, setOrders] = useState([]);
+  const [livestockCount, setLivestockCount] = useState(0);
+  const [orderCount, setOrderCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
-      base44.entities.User.filter({ verificationStatus: "Pending" }, "-created_date", 100),
-      base44.entities.FarmerProfile.list("-created_date", 200),
-      base44.entities.Livestock.list("-created_date", 200),
-      base44.entities.Order.list("-created_date", 200),
+      userApi.list({ role: "farmer", page: 1, limit: 100 }),
+      farmerProfileApi.list(),
+      farmVerificationApi.list({ status: "pending", page: 1, limit: 100 }),
+      livestockApi.list({ page: 1, limit: 1 }),
+      orderApi.adminList({ page: 1, limit: 1 }),
     ])
-      .then(([farmerRows, profileRows, livestockRows, orderRows]) => {
-        setFarmers(farmerRows || []);
-        setProfiles(profileRows || []);
-        setLivestock(livestockRows || []);
-        setOrders(orderRows || []);
+      .then(([userPage, profileRows, verificationPage, livestockPage, orderPage]) => {
+        const usersById = new Map((userPage.data || []).map((item) => [item.id, item]));
+        const profilesById = new Map((profileRows || []).map((item) => [item.id, item]));
+        const pending = (verificationPage.data || []).map((verification) => {
+          const profile = profilesById.get(verification.farmerProfileId);
+          const farmer = profile ? usersById.get(profile.userId) : null;
+          return farmer ? { ...farmer, _profile: profile, _verification: verification } : null;
+        }).filter(Boolean);
+        setFarmers(pending);
+        setLivestockCount(livestockPage.total || 0);
+        setOrderCount(orderPage.total || 0);
       })
       .finally(() => setLoading(false));
   }, []);
 
-  const profileMap = {};
-  profiles.forEach((profile) => { profileMap[profile.userId] = profile; });
   const adminName = user?.data?.name || user?.full_name || user?.email?.split("@")[0] || "Admin";
 
   return (
@@ -65,8 +69,8 @@ export default function AdminDashboard() {
       <SectionHeader title="System Overview" className="mt-6" />
       <div className="soft-card mt-3 grid grid-cols-3 divide-x divide-border/70 overflow-hidden p-1">
         <OverviewMetric icon={Clock} label="Pending Farmers" value={loading ? "—" : farmers.length} tone="warning" onClick={() => navigate("/admin/farmers")} />
-        <OverviewMetric icon={CowSilhouetteIcon} label="Livestock" value={loading ? "—" : livestock.length} tone="primary" onClick={() => navigate("/admin/livestock")} />
-        <OverviewMetric icon={ShoppingBag} label="Orders" value={loading ? "—" : orders.length} tone="success" onClick={() => navigate("/admin/orders")} />
+        <OverviewMetric icon={CowSilhouetteIcon} label="Livestock" value={loading ? "—" : livestockCount} tone="primary" onClick={() => navigate("/admin/livestock")} />
+        <OverviewMetric icon={ShoppingBag} label="Orders" value={loading ? "—" : orderCount} tone="success" onClick={() => navigate("/admin/orders")} />
       </div>
 
       <div className="mt-7">
@@ -80,8 +84,8 @@ export default function AdminDashboard() {
         ) : farmers.length ? (
           <div className="mt-3 grid gap-3 lg:grid-cols-2">
             {farmers.slice(0, 6).map((farmer) => {
-              const profile = profileMap[farmer.id];
-              const name = farmer.data?.name || farmer.full_name || farmer.email?.split("@")[0] || "Unnamed farmer";
+              const profile = farmer._profile;
+              const name = farmer.fullName || farmer.email?.split("@")[0] || "Unnamed farmer";
               return (
                 <button
                   key={farmer.id}
@@ -92,7 +96,7 @@ export default function AdminDashboard() {
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-sm font-extrabold text-amber-700">{initials(name)}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-extrabold">{name}</span>
-                    <span className="mt-0.5 block truncate text-xs text-muted-foreground">{profile?.farmName || "Farm profile"}{profile?.state ? ` · ${profile.state}` : ""}</span>
+                    <span className="mt-0.5 block truncate text-xs text-muted-foreground">{profile?.farmName || "Farm profile"}{profile?.farmState ? ` · ${profile.farmState}` : ""}</span>
                   </span>
                   <StatusBadge tone="warning" dot className="hidden shrink-0 sm:inline-flex">Pending</StatusBadge>
                   <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />

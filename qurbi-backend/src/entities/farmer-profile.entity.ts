@@ -47,6 +47,9 @@ export class FarmerProfile extends BaseEntity {
   @Column({ type: 'varchar', length: 500, nullable: true })
   logoUrl: string | null;
 
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  deliveryPreference: string | null;
+
   // Current state; the audit trail of each attempt lives in FarmVerification.
   @Column({
     type: 'enum',

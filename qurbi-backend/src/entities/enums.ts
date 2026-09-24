@@ -30,17 +30,19 @@ export enum LivestockSex {
   FEMALE = 'female',
 }
 
-// Not in the original spec list, but bulk_listings needs its own lifecycle:
-// share sales don't map cleanly onto LivestockStatus (draft/available/... is
-// single-animal language, a bulk listing needs to track "sold out" vs "cancelled").
+// A bulk listing is bought as a whole lot (one buyer takes every animal in
+// it), so its lifecycle is binary like Livestock's, not a share-sale funnel.
 export enum BulkListingStatus {
   DRAFT = 'draft',
   OPEN = 'open',
-  CLOSED = 'closed',
-  FULFILLED = 'fulfilled',
+  SOLD = 'sold',
   CANCELLED = 'cancelled',
 }
 
+// Fulfilment track only — refunds run in parallel on `refundStatus`, not as
+// a status here. REFUNDED is a terminal state reached exclusively via
+// OrdersService.reviewRefund() (an approved refund), never through the
+// generic transition table in OrdersService.updateStatus()/applyStatusChange.
 export enum OrderStatus {
   PENDING_PAYMENT = 'pending_payment',
   PAID = 'paid',
@@ -49,7 +51,6 @@ export enum OrderStatus {
   DELIVERED = 'delivered',
   RECEIVED = 'received',
   CANCELLED = 'cancelled',
-  REFUND_REQUESTED = 'refund_requested',
   REFUNDED = 'refunded',
 }
 
@@ -76,7 +77,7 @@ export enum RefundStatus {
 
 export enum OrderItemType {
   LIVESTOCK = 'livestock',
-  BULK_SHARE = 'bulk_share',
+  BULK_LISTING = 'bulk_listing',
 }
 
 export enum RequestStatus {
@@ -106,4 +107,9 @@ export enum AddressLabel {
   HOME = 'home',
   WORK = 'work',
   OTHER = 'other',
+}
+
+export enum UploadVisibility {
+  PUBLIC = 'public',
+  PRIVATE = 'private',
 }
