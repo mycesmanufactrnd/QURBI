@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import EmptyState from "@/components/agri/EmptyState";
@@ -26,8 +26,8 @@ export default function AdminUsers() {
     setError("");
     try {
       const [response, localAdmins] = await Promise.all([
-        base44.functions.invoke("fetchAisyahUsers"),
-        base44.entities.User.filter({ role: "admin" }, "-created_date", 500),
+        qurbi.functions.invoke("fetchAisyahUsers"),
+        qurbi.entities.User.filter({ role: "admin" }, "-created_date", 500),
       ]);
       const rows = response?.data?.users;
       if (!Array.isArray(rows)) throw new Error("QURBI User returned an invalid buyer list.");

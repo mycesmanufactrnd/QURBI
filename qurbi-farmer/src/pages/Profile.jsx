@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 import apiClient from "@/api/apiClient";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -31,7 +31,7 @@ export default function Profile() {
 
   useEffect(() => {
     if (!user?.id) return;
-    base44.entities.FarmerProfile.filter({ userId: user.id })
+    qurbi.entities.FarmerProfile.filter({ userId: user.id })
       .then((data) => setProfile(data?.[0] || null))
       .catch(() => setProfile(null));
   }, [user?.id]);
@@ -79,7 +79,7 @@ export default function Profile() {
     try {
       await Promise.all([
         apiClient.patch(`/users/${user.id}`, { fullName: nextName }),
-        base44.entities.FarmerProfile.update(profile.id, profileChanges),
+        qurbi.entities.FarmerProfile.update(profile.id, profileChanges),
       ]);
       setProfile((current) => ({ ...current, ...profileChanges }));
       await checkUserAuth();

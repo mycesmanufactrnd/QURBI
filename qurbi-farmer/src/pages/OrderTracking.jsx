@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 import {
   ArrowLeft,
   CalendarDays,
@@ -90,7 +90,7 @@ export default function OrderTracking() {
     setLoading(true);
     setError("");
     try {
-      const response = await base44.functions.invoke("fetchFarmerOrders", { orderId });
+      const response = await qurbi.functions.invoke("fetchFarmerOrders", { orderId });
       const packageOrder = response.data?.order;
       if (!packageOrder) throw new Error("Package not found.");
       setOrder(packageOrder);
@@ -126,9 +126,9 @@ export default function OrderTracking() {
     setError("");
     setMessage("");
     try {
-      const uploaded = await base44.integrations.Core.UploadFile({ file });
+      const uploaded = await qurbi.integrations.Core.UploadFile({ file });
       if (!uploaded.file_url) throw new Error("Photo upload failed.");
-      const response = await base44.functions.invoke("uploadFarmerTrackingPhoto", {
+      const response = await qurbi.functions.invoke("uploadFarmerTrackingPhoto", {
         orderId: order.id,
         stage,
         imageUrl: uploaded.file_url,

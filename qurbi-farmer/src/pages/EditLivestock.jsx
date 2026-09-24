@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import LivestockForm from "@/components/agri/LivestockForm";
 import { hasActivePaymentReservation, reservationExpiryLabel } from "@/lib/livestockReservation";
@@ -14,9 +14,9 @@ export default function EditLivestock() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    base44.functions.invoke("checkLivestockReservation", { livestockId: id })
+    qurbi.functions.invoke("checkLivestockReservation", { livestockId: id })
       .catch(() => null)
-      .then(() => base44.entities.Livestock.get(id))
+      .then(() => qurbi.entities.Livestock.get(id))
       .then(setLivestock)
       .catch(() => navigate("/livestock", { replace: true }))
       .finally(() => setLoading(false));
@@ -33,7 +33,7 @@ export default function EditLivestock() {
         update.marketplaceVisible = visibility.visible;
         update.marketplaceVisibilityReason = visibility.reason;
       }
-      await base44.entities.Livestock.update(id, update);
+      await qurbi.entities.Livestock.update(id, update);
       navigate(`/livestock/${id}`, { replace: true });
     } catch (err) {
       alert(err.message || "Failed to update listing");

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 import { Image } from "@/components/ui/image";
 import { Loader2, PackageOpen, Pencil, Plus, Trash2, Users } from "lucide-react";
 import ConfirmDialog from "@/components/agri/ConfirmDialog";
@@ -18,7 +18,7 @@ export default function BulkListings() {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    base44.entities.BulkListing.list("-created_date", 100)
+    qurbi.entities.BulkListing.list("-created_date", 100)
       .then((rows) => setItems(rows || []))
       .finally(() => setLoading(false));
   }, []);
@@ -27,7 +27,7 @@ export default function BulkListings() {
     if (!toDelete) return;
     setDeleting(true);
     try {
-      await base44.entities.BulkListing.delete(toDelete.id);
+      await qurbi.entities.BulkListing.delete(toDelete.id);
       setItems((current) => current.filter((item) => item.id !== toDelete.id));
       setToDelete(null);
     } catch (error) {

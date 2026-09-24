@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,7 +39,7 @@ export default function LivestockPolicy() {
   // Delivery method lives on the farmer's profile (not the listing draft).
   useEffect(() => {
     if (!user?.id) return;
-    base44.entities.FarmerProfile.filter({ userId: user.id })
+    qurbi.entities.FarmerProfile.filter({ userId: user.id })
       .then((rows) => setDeliveryMethod(rows?.[0]?.deliveryPreference || ""))
       .catch(() => {});
   }, [user?.id]);
@@ -59,7 +59,7 @@ export default function LivestockPolicy() {
         const dataUrl = sigRef.current?.toDataURL();
         const blob = await (await fetch(dataUrl)).blob();
         const file = new File([blob], "signature.png", { type: "image/png" });
-        const res = await base44.integrations.Core.UploadFile({ file });
+        const res = await qurbi.integrations.Core.UploadFile({ file });
         signatureUrl = res.file_url;
         setSavedSignatureUrl(signatureUrl);
       }
@@ -69,7 +69,7 @@ export default function LivestockPolicy() {
       const { markupConsent, ...draftData } = draft;
       let reviewAwareData = draftData;
       if (draftData.speciesRequestId) {
-        const request = await base44.entities.SpeciesRequest.get(draftData.speciesRequestId).catch(() => null);
+        const request = await qurbi.entities.SpeciesRequest.get(draftData.speciesRequestId).catch(() => null);
         if (request?.status === "Approved") {
           reviewAwareData = {
             ...reviewAwareData,
@@ -84,9 +84,9 @@ export default function LivestockPolicy() {
         }
       }
       if (draftData.breedRequestId) {
-        const request = await base44.entities.BreedRequest.get(draftData.breedRequestId).catch(() => null);
+        const request = await qurbi.entities.BreedRequest.get(draftData.breedRequestId).catch(() => null);
         if (request?.status === "Approved") {
-          const approvedBreeds = await base44.entities.Breed.filter({
+          const approvedBreeds = await qurbi.entities.Breed.filter({
             species: request.species,
             name: request.proposedName,
           }).catch(() => []);
@@ -116,7 +116,7 @@ export default function LivestockPolicy() {
       const livestockData = Object.fromEntries(
         Object.entries(reviewAwareData).filter(([, value]) => value !== null && value !== undefined)
       );
-      await base44.entities.Livestock.create({
+      await qurbi.entities.Livestock.create({
         ...livestockData,
         ownerId: user.id,
         policySignerName: name.trim(),
@@ -220,10 +220,8 @@ export default function LivestockPolicy() {
 
       {error && <p className="text-sm text-destructive mt-3">{error}</p>}
 
-      <div className="h-14 lg:hidden" />
-
-      <div className="fixed bottom-[76px] inset-x-0 z-30 lg:static lg:z-auto lg:bg-transparent lg:border-0 lg:px-0 lg:mt-6 bg-background/95 backdrop-blur border-t border-border p-3">
-        <div className="flex gap-3">
+      <div className="mt-6 pb-2">
+        <div className="soft-card flex gap-3 rounded-2xl p-3">
           <Button variant="outline" onClick={() => navigate("/livestock/add")} className="h-12 rounded-2xl flex-1" disabled={submitting}>
             Back
           </Button>

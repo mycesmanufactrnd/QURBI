@@ -1,4 +1,4 @@
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 
 export function hasActivePaymentReservation(livestock, now = new Date()) {
   const expiresAt = Date.parse(livestock?.reservationExpiresAt || "");
@@ -23,7 +23,7 @@ export async function refreshExpiredReservations(items) {
   ));
   if (!candidates.length) return items || [];
   await Promise.allSettled(candidates.map((item) => (
-    base44.functions.invoke("checkLivestockReservation", { livestockId: item.id })
+    qurbi.functions.invoke("checkLivestockReservation", { livestockId: item.id })
   )));
-  return base44.entities.Livestock.list("-created_date", 500);
+  return qurbi.entities.Livestock.list("-created_date", 500);
 }

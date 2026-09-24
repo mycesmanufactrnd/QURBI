@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { farmerProfileApi, farmVerificationApi, uploadApi } from "@/api/apiClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -39,7 +39,8 @@ export default function FarmerRegistrationPolicy() {
   const status = userVal(user, "verificationStatus");
   const draftReady = Boolean(
     draft?.form?.name?.trim() && draft?.form?.phoneNumber?.trim() && draft?.form?.icNumber?.trim()
-    && draft?.form?.farmName?.trim() && draft?.form?.address?.trim() && draft?.form?.state
+    && draft?.form?.farmName?.trim() && draft?.form?.address?.trim() && draft?.form?.city?.trim()
+    && draft?.form?.postcode?.trim() && draft?.form?.state
     && draft?.form?.deliveryPreference && draft?.docs?.icFront && draft?.docs?.icBack && draft?.docs?.selfieImage
   );
 
@@ -66,22 +67,30 @@ export default function FarmerRegistrationPolicy() {
       if (!uploadedSignature) {
         const dataUrl = signatureRef.current?.toDataURL();
         const blob = await (await fetch(dataUrl)).blob();
-        const upload = await base44.integrations.Core.UploadFile({ file: new File([blob], "farmer-registration-signature.png", { type: "image/png" }) });
-        uploadedSignature = upload.file_url;
+        const upload = await uploadApi.upload(
+          new File([blob], "farmer-registration-signature.png", { type: "image/png" }),
+          "private",
+        );
+        uploadedSignature = upload.fileUrl;
         if (!uploadedSignature) throw new Error("Signature upload failed.");
         setSignatureUrl(uploadedSignature);
       }
 
-      const submission = await base44.functions.invoke("submitFarmerVerification", {
-        profile: {
-          phoneNumber: draft.form.phoneNumber,
-          icNumber: draft.form.icNumber,
-          farmName: draft.form.farmName,
-          address: draft.form.address,
-          state: draft.form.state,
-          deliveryPreference: draft.form.deliveryPreference,
-        },
-        verification: {
+      const profileDetails = {
+        farmName: draft.form.farmName,
+        farmAddressLine: draft.form.address,
+        farmCity: draft.form.city,
+        farmState: draft.form.state,
+        farmPostcode: draft.form.postcode,
+        deliveryPreference: draft.form.deliveryPreference,
+      };
+      const existingProfile = await farmerProfileApi.byUser(user.id);
+      if (existingProfile) await farmerProfileApi.update(existingProfile.id, profileDetails);
+      else await farmerProfileApi.create(profileDetails);
+
+      await farmVerificationApi.submit({
+        signatureUrl: uploadedSignature,
+        documents: {
           icFront: draft.docs.icFront,
           icBack: draft.docs.icBack,
           selfieImage: draft.docs.selfieImage,
@@ -91,12 +100,13 @@ export default function FarmerRegistrationPolicy() {
           policyVersion: FARMER_POLICY_VERSION,
           policyConsents: POLICY_POINTS.map((point) => point.id),
           farmerCertificate: draft.docs.farmerCertificate || "",
+          personalDetails: {
+            phoneNumber: draft.form.phoneNumber,
+            icNumber: draft.form.icNumber,
+            deliveryPreference: draft.form.deliveryPreference,
+          },
         },
       });
-
-      if (submission.data?.created) try {
-        await base44.functions.invoke("notifyAdminNewFarmer", { farmerName: draft.form.name, farmName: draft.form.farmName, state: draft.form.state });
-      } catch { /* Notification failure must not create a duplicate registration. */ }
       clearFarmerVerificationDraft();
       await checkUserAuth();
       navigate("/pending", { replace: true });

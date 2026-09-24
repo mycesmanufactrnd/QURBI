@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 import { Boxes, Plus } from "lucide-react";
 import LivestockCard from "@/components/agri/LivestockCard";
 import EmptyState from "@/components/agri/EmptyState";
@@ -20,7 +20,7 @@ export default function MyLivestock() {
 
   const load = () => {
     setLoading(true);
-    base44.entities.Livestock.list("-created_date", 100)
+    qurbi.entities.Livestock.list("-created_date", 100)
       .then((d) => refreshExpiredReservations(d || []))
       .then((d) => setItems(d || []))
       .finally(() => setLoading(false));
@@ -39,7 +39,7 @@ export default function MyLivestock() {
   const doDelete = async () => {
     setDeleting(true);
     try {
-      await base44.entities.Livestock.delete(toDelete.id);
+      await qurbi.entities.Livestock.delete(toDelete.id);
       setItems((prev) => prev.filter((i) => i.id !== toDelete.id));
       setToDelete(null);
     } catch (err) {

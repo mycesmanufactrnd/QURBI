@@ -40,4 +40,8 @@ export class CreateFarmerProfileDto {
   @IsOptional()
   @IsString()
   logoUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  deliveryPreference?: string;
 }

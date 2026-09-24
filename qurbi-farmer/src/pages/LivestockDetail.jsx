@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   AlertCircle, ArrowLeft, CalendarDays, Hash, Loader2, MapPin, Palette, Pencil, Ruler, Tag, Trash2, UserRound, Utensils, Weight,
 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 import ConfirmDialog from "@/components/agri/ConfirmDialog";
 import SectionHeader from "@/components/agri/SectionHeader";
 import StatusBadge from "@/components/agri/StatusBadge";
@@ -26,22 +26,22 @@ export default function LivestockDetail() {
   const [deleting, setDeleting] = useState(false);
 
   const load = () =>
-    base44.functions.invoke("checkLivestockReservation", { livestockId: id })
+    qurbi.functions.invoke("checkLivestockReservation", { livestockId: id })
       .catch(() => null)
-      .then(() => base44.entities.Livestock.get(id))
+      .then(() => qurbi.entities.Livestock.get(id))
       .then(async (data) => {
         setItem(data);
         setActiveImg(0);
 
         const profiles = data.ownerId
-          ? await base44.entities.FarmerProfile.filter({ userId: data.ownerId }).catch(() => [])
+          ? await qurbi.entities.FarmerProfile.filter({ userId: data.ownerId }).catch(() => [])
           : [];
         const farmerProfile = profiles?.[0];
         const correctState = malaysiaState(data.state, data.farmLocation, farmerProfile?.state);
         setFarmAddress(farmerProfile?.address || "");
         setFarmState(correctState);
         if (correctState && data.state !== correctState) {
-          await base44.entities.Livestock.update(data.id, { state: correctState }).catch(() => null);
+          await qurbi.entities.Livestock.update(data.id, { state: correctState }).catch(() => null);
           setItem((current) => ({ ...current, state: correctState }));
         }
       })
@@ -53,7 +53,7 @@ export default function LivestockDetail() {
   const doDelete = async () => {
     setDeleting(true);
     try {
-      await base44.entities.Livestock.delete(id);
+      await qurbi.entities.Livestock.delete(id);
       navigate("/livestock", { replace: true });
     } catch (error) {
       alert(error.message || "Failed to delete");

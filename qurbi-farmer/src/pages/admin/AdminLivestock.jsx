@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 import EmptyState from "@/components/agri/EmptyState";
 import CowSilhouetteIcon from "@/components/agri/CowSilhouetteIcon";
 import LivestockCard from "@/components/agri/LivestockCard";
@@ -20,7 +20,7 @@ export default function AdminLivestock() {
 
   const load = () => {
     setLoading(true);
-    base44.entities.Livestock.list("-created_date", 200)
+    qurbi.entities.Livestock.list("-created_date", 200)
       .then((d) => setItems(d || []))
       .finally(() => setLoading(false));
   };
@@ -39,13 +39,13 @@ export default function AdminLivestock() {
     try {
       let state = malaysiaState(item.state, item.farmLocation);
       if (!state && item.ownerId) {
-        const profiles = await base44.entities.FarmerProfile.filter({ userId: item.ownerId }, "-created_date", 1);
+        const profiles = await qurbi.entities.FarmerProfile.filter({ userId: item.ownerId }, "-created_date", 1);
         state = malaysiaState(profiles?.[0]?.state);
       }
       if (!state) throw new Error("This listing has no state. Ask the farmer to update the livestock location first.");
 
       const update = { disabled: !item.disabled, state };
-      await base44.entities.Livestock.update(item.id, update);
+      await qurbi.entities.Livestock.update(item.id, update);
       setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, ...update } : i)));
     } catch (err) {
       alert(err.message || "Failed to update");

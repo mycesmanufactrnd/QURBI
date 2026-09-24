@@ -1,7 +1,7 @@
 import React from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 import BrandLogo from "@/components/agri/BrandLogo";
 import StatusBadge from "@/components/agri/StatusBadge";
 import { XCircle, LogOut, RefreshCw, Loader2 } from "lucide-react";
@@ -15,7 +15,7 @@ export default function VerificationRejected() {
 
   React.useEffect(() => {
     if (!user?.id) return;
-    base44.entities.FarmVerification.filter({ userId: user.id }, "-created_date", 1)
+    qurbi.entities.FarmVerification.filter({ userId: user.id }, "-created_date", 1)
       .then((rows) => setReason(rows?.[0]?.rejectionReason || "No reason was provided. Please contact QURBI support before resubmitting."))
       .catch(() => setReason("The rejection reason could not be loaded."));
   }, [user?.id]);

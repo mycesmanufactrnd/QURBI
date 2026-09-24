@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Outlet, NavLink } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
 import BrandLogo from "@/components/agri/BrandLogo";
 import AdminBottomNav from "@/components/agri/AdminBottomNav";
@@ -23,7 +23,7 @@ export default function AdminLayout() {
 
   useEffect(() => {
     let active = true;
-    const loadPendingRefunds = () => base44.functions.invoke("fetchAdminBuyerOrders")
+    const loadPendingRefunds = () => qurbi.functions.invoke("fetchAdminBuyerOrders")
       .then((response) => {
         if (!active) return;
         const orders = response.data?.orders || [];

@@ -42,4 +42,8 @@ export class UpdateFarmerProfileDto {
   @IsOptional()
   @IsString()
   logoUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  deliveryPreference?: string;
 }

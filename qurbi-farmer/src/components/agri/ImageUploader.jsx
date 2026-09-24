@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { uploadApi } from "@/api/apiClient";
 import { ImagePlus, X, Star, Loader2, ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Image } from "@/components/ui/image";
@@ -39,6 +39,7 @@ async function compressFile(file) {
 export default function ImageUploader({ value = [], cover, onChange }) {
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
   const images = value || [];
   const coverUrl = cover || images[0] || null;
 
@@ -46,16 +47,20 @@ export default function ImageUploader({ value = [], cover, onChange }) {
     const files = Array.from(fileList).slice(0, MAX_IMAGES - images.length);
     if (!files.length) return;
     setUploading(true);
+    setError("");
     try {
       const uploads = await Promise.all(
         files.map(async (file) => {
           const compressed = await compressFile(file);
-          const { file_url } = await base44.integrations.Core.UploadFile({ file: compressed });
-          return file_url;
+          const { fileUrl } = await uploadApi.upload(compressed, "public");
+          if (!fileUrl) throw new Error("Upload returned no URL");
+          return fileUrl;
         })
       );
       const next = [...images, ...uploads];
       onChange(next, coverUrl || next[0] || null);
+    } catch (uploadError) {
+      setError(uploadError.message || "Image upload failed. Please try again.");
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -118,6 +123,7 @@ export default function ImageUploader({ value = [], cover, onChange }) {
         <ImageIcon className="w-3.5 h-3.5" />
         Tap a photo to set it as the cover. Up to {MAX_IMAGES} images.
       </p>
+      {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
       <input
         ref={inputRef}
         type="file"

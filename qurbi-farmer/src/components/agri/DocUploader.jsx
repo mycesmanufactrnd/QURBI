@@ -1,5 +1,5 @@
-import React, { useRef, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import React, { useEffect, useRef, useState } from "react";
+import { uploadApi } from "@/api/apiClient";
 import { Image } from "@/components/ui/image";
 import { Upload, X, Loader2, FileCheck2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -48,6 +48,41 @@ export default function DocUploader({
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [previewUrl, setPreviewUrl] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl = "";
+
+    if (!value) {
+      setPreviewUrl("");
+      return undefined;
+    }
+
+    if (!String(value).startsWith("/uploads/private/")) {
+      setPreviewUrl(value);
+      return undefined;
+    }
+
+    uploadApi
+      .getPrivateFile(value)
+      .then((blob) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setPreviewUrl(objectUrl);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setPreviewUrl("");
+          setError(err?.message || "Unable to display the uploaded document.");
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [value]);
 
   const handleFile = async (file) => {
     if (!file) return;
@@ -55,9 +90,9 @@ export default function DocUploader({
     setError("");
     try {
       const compressed = await compressFile(file);
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: compressed });
-      if (!file_url) throw new Error("Upload returned no URL");
-      onChange(file_url);
+      const { fileUrl } = await uploadApi.upload(compressed, "private");
+      if (!fileUrl) throw new Error("Upload returned no URL");
+      onChange(fileUrl);
     } catch (err) {
       setError(err?.message || "Upload failed. Please try again.");
     } finally {
@@ -81,7 +116,13 @@ export default function DocUploader({
       />
       {value ? (
         <div className={cn("relative overflow-hidden rounded-2xl border border-border bg-muted", aspectClassName)}>
-          <Image src={value} fittingType={fittingType} className="w-full h-full" />
+          {previewUrl ? (
+            <Image src={previewUrl} fittingType={fittingType} className="w-full h-full" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+              Loading secure preview...
+            </div>
+          )}
           <button
             type="button"
             onClick={() => inputRef.current?.click()}

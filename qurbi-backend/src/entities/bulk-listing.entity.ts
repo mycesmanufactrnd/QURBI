@@ -10,6 +10,8 @@ import { Breed } from './breed.entity';
 export interface BulkListingBreedGroup {
   breedId: string;
   count: number;
+  maleCount?: number;
+  femaleCount?: number;
 }
 
 // A farmer selling a group of animals as one lot to one buyer — e.g. 7 cows,

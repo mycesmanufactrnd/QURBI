@@ -2,10 +2,12 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, DeepPartial, EntityManager, Repository } from 'typeorm';
 import {
+  Breed,
   FarmerProfile,
   Livestock,
   LivestockStatus,
   RequestStatus,
+  Species,
   UserRole,
   VerificationStatus,
 } from '../entities';
@@ -113,7 +115,14 @@ export class LivestockService extends BaseCrudService<Livestock> {
   }
 
   async createForFarmer(farmerId: string, data: DeepPartial<Livestock>): Promise<Livestock> {
-    return this.create({ ...data, farmerId });
+    if (!data.speciesId) throw new BadRequestException('Select an active species');
+    await this.validateReferenceData(data.speciesId, data.breedId);
+    return this.create({
+      ...data,
+      farmerId,
+      speciesApprovalStatus: RequestStatus.APPROVED,
+      breedApprovalStatus: RequestStatus.APPROVED,
+    });
   }
 
   async updateOwned(
@@ -125,7 +134,22 @@ export class LivestockService extends BaseCrudService<Livestock> {
     if (data.status === LivestockStatus.SOLD) {
       throw new BadRequestException('status SOLD can only be set by completing a purchase');
     }
+    if (data.speciesId !== undefined || data.breedId !== undefined) {
+      const speciesId = data.speciesId ?? listing.speciesId;
+      const breedId = data.breedId === undefined ? listing.breedId : data.breedId;
+      await this.validateReferenceData(speciesId, breedId);
+      data.speciesApprovalStatus = RequestStatus.APPROVED;
+      data.breedApprovalStatus = RequestStatus.APPROVED;
+    }
     return super.update(listing.id, data);
+  }
+
+  private async validateReferenceData(speciesId: string, breedId?: string | null): Promise<void> {
+    const species = await this.dataSource.getRepository(Species).findOne({ where: { id: speciesId, isActive: true } });
+    if (!species) throw new BadRequestException('Select an active species');
+    if (!breedId) return;
+    const breed = await this.dataSource.getRepository(Breed).findOne({ where: { id: breedId, speciesId, isActive: true } });
+    if (!breed) throw new BadRequestException('Select an active breed that belongs to this species');
   }
 
   async removeOwned(id: string, viewer: AuthenticatedUser): Promise<void> {
