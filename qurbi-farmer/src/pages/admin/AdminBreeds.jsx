@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Check, Loader2, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import EmptyState from "@/components/agri/EmptyState";
 import CowSilhouetteIcon from "@/components/agri/CowSilhouetteIcon";
 import StatusBadge from "@/components/agri/StatusBadge";
-import { marketplaceVisibility, speciesOptions } from "@/lib/agri";
+import { speciesOptions } from "@/lib/agri";
 import { cn } from "@/lib/utils";
 
 export default function AdminBreeds() {
@@ -32,8 +32,8 @@ export default function AdminBreeds() {
   const load = () => {
     setLoading(true);
     Promise.all([
-      base44.entities.BreedRequest.list("-created_date", 500),
-      base44.entities.Breed.list("name", 500),
+      qurbi.entities.BreedRequest.list("-created_date", 500),
+      qurbi.entities.Breed.list("name", 500),
     ]).then(([requestRows, breedRows]) => {
       setRequests(requestRows || []);
       setBreeds(breedRows || []);
@@ -54,10 +54,8 @@ export default function AdminBreeds() {
     if (!open && searchParams.get("action") === "add") setSearchParams({}, { replace: true });
   };
 
-  const linkedLivestock = (request) => base44.entities.Livestock.filter({ breedRequestId: request.id }, "-created_date", 500);
-
   const notify = (request, type, title, message, livestockId = "") =>
-    base44.entities.FarmerNotification.create({
+    qurbi.entities.FarmerNotification.create({
       farmerId: request.farmerId,
       type,
       title,
@@ -71,41 +69,26 @@ export default function AdminBreeds() {
     if (!approvalReason.trim()) return;
     setProcessing(request.id);
     try {
-      let breed = breeds.find((item) => item.species === request.species && item.name.toLowerCase() === request.proposedName.toLowerCase());
-      if (!breed) {
-        breed = await base44.entities.Breed.create({
-          species: request.species,
-          name: request.proposedName,
-          image: request.referenceImage,
-          description: request.description || "",
-          status: "Active",
-          sourceRequestId: request.id,
-        });
-      }
-      const listings = await linkedLivestock(request);
-      await Promise.all((listings || []).map((listing) => {
-        const updated = { ...listing, breed: breed.name, breedId: breed.id, breedApprovalStatus: "Approved" };
-        const visibility = marketplaceVisibility(updated);
-        return base44.entities.Livestock.update(listing.id, {
-          breed: breed.name,
-          breedId: breed.id,
-          breedApprovalStatus: "Approved",
-          marketplaceVisible: visibility.visible,
-          marketplaceVisibilityReason: visibility.reason,
-        });
-      }));
-      await base44.entities.BreedRequest.update(request.id, {
+      const reviewedRequest = await qurbi.entities.BreedRequest.update(request.id, {
         status: "Approved",
         adminReason: approvalReason.trim(),
         reviewedBy: user?.id || "",
         reviewedAt: new Date().toISOString(),
       });
+      const listings = await qurbi.entities.Livestock.filter({ breedRequestId: request.id }, "-created_date", 500);
+      await Promise.all((listings || []).map((listing) => qurbi.entities.Livestock.update(listing.id, {
+        breed: request.proposedName,
+        breedId: reviewedRequest.createdBreedId,
+        breedRequestId: "",
+        breedApprovalStatus: "Approved",
+        status: listing.originalStatus || "Available",
+      })));
       await notify(
         request,
         "Breed Approved",
         "New breed approved",
         `${request.proposedName} has been approved and added to the ${request.species} breed list. Admin reason: ${approvalReason.trim()}`,
-        listings?.[0]?.id || request.livestockId || ""
+        request.livestockId || ""
       ).catch(() => {});
       setApproving(null);
       setApprovalReason("");
@@ -121,26 +104,26 @@ export default function AdminBreeds() {
     if (!rejecting || !reason.trim()) return;
     setProcessing(rejecting.id);
     try {
-      const listings = await linkedLivestock(rejecting);
-      await Promise.all((listings || []).map((listing) => base44.entities.Livestock.update(listing.id, {
-        breed: "Unspecified",
-        breedId: "",
-        breedApprovalStatus: "Rejected",
-        marketplaceVisible: false,
-        marketplaceVisibilityReason: "Breed request was rejected",
-      })));
-      await base44.entities.BreedRequest.update(rejecting.id, {
+      await qurbi.entities.BreedRequest.update(rejecting.id, {
         status: "Rejected",
         adminReason: reason.trim(),
         reviewedBy: user?.id || "",
         reviewedAt: new Date().toISOString(),
       });
+      const listings = await qurbi.entities.Livestock.filter({ breedRequestId: rejecting.id }, "-created_date", 500);
+      await Promise.all((listings || []).map((listing) => qurbi.entities.Livestock.update(listing.id, {
+        breed: "Unspecified",
+        breedId: "",
+        breedRequestId: "",
+        breedApprovalStatus: "Rejected",
+        status: "Draft",
+      })));
       await notify(
         rejecting,
         "Breed Rejected",
         "Breed request needs correction",
         `${rejecting.proposedName} was rejected. Reason: ${reason.trim()} Your other livestock details remain saved; please choose or request another breed.`,
-        listings?.[0]?.id || rejecting.livestockId || ""
+        rejecting.livestockId || ""
       ).catch(() => {});
       setRejecting(null);
       setReason("");
@@ -156,7 +139,7 @@ export default function AdminBreeds() {
     setProcessing(breed.id);
     try {
       const status = breed.status === "Inactive" ? "Active" : "Inactive";
-      await base44.entities.Breed.update(breed.id, { status });
+      await qurbi.entities.Breed.update(breed.id, { status });
       setBreeds((current) => current.map((item) => item.id === breed.id ? { ...item, status } : item));
     } finally {
       setProcessing("");
@@ -260,7 +243,7 @@ function AddBreedDialog({ open, onOpenChange, onCreated }) {
   const submit = async () => {
     setSubmitting(true);
     try {
-      const breed = await base44.entities.Breed.create({ species, name: name.trim(), description: description.trim(), image: "", status: "Active", sourceRequestId: "" });
+      const breed = await qurbi.entities.Breed.create({ species, name: name.trim(), description: description.trim(), image: "", status: "Active", sourceRequestId: "" });
       onCreated(breed);
       setSpecies(""); setName(""); setDescription("");
     } finally { setSubmitting(false); }

@@ -1,17 +1,26 @@
 import React, { useState } from "react";
 import { Loader2, ShieldCheck } from "lucide-react";
-import { base44 } from "@/api/base44Client";
 import BrandLogo from "@/components/agri/BrandLogo";
 import GoogleIcon from "@/components/GoogleIcon";
 import { safeReturnTo } from "@/lib/authReturnTo";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function Login() {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const returnTo = safeReturnTo();
+  const { loginWithGoogle } = useAuth();
 
-  const handleGoogle = () => {
+  const handleGoogle = async () => {
     setLoading(true);
-    base44.auth.loginWithProvider("google", returnTo);
+    setError("");
+    try {
+      await loginWithGoogle();
+      window.location.assign(returnTo || "/");
+    } catch (authError) {
+      setError(authError?.message || "Google sign-in failed. Please try again.");
+      setLoading(false);
+    }
   };
 
   return (
@@ -44,6 +53,7 @@ export default function Login() {
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-secondary text-primary"><ShieldCheck className="h-5 w-5" /></div>
             <p className="mt-5 text-2xl font-extrabold tracking-tight text-foreground">Welcome back</p>
             <p className="mt-1.5 text-sm leading-6 text-muted-foreground">Sign in with your registered Google account to continue.</p>
+            {error && <div role="alert" className="mt-4 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
             <button
               type="button"
               onClick={handleGoogle}

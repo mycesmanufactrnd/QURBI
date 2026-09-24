@@ -1,5 +1,5 @@
   import React, { useEffect, useRef, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
 import { AlertCircle, CheckCircle2, ImagePlus, Loader2, Plus, ShieldCheck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ export default function BreedSelector({ species, value, approvalStatus, requestI
   const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
-    base44.entities.Breed.list("name", 500)
+    qurbi.entities.Breed.list("name", 500)
       .then((rows) => setManagedBreeds(rows || []))
       .catch(() => setManagedBreeds([]));
   }, []);
@@ -105,7 +105,7 @@ function BreedRequestDialog({ open, onOpenChange, species, farmerId, livestockId
     setUploading(true);
     setError("");
     try {
-      const result = await base44.integrations.Core.UploadFile({ file });
+      const result = await qurbi.integrations.Core.UploadFile({ file });
       setImage(result.file_url);
     } catch (uploadError) {
       setError(uploadError.message || "Image upload failed.");
@@ -119,7 +119,7 @@ function BreedRequestDialog({ open, onOpenChange, species, farmerId, livestockId
     setSubmitting(true);
     setError("");
     try {
-      const request = await base44.entities.BreedRequest.create({
+      const request = await qurbi.entities.BreedRequest.create({
         farmerId,
         livestockId: livestockId || "",
         species,

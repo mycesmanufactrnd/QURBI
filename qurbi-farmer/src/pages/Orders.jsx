@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 import {
   Check,
   ChevronRight,
@@ -148,10 +148,10 @@ export default function Orders() {
     setLoading(true);
     setError("");
     try {
-      const response = await base44.functions.invoke("fetchFarmerOrders", {});
+      const response = await qurbi.functions.invoke("fetchFarmerOrders", {});
       const packages = response.data?.orders;
       if (!Array.isArray(packages)) throw new Error("The order service returned an invalid response.");
-      const livestock = await base44.entities.Livestock.list("-created_date", 500);
+      const livestock = await qurbi.entities.Livestock.list("-created_date", 500);
       await reconcileOrderLivestockStatuses(packages, livestock);
       setOrders(packages);
     } catch (loadError) {

@@ -9,6 +9,7 @@ import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from '@/components/ProtectedRoute';
 // Page imports
 import Login from "@/pages/Login";
+import Register from "@/pages/Register";
 import FarmerVerification from "@/pages/FarmerVerification";
 import FarmerRegistrationPolicy from "@/pages/FarmerRegistrationPolicy";
 import VerificationPending from "@/pages/VerificationPending";
@@ -40,7 +41,7 @@ import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminLivestockDetail from "@/pages/admin/AdminLivestockDetail";
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError } = useAuth();
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -55,10 +56,6 @@ const AuthenticatedApp = () => {
   if (authError) {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
-    } else if (authError.type === 'auth_required') {
-      // Redirect to login automatically
-      navigateToLogin();
-      return null;
     }
   }
 
@@ -66,6 +63,7 @@ const AuthenticatedApp = () => {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
 
       {/* Authenticated area */}
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>

@@ -76,7 +76,35 @@ export const BREEDS_BY_SPECIES = {
 };
 
 export const GENDERS = ["Male", "Female"];
-export const LIVESTOCK_STATUSES = ["Available", "Reserved", "Sold", "Sick"];
+export const LIVESTOCK_STATUSES = ["Available", "Reserved", "Sold", "Unavailable", "Draft"];
+export const FARMER_LISTING_STATUSES = ["Available", "Unavailable", "Draft"];
+export const LISTING_DURATION_MS = 14 * 24 * 60 * 60 * 1000;
+
+export function listingExpiry(livestock, now = new Date()) {
+  const explicitExpiry = Date.parse(livestock?.listingExpiresAt || "");
+  const createdAt = Date.parse(livestock?.created_date || "");
+  const expiresAt = Number.isFinite(explicitExpiry)
+    ? explicitExpiry
+    : Number.isFinite(createdAt) ? createdAt + LISTING_DURATION_MS : null;
+  return {
+    expiresAt: expiresAt ? new Date(expiresAt) : null,
+    expired: expiresAt !== null && expiresAt <= now.getTime(),
+    daysRemaining: expiresAt === null ? null : Math.max(0, Math.ceil((expiresAt - now.getTime()) / (24 * 60 * 60 * 1000))),
+  };
+}
+
+export function newListingWindow(now = new Date()) {
+  return {
+    listingPublishedAt: now.toISOString(),
+    listingExpiresAt: new Date(now.getTime() + LISTING_DURATION_MS).toISOString(),
+  };
+}
+
+export function listingExpiryLabel(livestock) {
+  const { expiresAt } = listingExpiry(livestock);
+  if (!expiresAt) return "Renewal date unavailable";
+  return new Intl.DateTimeFormat("en-MY", { day: "numeric", month: "short", year: "numeric" }).format(expiresAt);
+}
 
 // QURBI marketplace welfare thresholds based on post-weaning guidance.
 // Cow: DVS guidance identifies weaned calves at >6 months or >100 kg.
@@ -177,6 +205,9 @@ export function marketplaceVisibility(livestock) {
   }
   if (livestock.status !== "Available") {
     return { visible: false, reason: `Status is ${livestock.status || "not available"}` };
+  }
+  if (listingExpiry(livestock).expired) {
+    return { visible: false, reason: "Listing expired after 14 days; farmer confirmation is required" };
   }
   const months = ageInMonths(livestock);
   const minimum = MIN_MARKETPLACE_AGE_MONTHS[livestock.species];

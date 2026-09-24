@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { farmerProfileApi, userApi } from "@/api/apiClient";
 import StatusBadge from "@/components/agri/StatusBadge";
 import EmptyState from "@/components/agri/EmptyState";
 import AdminAccountCard from "@/components/agri/AdminAccountCard";
@@ -21,10 +21,10 @@ export default function AdminFarmers() {
 
   useEffect(() => {
     Promise.all([
-      base44.entities.User.list("-created_date", 500),
-      base44.entities.FarmerProfile.list("-created_date", 500),
-    ]).then(([userRows, profileRows]) => {
-      setUsers(userRows || []);
+      userApi.list({ role: "farmer", page: 1, limit: 100 }),
+      farmerProfileApi.list(),
+    ]).then(([userPage, profileRows]) => {
+      setUsers(userPage.data || []);
       setProfiles(profileRows || []);
     }).finally(() => setLoading(false));
   }, []);
@@ -33,9 +33,9 @@ export default function AdminFarmers() {
   profiles.forEach((profile) => { profileMap[profile.userId] = profile; });
   const farmers = users.filter((user) => Boolean(profileMap[user.id]));
   const filtered = useMemo(() => farmers.filter((farmer) => {
-    const status = farmer.data?.verificationStatus || farmer.verificationStatus || "Not Submitted";
     const profile = profileMap[farmer.id];
-    const name = farmer.data?.name || farmer.name || farmer.full_name || "Unnamed farmer";
+    const status = statusLabel(profile?.verificationStatus);
+    const name = farmer.fullName || "Unnamed farmer";
     const term = search.trim().toLowerCase();
     const matchesFilter = filter === "All" || status === filter;
     const matchesSearch = !term || `${name} ${farmer.email || ""} ${profile?.farmName || ""}`.toLowerCase().includes(term);
@@ -52,7 +52,7 @@ export default function AdminFarmers() {
 
       <div className="no-scrollbar -mx-5 mt-5 flex gap-2 overflow-x-auto px-5 pb-1 lg:mx-0 lg:px-0">
         {FILTERS.map((status) => {
-          const count = status === "All" ? farmers.length : farmers.filter((farmer) => (farmer.data?.verificationStatus || farmer.verificationStatus || "Not Submitted") === status).length;
+          const count = status === "All" ? farmers.length : farmers.filter((farmer) => statusLabel(profileMap[farmer.id]?.verificationStatus) === status).length;
           return (
             <button
               key={status}
@@ -82,11 +82,15 @@ export default function AdminFarmers() {
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {loading ? <div className="col-span-full flex justify-center py-16"><Loader2 className="h-7 w-7 animate-spin text-primary" /></div> : filtered.length ? filtered.map((farmer) => {
           const profile = profileMap[farmer.id];
-          const status = farmer.data?.verificationStatus || farmer.verificationStatus || "Not Submitted";
-          const name = farmer.data?.name || farmer.name || farmer.full_name || "Unnamed farmer";
-          return <AdminAccountCard key={farmer.id} name={name} email={farmer.email} subtitle={profile?.farmName || "Farm name unavailable"} badge={<StatusBadge tone={TONE[status] || "muted"} dot>{status}</StatusBadge>} onClick={() => navigate(`/admin/farmers/${farmer.id}`)} meta={[{ icon: Building2, label: "Farm", value: profile?.farmName || "Not provided" }, { icon: MapPin, label: "State", value: profile?.state || "Not provided" }]} />;
+          const status = statusLabel(profile?.verificationStatus);
+          const name = farmer.fullName || "Unnamed farmer";
+          return <AdminAccountCard key={farmer.id} name={name} email={farmer.email} subtitle={profile?.farmName || "Farm name unavailable"} badge={<StatusBadge tone={TONE[status] || "muted"} dot>{status}</StatusBadge>} onClick={() => navigate(`/admin/farmers/${farmer.id}`)} meta={[{ icon: Building2, label: "Farm", value: profile?.farmName || "Not provided" }, { icon: MapPin, label: "State", value: profile?.farmState || "Not provided" }]} />;
         }) : <div className="col-span-full"><EmptyState icon={UserCheck} title={search ? "No matching farmers" : filter === "All" ? "No farmers" : `No ${filter.toLowerCase()} farmers`} description={search ? "Try another name, email or farm." : "Nothing to review here right now."} /></div>}
       </div>
     </div>
   );
+}
+
+function statusLabel(status) {
+  return { pending: "Pending", verified: "Approved", rejected: "Rejected", unverified: "Not Submitted" }[status] || "Not Submitted";
 }

@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { resolveApiAssetUrl, uploadApi } from "@/api/apiClient";
 import { Loader2, PlaySquare, Upload, X } from "lucide-react";
 
 const MAX_VIDEOS = 2;
@@ -23,8 +23,9 @@ export default function VideoUploader({ value = [], onChange, buttonLabel = "Add
     setUploading(true);
     try {
       const urls = await Promise.all(files.map(async (file) => {
-        const result = await base44.integrations.Core.UploadFile({ file });
-        return result.file_url;
+        const result = await uploadApi.upload(file, "public");
+        if (!result.fileUrl) throw new Error("Upload returned no URL");
+        return result.fileUrl;
       }));
       onChange([...value, ...urls]);
     } catch (uploadError) {
@@ -39,7 +40,7 @@ export default function VideoUploader({ value = [], onChange, buttonLabel = "Add
     <div className="space-y-2">
       {value.map((url, index) => (
         <div key={url} className="relative overflow-hidden rounded-2xl border border-border bg-black">
-          <video src={url} controls preload="metadata" className="aspect-video w-full" />
+          <video src={resolveApiAssetUrl(url)} controls preload="metadata" className="aspect-video w-full" />
           <button
             type="button"
             onClick={() => onChange(value.filter((_, itemIndex) => itemIndex !== index))}

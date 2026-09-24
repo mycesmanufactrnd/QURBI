@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 import { Button } from "@/components/ui/button";
 import { Truck, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
@@ -26,11 +26,11 @@ export default function DeliveryPreference({ profile }) {
     setError("");
     setSaving(true);
     try {
-      await base44.entities.FarmerProfile.update(profile.id, {
+      await qurbi.entities.FarmerProfile.update(profile.id, {
         deliveryPreference: value,
       });
       // Re-fetch and only confirm if the stored value matches.
-      const refetched = await base44.entities.FarmerProfile.filter({
+      const refetched = await qurbi.entities.FarmerProfile.filter({
         userId: profile.userId,
       });
       const fresh = refetched?.[0];

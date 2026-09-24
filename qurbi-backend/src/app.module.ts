@@ -16,7 +16,6 @@ import { GoogleDriveModule } from './google-drive/google-drive.module';
 import { APP_ENTITIES } from './app.entities';
 import { APP_MODULES } from "./app.modules";
 import { jwtConstants } from "./auth/jwt.constants";
-import { StringValue } from "ms";
 
 @Module({
   imports: [
@@ -28,21 +27,24 @@ import { StringValue } from "ms";
       type: "mysql",
       // logger: new TypeOrmLogger(),
       // logging: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-      // maxQueryExecutionTime: 1000, 
+      // maxQueryExecutionTime: 1000,
       host: process.env.DB_HOST,
       port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 3306,
       username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      synchronize: process.env.DB_SYNC == "true" ? true : false,
-      autoLoadEntities: true,
+      database: process.env.DB_DATABASE,
+      charset: "utf8mb4",
+      // DEV ONLY when DB_SYNC=true: automatic schema changes can rewrite data.
+      // Keep false outside local development and use reviewed migrations.
+      synchronize: process.env.DB_SYNC === 'true',
       entities: APP_ENTITIES,
       // debug:true,
     }),
     JwtModule.register({
+      global: true,
       secret: jwtConstants.secret,
       signOptions: {
-        expiresIn: (process.env.DAY_TOKEN ? process.env.DAY_TOKEN : "7d") as StringValue,
+        expiresIn: jwtConstants.accessTtl,
       },
     }),
     ThrottlerModule.forRoot([

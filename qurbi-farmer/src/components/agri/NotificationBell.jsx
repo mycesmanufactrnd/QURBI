@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 import { Bell, CheckCheck, CheckCircle2, ChevronRight, Loader2, PackageCheck, ShieldAlert, XCircle } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -45,16 +45,16 @@ export default function NotificationBell() {
 
   const load = (showLoader = false) => {
     if (showLoader) setLoading(true);
-    return base44.entities.FarmerNotification.list("-created_date", 50)
+    return qurbi.entities.FarmerNotification.list("-created_date", 50)
       .then((rows) => setItems(rows || []))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
-    base44.functions.invoke("syncFarmerNotifications")
+    qurbi.functions.invoke("syncFarmerNotifications")
       .catch(() => null)
       .finally(() => load(true));
-    const unsubscribe = base44.entities.FarmerNotification.subscribe(() => load());
+    const unsubscribe = qurbi.entities.FarmerNotification.subscribe(() => load());
     return unsubscribe;
   }, []);
 
@@ -65,7 +65,7 @@ export default function NotificationBell() {
     if (!notification.isRead) {
       setItems((current) => current.map((item) => item.id === notification.id ? { ...item, isRead: true } : item));
       try {
-        await base44.entities.FarmerNotification.update(notification.id, { isRead: true });
+        await qurbi.entities.FarmerNotification.update(notification.id, { isRead: true });
       } catch {
         load();
         return;
@@ -82,7 +82,7 @@ export default function NotificationBell() {
     if (!unread.length || marking) return;
     setMarking(true);
     try {
-      await Promise.all(unread.map((item) => base44.entities.FarmerNotification.update(item.id, { isRead: true })));
+      await Promise.all(unread.map((item) => qurbi.entities.FarmerNotification.update(item.id, { isRead: true })));
       setItems((current) => current.map((item) => ({ ...item, isRead: true })));
     } finally {
       setMarking(false);

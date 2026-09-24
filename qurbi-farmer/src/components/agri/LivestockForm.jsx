@@ -11,7 +11,7 @@ import BreedSelector from "@/components/agri/BreedSelector";
 import SpeciesSelector from "@/components/agri/SpeciesSelector";
 import {
   GENDERS,
-  LIVESTOCK_STATUSES,
+  FARMER_LISTING_STATUSES,
   MALAYSIA_STATES,
   formatAge,
   marketplaceEligibleFrom,
@@ -268,7 +268,7 @@ const LivestockForm = forwardRef(function LivestockForm({
             </Field>
             <Field label="Listing status" required>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {LIVESTOCK_STATUSES.map((status) => (
+                {FARMER_LISTING_STATUSES.map((status) => (
                   <button
                     key={status}
                     type="button"

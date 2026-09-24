@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Check, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,6 @@ import EmptyState from "@/components/agri/EmptyState";
 import CowSilhouetteIcon from "@/components/agri/CowSilhouetteIcon";
 import StatusBadge from "@/components/agri/StatusBadge";
 import { cn } from "@/lib/utils";
-import { marketplaceVisibility } from "@/lib/agri";
 
 export default function AdminSpecies() {
   const { user } = useAuth();
@@ -25,8 +24,8 @@ export default function AdminSpecies() {
   const load = () => {
     setLoading(true);
     Promise.all([
-      base44.entities.SpeciesRequest.list("-created_date", 500),
-      base44.entities.Species.list("name", 500),
+      qurbi.entities.SpeciesRequest.list("-created_date", 500),
+      qurbi.entities.Species.list("name", 500),
     ]).then(([requestRows, speciesRows]) => {
       setRequests(requestRows || []);
       setSpecies(speciesRows || []);
@@ -35,55 +34,25 @@ export default function AdminSpecies() {
 
   useEffect(() => { load(); }, []);
 
-  const linkedLivestock = (request) => base44.entities.Livestock.filter({ speciesRequestId: request.id }, "-created_date", 500);
-
   const review = async () => {
     if (!decision?.request || !reason.trim()) return;
     const { request, approved } = decision;
     setProcessing(request.id);
     try {
-      let approvedSpecies = species.find((item) => item.name.toLowerCase() === request.proposedName.toLowerCase());
-      if (approved && !approvedSpecies) {
-        approvedSpecies = await base44.entities.Species.create({
-          name: request.proposedName,
-          image: request.referenceImage,
-          description: request.description || "",
-          status: "Active",
-          sourceRequestId: request.id,
-        });
-      }
-      const listings = await linkedLivestock(request);
-      await Promise.all((listings || []).map((listing) => {
-        if (!approved) {
-          return base44.entities.Livestock.update(listing.id, {
-            speciesApprovalStatus: "Rejected",
-            marketplaceVisible: false,
-            marketplaceVisibilityReason: "Species request was rejected",
-          });
-        }
-        const updated = { ...listing, species: approvedSpecies.name, speciesApprovalStatus: "Approved" };
-        const visibility = marketplaceVisibility(updated);
-        return base44.entities.Livestock.update(listing.id, {
-          species: approvedSpecies.name,
-          speciesApprovalStatus: "Approved",
-          marketplaceVisible: visibility.visible,
-          marketplaceVisibilityReason: visibility.reason,
-        });
-      }));
-      await base44.entities.SpeciesRequest.update(request.id, {
+      await qurbi.entities.SpeciesRequest.update(request.id, {
         status: approved ? "Approved" : "Rejected",
         adminReason: reason.trim(),
         reviewedBy: user?.id || "",
         reviewedAt: new Date().toISOString(),
       });
-      await base44.entities.FarmerNotification.create({
+      await qurbi.entities.FarmerNotification.create({
         farmerId: request.farmerId,
         type: approved ? "Species Approved" : "Species Rejected",
         title: approved ? "New species approved" : "Species request needs correction",
         message: approved
           ? `${request.proposedName} was approved. Reason: ${reason.trim()} You can now select or request its breed.`
           : `${request.proposedName} was rejected. Reason: ${reason.trim()} Please edit the livestock and select or request another species.`,
-        livestockId: listings?.[0]?.id || request.livestockId || "",
+        livestockId: request.livestockId || "",
         speciesRequestId: request.id,
         isRead: false,
       }).catch(() => {});
@@ -101,7 +70,7 @@ export default function AdminSpecies() {
     setProcessing(item.id);
     try {
       const status = item.status === "Inactive" ? "Active" : "Inactive";
-      await base44.entities.Species.update(item.id, { status });
+      await qurbi.entities.Species.update(item.id, { status });
       setSpecies((current) => current.map((speciesItem) => speciesItem.id === item.id ? { ...speciesItem, status } : speciesItem));
     } finally {
       setProcessing("");

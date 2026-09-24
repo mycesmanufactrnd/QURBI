@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, MapPin, Pencil, Trash2, Users } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { qurbi } from "@/api/qurbiClient";
 import ConfirmDialog from "@/components/agri/ConfirmDialog";
 import StatusBadge from "@/components/agri/StatusBadge";
 import { Image } from "@/components/ui/image";
@@ -21,7 +21,7 @@ export default function BulkListingDetail() {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    base44.entities.BulkListing.get(id)
+    qurbi.entities.BulkListing.get(id)
       .then(setItem)
       .catch(() => navigate("/bulk", { replace: true }))
       .finally(() => setLoading(false));
@@ -30,7 +30,7 @@ export default function BulkListingDetail() {
   const remove = async () => {
     setDeleting(true);
     try {
-      await base44.entities.BulkListing.delete(id);
+      await qurbi.entities.BulkListing.delete(id);
       navigate("/bulk", { replace: true });
     } catch (error) {
       alert(error.message || "Bulk listing could not be deleted.");

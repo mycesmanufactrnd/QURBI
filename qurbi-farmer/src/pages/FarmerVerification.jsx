@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { farmerProfileApi, farmVerificationApi } from "@/api/apiClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,18 +20,25 @@ const STEPS = [
 ];
 
 const EMPTY_FORM = {
-  name: "", phoneNumber: "", icNumber: "", farmName: "", address: "", state: "", deliveryPreference: "",
+  name: "", phoneNumber: "", icNumber: "", farmName: "", address: "", city: "", postcode: "", state: "", deliveryPreference: "",
 };
 
 export default function FarmerVerification() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const savedDraft = getFarmerVerificationDraft();
-  const [form, setForm] = useState(() => savedDraft?.form || {
+  const [form, setForm] = useState(() => ({
     ...EMPTY_FORM,
     name: userVal(user, "name") || user?.full_name || "",
-  });
-  const [docs, setDocs] = useState(() => savedDraft?.docs || { icFront: null, icBack: null, selfieImage: null, farmerCertificate: null });
+    ...(savedDraft?.form || {}),
+  }));
+  const [docs, setDocs] = useState(() => ({
+    icFront: null,
+    icBack: null,
+    selfieImage: null,
+    farmerCertificate: null,
+    ...(savedDraft?.docs || {}),
+  }));
   const [loading, setLoading] = useState(!savedDraft);
   const [error, setError] = useState("");
 
@@ -40,30 +47,33 @@ export default function FarmerVerification() {
       setLoading(false);
       return;
     }
-    Promise.all([
-      base44.entities.FarmerProfile.filter({ userId: user.id }, "-created_date", 1),
-      base44.entities.FarmVerification.filter({ userId: user.id }, "-created_date", 1),
-    ])
-      .then(([profiles, verifications]) => {
-        const profile = profiles?.[0];
-        const verification = verifications?.[0];
+    farmerProfileApi.byUser(user.id)
+      .then(async (profile) => {
+        const verificationPage = profile
+          ? await farmVerificationApi.list({ page: 1, limit: 1 })
+          : null;
+        const verification = verificationPage?.data?.[0];
+        const documents = verification?.documents || {};
+        const personalDetails = documents.personalDetails || {};
         if (profile) {
           setForm({
             name: userVal(user, "name") || user?.full_name || "",
-            phoneNumber: profile.phoneNumber || "",
-            icNumber: profile.icNumber || "",
+            phoneNumber: personalDetails.phoneNumber || "",
+            icNumber: personalDetails.icNumber || "",
             farmName: profile.farmName || "",
-            address: profile.address || "",
-            state: profile.state || "",
-            deliveryPreference: profile.deliveryPreference || "",
+            address: profile.farmAddressLine || "",
+            city: profile.farmCity || "",
+            postcode: profile.farmPostcode || "",
+            state: profile.farmState || "",
+            deliveryPreference: personalDetails.deliveryPreference || "",
           });
         }
         if (verification) {
           setDocs({
-            icFront: verification.icFront || null,
-            icBack: verification.icBack || null,
-            selfieImage: verification.selfieImage || null,
-            farmerCertificate: verification.farmerCertificate || null,
+            icFront: documents.icFront || null,
+            icBack: documents.icBack || null,
+            selfieImage: documents.selfieImage || null,
+            farmerCertificate: documents.farmerCertificate || null,
           });
         }
       })
@@ -74,7 +84,8 @@ export default function FarmerVerification() {
   const set = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
   const valid = Boolean(
     form.name.trim() && form.phoneNumber.trim() && form.icNumber.trim() && form.farmName.trim()
-    && form.address.trim() && form.state && form.deliveryPreference && docs.icFront && docs.icBack && docs.selfieImage
+    && form.address.trim() && form.city.trim() && form.postcode.trim() && form.state
+    && form.deliveryPreference && docs.icFront && docs.icBack && docs.selfieImage
   );
 
   const next = () => {
@@ -116,6 +127,10 @@ export default function FarmerVerification() {
           <Field label="IC Number" required><Input value={form.icNumber} onChange={set("icNumber")} placeholder="XXXXXX-XX-XXXX" className="h-12" /></Field>
           <Field label="Farm Name" required><Input value={form.farmName} onChange={set("farmName")} placeholder="QURBI Livestock Farm" className="h-12" /></Field>
           <Field label="Farm Address" required><Input value={form.address} onChange={set("address")} placeholder="Lot 12, Jalan..." className="h-12" /></Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="City" required><Input value={form.city} onChange={set("city")} placeholder="Kuantan" className="h-12" /></Field>
+            <Field label="Postcode" required><Input value={form.postcode} onChange={set("postcode")} inputMode="numeric" placeholder="25000" className="h-12" /></Field>
+          </div>
           <Field label="State" required>
             <Select value={form.state} onValueChange={(state) => setForm((current) => ({ ...current, state }))}>
               <SelectTrigger className="h-12"><SelectValue placeholder="Select state" /></SelectTrigger>
