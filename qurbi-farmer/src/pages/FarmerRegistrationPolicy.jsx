@@ -101,6 +101,7 @@ export default function FarmerRegistrationPolicy() {
           policyConsents: POLICY_POINTS.map((point) => point.id),
           farmerCertificate: draft.docs.farmerCertificate || "",
           personalDetails: {
+            fullName: draft.form.name.trim(),
             phoneNumber: draft.form.phoneNumber,
             icNumber: draft.form.icNumber,
             deliveryPreference: draft.form.deliveryPreference,

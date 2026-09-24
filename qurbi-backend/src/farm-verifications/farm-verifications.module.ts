@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { FarmerProfile, FarmVerification } from '../entities';
+import { FarmerProfile, FarmVerification, User } from '../entities';
 import { FarmVerificationsController } from './farm-verifications.controller';
 import { FarmVerificationsService } from './farm-verifications.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([FarmVerification, FarmerProfile])],
+  imports: [TypeOrmModule.forFeature([FarmVerification, FarmerProfile, User])],
   controllers: [FarmVerificationsController],
   providers: [FarmVerificationsService],
   exports: [FarmVerificationsService],

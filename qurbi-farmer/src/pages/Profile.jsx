@@ -44,7 +44,7 @@ export default function Profile() {
   const openEditor = () => {
     setForm({
       name,
-      phoneNumber: profile?.phoneNumber || "",
+      phoneNumber: user?.phone || "",
       farmName: profile?.farmName || "",
       address: profile?.address || "",
       state: profile?.state || "",
@@ -67,8 +67,11 @@ export default function Profile() {
     if (!profile?.id || !formValid || saving) return;
 
     const nextName = form.name.trim();
+    const userChanges = {
+      fullName: nextName,
+      phone: form.phoneNumber.trim(),
+    };
     const profileChanges = {
-      phoneNumber: form.phoneNumber.trim(),
       farmName: form.farmName.trim(),
       address: form.address.trim(),
       state: form.state,
@@ -78,7 +81,7 @@ export default function Profile() {
     setSaveError("");
     try {
       await Promise.all([
-        apiClient.patch(`/users/${user.id}`, { fullName: nextName }),
+        apiClient.patch(`/users/${user.id}`, userChanges),
         qurbi.entities.FarmerProfile.update(profile.id, profileChanges),
       ]);
       setProfile((current) => ({ ...current, ...profileChanges }));
@@ -133,7 +136,7 @@ export default function Profile() {
 
       <div className="soft-card mt-4 divide-y divide-border/70 overflow-hidden">
         <Row icon={Mail} label="Email" value={user?.email} />
-        <Row icon={Phone} label="Phone" value={profile?.phoneNumber || "—"} />
+        <Row icon={Phone} label="Phone" value={user?.phone || "—"} />
         <Row icon={HomeIcon} label="Farm Name" value={profile?.farmName || "—"} />
         <Row icon={MapPin} label="Farm Address" value={profile?.address || "—"} />
         <Row icon={MapPin} label="State" value={profile?.state || "—"} />
