@@ -8,6 +8,7 @@ import {
   LivestockStatus,
   RequestStatus,
   Species,
+  User,
   UserRole,
   VerificationStatus,
 } from '../entities';
@@ -60,8 +61,8 @@ export class LivestockService extends BaseCrudService<Livestock> {
       .leftJoinAndSelect('livestock.species', 'species')
       .leftJoinAndSelect('livestock.breed', 'breed')
       .leftJoinAndSelect('livestock.category', 'category')
-      .innerJoin(FarmerProfile, 'farmerProfile', 'farmerProfile.userId = livestock.farmerId')
-      .addSelect('farmerProfile.verificationStatus')
+      .innerJoinAndSelect('livestock.farmer', 'farmer')
+      .innerJoinAndSelect('farmer.farmerProfile', 'farmerProfile')
       .orderBy('livestock.createdAt', 'DESC');
 
     if (query.farmerId) qb.andWhere('livestock.farmerId = :farmerId', { farmerId: query.farmerId });
@@ -96,20 +97,53 @@ export class LivestockService extends BaseCrudService<Livestock> {
     const rows = await qb.getRawAndEntities();
     const data = rows.entities.map((listing, index) => {
       const verificationStatus = rows.raw[index].farmerProfile_verificationStatus as VerificationStatus;
-      return this.withDerivedVisibility(listing, verificationStatus);
+      return this.withPublicFarmer(this.withDerivedVisibility(listing, verificationStatus));
     });
     return { data, total, page, limit };
   }
 
   async findOneWithVisibility(id: string): Promise<LivestockWithVisibility> {
-    const listing = await this.findOne(id);
-    const farmerProfile = await this.dataSource
-      .getRepository(FarmerProfile)
-      .findOne({ where: { userId: listing.farmerId } });
-    return this.withDerivedVisibility(
-      listing,
-      farmerProfile?.verificationStatus ?? VerificationStatus.UNVERIFIED,
-    );
+    const listing = await this.repository.findOne({
+      where: { id },
+      relations: {
+        species: true,
+        breed: true,
+        category: true,
+        farmer: { farmerProfile: true },
+      },
+    });
+    if (!listing) throw new NotFoundException(`Livestock ${id} not found`);
+    const verificationStatus = listing.farmer?.farmerProfile?.verificationStatus ?? VerificationStatus.UNVERIFIED;
+    return this.withPublicFarmer(this.withDerivedVisibility(listing, verificationStatus));
+  }
+
+  private withPublicFarmer(listing: LivestockWithVisibility): LivestockWithVisibility {
+    const farmer = listing.farmer;
+    const profile = farmer?.farmerProfile;
+    if (!farmer || !profile) return listing;
+
+    listing.farmer = {
+      id: farmer.id,
+      fullName: farmer.fullName,
+      avatarUrl: farmer.avatarUrl,
+      farmerProfile: {
+        id: profile.id,
+        userId: profile.userId,
+        farmName: profile.farmName,
+        farmDescription: profile.farmDescription,
+        farmAddressLine: profile.farmAddressLine,
+        farmCity: profile.farmCity,
+        farmState: profile.farmState,
+        farmPostcode: profile.farmPostcode,
+        logoUrl: profile.logoUrl,
+        deliveryPreference: profile.deliveryPreference,
+        verificationStatus: profile.verificationStatus,
+        ratingAverage: profile.ratingAverage,
+        ratingCount: profile.ratingCount,
+        totalSales: profile.totalSales,
+      } as FarmerProfile,
+    } as User;
+    return listing;
   }
 
   async findOneForViewer(id: string, viewer: AuthenticatedUser): Promise<LivestockWithVisibility> {

@@ -50,7 +50,7 @@ import { jwtConstants } from "./auth/jwt.constants";
     ThrottlerModule.forRoot([
       {
         ttl: parseInt(process.env.MINIT ? process.env.MINIT : "60000"),
-        limit: parseInt(process.env.LIMIT ? process.env.LIMIT : "10"),
+        limit: parseInt(process.env.LIMIT ? process.env.LIMIT : "100"),
       },
     ]),
     ScheduleModule.forRoot(),

@@ -14,7 +14,7 @@ const TABS = [
 
 export default function BottomNav() {
   const location = useLocation();
-  const { totalItems } = useCart();
+  const { totalItems = 0 } = useCart() || {};
   const [cartBouncing, setCartBouncing] = useState(false);
   const bounceTimer = useRef(null);
 

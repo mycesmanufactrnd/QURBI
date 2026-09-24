@@ -1,5 +1,10 @@
 import apiClient, { getAccessToken } from "@/api/apiClient";
 
+const API_ORIGIN = new URL(
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api",
+  window.location.origin,
+).origin;
+
 const toSnake = (key) => key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
 const toCamel = (key) => key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
 
@@ -54,6 +59,19 @@ function wrap(data) {
   return { data };
 }
 
+function collectionFrom(response) {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.data)) return response.data;
+  return null;
+}
+
+function mediaUrl(value) {
+  if (typeof value !== "string" || !value.trim()) return "";
+  const reference = value.trim();
+  if (/^(?:https?:|data:|blob:)/i.test(reference)) return reference;
+  return `${API_ORIGIN}/${reference.replace(/^\//, "")}`;
+}
+
 function farmDetails(item) {
   const profile = item?.farmer?.farmerProfile || item?.farmer?.farmer_profile || {};
   const address = [profile.farmAddressLine, profile.farmCity, profile.farmState, profile.farmPostcode]
@@ -73,9 +91,11 @@ function farmDetails(item) {
 function livestockForUser(item) {
   if (!item) return item;
   const attributes = item.attributes || {};
+  const images = (item.images || []).map(mediaUrl).filter(Boolean);
   return {
     ...item,
     ...farmDetails(item),
+    images,
     name: item.title,
     species: item.species?.name || item.species?.slug || "Livestock",
     breed: item.breed?.name || "",
@@ -83,7 +103,7 @@ function livestockForUser(item) {
     gender: item.sex || "",
     age: item.ageMonths == null ? "" : `${item.ageMonths} months`,
     weight: item.weightKg == null ? "" : Number(item.weightKg),
-    coverImage: item.images?.[0] || "",
+    coverImage: images[0] || "",
     grade: attributes.grade || "",
     height: attributes.height || attributes.heightCm || "",
     bodyLength: attributes.bodyLength || attributes.bodyLengthCm || "",
@@ -100,19 +120,37 @@ function livestockForUser(item) {
 
 function bulkListingForUser(item) {
   if (!item) return item;
-  const availableShares = Math.max(0, Number(item.totalShares || 0) - Number(item.sharesSold || 0));
+  const maleCount = Number(item.maleCount || 0);
+  const femaleCount = Number(item.femaleCount || 0);
+  const images = (item.images || []).map(mediaUrl).filter(Boolean);
+  const breedBreakdown = Array.isArray(item.breedBreakdown)
+    ? item.breedBreakdown.map((entry, index, entries) => ({
+        ...entry,
+        species: entry.species || item.species?.name || "",
+        breed:
+          entry.breed ||
+          entry.name ||
+          (entry.breedId === item.breed?.id || entries.length === 1
+            ? item.breed?.name
+            : "") ||
+          `Breed ${index + 1}`,
+      }))
+    : item.breed?.name
+      ? [{ breed: item.breed.name, species: item.species?.name || "", count: maleCount + femaleCount }]
+      : [];
   return {
     ...item,
     ...farmDetails(item),
+    images,
     name: item.title,
     ownerId: item.farmerId,
-    coverImage: item.images?.[0] || "",
-    maleCount: 0,
-    femaleCount: 0,
-    totalAnimals: availableShares,
-    breedBreakdown: item.breed?.name ? [item.breed.name] : [],
-    state: item.farmer?.farmerProfile?.farmState || "",
-    totalPrice: Number(item.pricePerShare || 0),
+    coverImage: images[0] || "",
+    maleCount,
+    femaleCount,
+    totalAnimals: maleCount + femaleCount,
+    breedBreakdown,
+    state: item.state || item.farmer?.farmerProfile?.farmState || "",
+    totalPrice: Number(item.price || 0),
     created_date: item.createdAt,
   };
 }
@@ -152,16 +190,18 @@ const functionHandlers = {
   /** @param {{ id?: string }} [payload] */
   async fetchLivestock({ id } = {}) {
     const response = await request({ method: "get", url: id ? `/livestock/${id}` : "/livestock" });
-    const livestock = Array.isArray(response)
-      ? response.filter((item) => item.status === "available").map(livestockForUser)
+    const items = collectionFrom(response);
+    const livestock = items
+      ? items.filter((item) => item.status === "available").map(livestockForUser)
       : livestockForUser(response);
     return wrap({ livestock });
   },
   /** @param {{ id?: string }} [payload] */
   async fetchBulkListings({ id } = {}) {
     const response = await request({ method: "get", url: id ? `/bulk-listings/${id}` : "/bulk-listings" });
-    const bulkListings = Array.isArray(response)
-      ? response.filter((item) => item.status === "open").map(bulkListingForUser)
+    const items = collectionFrom(response);
+    const bulkListings = items
+      ? items.filter((item) => item.status === "open").map(bulkListingForUser)
       : bulkListingForUser(response);
     return wrap({ bulkListings });
   },
@@ -215,7 +255,8 @@ const functionHandlers = {
   /** @param {{ orderId?: string }} [payload] */
   async fetchMyOrders({ orderId } = {}) {
     if (orderId) return wrap({ order: orderForUser(await request({ method: "get", url: `/orders/${orderId}` })) });
-    const orders = await request({ method: "get", url: "/orders", params: { buyerId: currentUserId() } });
+    const response = await request({ method: "get", url: "/orders", params: { buyerId: currentUserId() } });
+    const orders = collectionFrom(response) || [];
     return wrap({ orders: orders.map(orderForUser) });
   },
   async cancelMyOrder({ orderId, reason = "Cancelled by buyer" }) {

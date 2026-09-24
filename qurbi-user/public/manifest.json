@@ -1,0 +1,8 @@
+{
+  "name": "QURBI",
+  "short_name": "QURBI",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7ede2",
+  "theme_color": "#4c333b"
+}
