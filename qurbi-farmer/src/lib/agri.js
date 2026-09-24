@@ -76,7 +76,8 @@ export const BREEDS_BY_SPECIES = {
 };
 
 export const GENDERS = ["Male", "Female"];
-export const LIVESTOCK_STATUSES = ["Available", "Reserved", "Sold", "Sick"];
+export const LIVESTOCK_STATUSES = ["Available", "Reserved", "Sold", "Unavailable", "Draft"];
+export const FARMER_LISTING_STATUSES = ["Available", "Unavailable", "Draft"];
 export const LISTING_DURATION_MS = 14 * 24 * 60 * 60 * 1000;
 
 export function listingExpiry(livestock, now = new Date()) {

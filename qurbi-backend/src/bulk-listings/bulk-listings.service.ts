@@ -36,6 +36,9 @@ export class BulkListingsService extends BaseCrudService<BulkListing> {
   }
 
   async createForFarmer(farmerId: string, data: DeepPartial<BulkListing>): Promise<BulkListing> {
+    if (data.status === BulkListingStatus.SOLD || data.status === BulkListingStatus.CANCELLED) {
+      throw new BadRequestException('a new bulk listing can only start as DRAFT or OPEN');
+    }
     return this.create({ ...data, farmerId });
   }
 

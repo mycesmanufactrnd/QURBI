@@ -116,6 +116,9 @@ export class LivestockService extends BaseCrudService<Livestock> {
 
   async createForFarmer(farmerId: string, data: DeepPartial<Livestock>): Promise<Livestock> {
     if (!data.speciesId) throw new BadRequestException('Select an active species');
+    if (data.status === LivestockStatus.RESERVED || data.status === LivestockStatus.SOLD) {
+      throw new BadRequestException('A new listing cannot start as reserved or sold');
+    }
     await this.validateReferenceData(data.speciesId, data.breedId);
     return this.create({
       ...data,

@@ -163,7 +163,7 @@ export default function AddBulkListing() {
       <Section title="Location & price">
         <Field label="State"><Select value={form.state} onValueChange={(state) => setForm((current) => ({ ...current, state }))}><SelectTrigger className="h-12"><SelectValue placeholder="Select state" /></SelectTrigger><SelectContent>{MALAYSIA_STATES.map((state) => <SelectItem key={state} value={state}>{state}</SelectItem>)}</SelectContent></Select></Field>
         <Field label="Total Price (RM)"><Input type="number" min="0" step="0.01" value={form.totalPrice} onChange={(event) => setForm((current) => ({ ...current, totalPrice: event.target.value }))} placeholder="0.00" className="h-12" /></Field>
-        <Field label="Status"><Select value={form.status} onValueChange={(status) => setForm((current) => ({ ...current, status }))}><SelectTrigger className="h-12"><SelectValue /></SelectTrigger><SelectContent>{["Available", "Paused", "Sold"].map((status) => <SelectItem key={status} value={status}>{status}</SelectItem>)}</SelectContent></Select></Field>
+        <Field label="Status"><Select value={form.status} onValueChange={(status) => setForm((current) => ({ ...current, status }))}><SelectTrigger className="h-12"><SelectValue /></SelectTrigger><SelectContent>{["Available", "Draft"].map((status) => <SelectItem key={status} value={status}>{status}</SelectItem>)}</SelectContent></Select></Field>
       </Section>
 
       {error && <p className="mt-3 text-sm text-destructive">{error}</p>}

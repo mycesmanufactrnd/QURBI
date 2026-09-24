@@ -2,7 +2,17 @@
 // calls. Every operation is backed by QURBI NestJS/MySQL; no Base44 request.
 import apiClient, { uploadApi } from "@/api/apiClient";
 
-const data = (request) => request.then((response) => response.data);
+const data = async (request) => {
+  try {
+    const response = await request;
+    return response.data;
+  } catch (error) {
+    const responseMessage = error.response?.data?.message;
+    if (Array.isArray(responseMessage)) error.message = responseMessage.join(". ");
+    else if (responseMessage) error.message = responseMessage;
+    throw error;
+  }
+};
 const titleCase = (value) => value ? String(value).split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ") : value;
 const slugify = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const STATUS_TO_API = { Available: "available", Reserved: "reserved", Sold: "sold", Unavailable: "unavailable", Draft: "draft", Open: "open", Cancelled: "cancelled" };
@@ -89,7 +99,7 @@ async function bulkPayload(input, partial = false) {
   if (!partial && !speciesId) throw new Error("Select an approved species before saving the bulk listing.");
   const breedIds = await Promise.all(groups.map((row) => resolveBreedId(row.breedId || row.breed, speciesId)));
   const breakdown = groups.map((row, index) => ({ breedId: breedIds[index], count: Number(row.count ?? Number(row.maleCount || 0) + Number(row.femaleCount || 0)), maleCount: Number(row.maleCount || 0), femaleCount: Number(row.femaleCount || 0) })).filter((row) => row.breedId);
-  return Object.fromEntries(Object.entries({ speciesId, breedId: breakdown.length === 1 ? breakdown[0].breedId : input.breedId, title: input.title || input.name, description: input.description, maleCount: input.maleCount != null ? Number(input.maleCount) : undefined, femaleCount: input.femaleCount != null ? Number(input.femaleCount) : undefined, breedBreakdown: groups.length ? breakdown : undefined, price: input.price != null || input.totalPrice != null ? String(input.price ?? input.totalPrice) : undefined, currency: input.currency || (partial ? undefined : "MYR"), images: input.images, status: input.status ? BULK_STATUS_TO_API[input.status] || input.status : undefined }).filter(([, value]) => value !== undefined && value !== ""));
+  return Object.fromEntries(Object.entries({ speciesId, breedId: breakdown.length === 1 ? breakdown[0].breedId : input.breedId, title: input.title || input.name, description: input.description, maleCount: input.maleCount != null ? Number(input.maleCount) : undefined, femaleCount: input.femaleCount != null ? Number(input.femaleCount) : undefined, breedBreakdown: groups.length ? breakdown : undefined, price: input.price != null || input.totalPrice != null ? String(input.price ?? input.totalPrice) : undefined, currency: input.currency || (partial ? undefined : "MYR"), images: input.images, videos: input.videos, state: input.state, status: input.status ? BULK_STATUS_TO_API[input.status] || input.status : undefined }).filter(([, value]) => value !== undefined && value !== ""));
 }
 
 const FarmerProfile = { list: async () => (await data(apiClient.get("/farmer-profiles"))).map(normalizeProfile), filter: async ({ userId } = {}) => userId ? ((row) => row ? [normalizeProfile(row)] : [])(await data(apiClient.get(`/farmer-profiles/by-user/${userId}`))) : FarmerProfile.list(), update: async (id, input) => normalizeProfile(await data(apiClient.patch(`/farmer-profiles/${id}`, Object.fromEntries(Object.entries({ farmName: input.farmName, farmAddressLine: input.farmAddressLine ?? input.address, farmCity: input.farmCity ?? input.city, farmState: input.farmState ?? input.state, farmPostcode: input.farmPostcode ?? input.postcode, farmDescription: input.farmDescription, businessRegNo: input.businessRegNo, logoUrl: input.logoUrl, deliveryPreference: input.deliveryPreference }).filter(([, value]) => value !== undefined))))) };

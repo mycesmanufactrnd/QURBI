@@ -79,6 +79,12 @@ export class BulkListing extends BaseEntity {
   @Column({ type: 'json' })
   images: string[];
 
+  @Column({ type: 'json', nullable: true })
+  videos: string[] | null;
+
+  @Column({ type: 'varchar', length: 100 })
+  state: string;
+
   @Column({ type: 'decimal', precision: 8, scale: 2, nullable: true })
   estimatedWeightKg: string | null;
 

@@ -9,7 +9,7 @@ import {
   IsString,
   IsUUID,
 } from 'class-validator';
-import { LivestockSex } from '../../entities';
+import { LivestockSex, LivestockStatus } from '../../entities';
 
 // No farmerId — the owner is always the authenticated caller (see
 // LivestockController), never a value the client declares. No
@@ -71,6 +71,10 @@ export class CreateLivestockDto {
   @IsArray()
   @IsString({ each: true })
   videos?: string[];
+
+  @IsOptional()
+  @IsEnum(LivestockStatus)
+  status?: LivestockStatus;
 
   @IsOptional()
   @IsDateString()

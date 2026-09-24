@@ -47,6 +47,15 @@ export class UpdateBulkListingDto {
   images?: string[];
 
   @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  videos?: string[];
+
+  @IsOptional()
+  @IsString()
+  state?: string;
+
+  @IsOptional()
   @IsNumberString()
   estimatedWeightKg?: string;
 

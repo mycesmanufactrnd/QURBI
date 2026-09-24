@@ -1,4 +1,5 @@
-import { IsArray, IsDateString, IsInt, IsNumberString, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+import { IsArray, IsDateString, IsEnum, IsInt, IsNumberString, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+import { BulkListingStatus } from '../../entities';
 import type { BulkListingBreedGroup } from '../../entities';
 
 // No farmerId — the owner is always the authenticated caller (see
@@ -46,6 +47,14 @@ export class CreateBulkListingDto {
   images: string[];
 
   @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  videos?: string[];
+
+  @IsString()
+  state: string;
+
+  @IsOptional()
   @IsNumberString()
   estimatedWeightKg?: string;
 
@@ -56,4 +65,8 @@ export class CreateBulkListingDto {
   @IsOptional()
   @IsDateString()
   closesAt?: string;
+
+  @IsOptional()
+  @IsEnum(BulkListingStatus)
+  status?: BulkListingStatus;
 }
