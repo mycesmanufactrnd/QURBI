@@ -175,9 +175,8 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] pb-24">
       <AppHeader
-        title="Browse Livestock"
-        subtitle="Browse livestock, manage your cart and track your orders."
-        guestActionsOnLeft
+        eyebrow=""
+        title="QURBI"
         titleClassName="text-2xl sm:text-3xl"
         subtitleClassName="text-base"
       />

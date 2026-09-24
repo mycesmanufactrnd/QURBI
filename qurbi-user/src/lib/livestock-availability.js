@@ -1,16 +1,16 @@
-import { base44 } from "@/api/base44Client";
+import { qurbiApi } from "@/api/qurbiClient";
 
 export async function checkLivestockAvailability(livestockIds) {
   const ids = [...new Set((livestockIds || []).filter(Boolean))];
   if (!ids.length) return {};
-  const response = await base44.functions.invoke("checkLivestockAvailability", { livestockIds: ids });
+  const response = await qurbiApi.functions.invoke("checkLivestockAvailability", { livestockIds: ids });
   return response.data?.availability || {};
 }
 
 export async function checkBulkListingAvailability(bulkListingIds) {
   const ids = [...new Set((bulkListingIds || []).filter(Boolean))];
   if (!ids.length) return {};
-  const response = await base44.functions.invoke("checkBulkListingAvailability", { bulkListingIds: ids });
+  const response = await qurbiApi.functions.invoke("checkBulkListingAvailability", { bulkListingIds: ids });
   return response.data?.availability || {};
 }
 

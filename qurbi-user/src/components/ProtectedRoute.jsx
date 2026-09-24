@@ -2,10 +2,10 @@ import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import UserNotRegisteredError from "@/components/UserNotRegisteredError";
-import { QurbiPageLoader } from "@/components/QurbiLoading";
+import { AisyahPageLoader } from "@/components/AisyahLoading";
 
 const DefaultFallback = () => (
-  <QurbiPageLoader label="Checking your session…" />
+  <AisyahPageLoader label="Checking your session…" />
 );
 
 export default function ProtectedRoute({

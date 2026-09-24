@@ -6,14 +6,15 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { Camera, Check, Package } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { qurbiApi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
+import { useAuthPrompt } from "@/lib/auth-prompt-context";
 import { formatOrderDateTime } from "@/lib/order-date";
 import ImageLightbox from "@/components/ImageLightbox";
 import AppHeader from "@/components/AppHeader";
 import PageLoading from "@/components/PageLoading";
 
-const RECEIVABLE_STATUSES = ["shipped", "to_receive", "delivering"];
+const RECEIVABLE_STATUSES = ["in_transit", "shipped", "to_receive", "delivering", "delivered"];
 
 const TRACKING_STAGES = [
   { key: "before", label: "Before", owner: "Farmer" },
@@ -24,17 +25,21 @@ const TRACKING_STAGES = [
 
 const TAB_FOR_STATUS = {
   pending: "to-pay",
+  pending_payment: "to-pay",
   to_pay: "to-pay",
   cancelled: "to-pay",
   out_of_stock: "to-pay",
   paid: "to-ship",
+  preparing: "to-ship",
   to_ship: "to-ship",
   processing: "to-ship",
+  in_transit: "to-receive",
   shipped: "to-receive",
   to_receive: "to-receive",
   delivering: "to-receive",
   completed: "completed",
   delivered: "completed",
+  received: "completed",
   return_requested: "return-refund",
   refund_requested: "return-refund",
   return_refund: "return-refund",
@@ -79,7 +84,7 @@ function LegacyOrderTracking({ order, onPreview }) {
               <div
                 className={`mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full ${
                   proof?.image_url
-                    ? "bg-emerald-500 text-white"
+                    ? "bg-[#F7EDE2]0 text-white"
                     : "bg-gray-100 text-gray-400"
                 }`}
               >
@@ -100,7 +105,7 @@ function LegacyOrderTracking({ order, onPreview }) {
 
                   <span
                     className={`text-[11px] font-semibold text-right ${
-                      proof?.image_url ? "text-emerald-600" : "text-gray-400"
+                      proof?.image_url ? "text-[#5A493C]" : "text-gray-400"
                     }`}
                   >
                     {waitingFor}
@@ -182,7 +187,7 @@ function OrderTracking({ order, onPreview }) {
                 onClick={() => setSelectedKey(proof.key)}
                 className={`flex-none overflow-hidden rounded-xl border-2 p-0.5 ${
                   selected.key === proof.key
-                    ? "border-emerald-500"
+                    ? "border-[#F7EDE2]0"
                     : "border-transparent"
                 }`}
               >
@@ -268,15 +273,15 @@ function RefundRequestSheet({ order, loading, error, onClose, onSubmit }) {
           disabled={loading}
           rows={4}
           placeholder="Enter your reason"
-          className="mt-4 w-full resize-none rounded-xl border border-gray-200 px-3 py-3 text-sm text-gray-800 outline-none focus:border-emerald-400 disabled:bg-gray-50"
+          className="mt-4 w-full resize-none rounded-xl border border-gray-200 px-3 py-3 text-sm text-gray-800 outline-none focus:border-[#A9825F] disabled:bg-gray-50"
         />
 
-        <label className="mt-3 flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-emerald-300 bg-emerald-50 px-3 text-center text-sm font-bold text-emerald-700">
+        <label className="mt-3 flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[#C49A72] bg-[#F7EDE2] px-3 text-center text-sm font-bold text-[#41362D]">
           <Camera className="h-5 w-5" />
 
           <span className="mt-1">Upload refund photo evidence</span>
 
-          <span className="mt-0.5 text-[11px] font-medium text-emerald-600">
+          <span className="mt-0.5 text-[11px] font-medium text-[#5A493C]">
             At least one photo is required (up to 5)
           </span>
 
@@ -293,7 +298,7 @@ function RefundRequestSheet({ order, loading, error, onClose, onSubmit }) {
         </label>
 
         {evidenceFiles.length > 0 && (
-          <p className="mt-2 text-xs font-semibold text-emerald-700">
+          <p className="mt-2 text-xs font-semibold text-[#41362D]">
             {evidenceFiles.length} photo
             {evidenceFiles.length === 1 ? "" : "s"} selected
           </p>
@@ -322,7 +327,7 @@ function RefundRequestSheet({ order, loading, error, onClose, onSubmit }) {
             type="button"
             onClick={() => onSubmit(reason, evidenceFiles)}
             disabled={loading || !reason.trim() || !evidenceFiles.length}
-            className="min-h-11 rounded-xl bg-emerald-500 px-4 text-sm font-bold text-white disabled:opacity-50"
+            className="min-h-11 rounded-xl bg-[#F7EDE2]0 px-4 text-sm font-bold text-white disabled:opacity-50"
           >
             {loading ? "Submitting..." : "Submit Request"}
           </button>
@@ -338,6 +343,7 @@ export default function OrderDetail() {
   const [searchParams] = useSearchParams();
 
   const { user, isAuthenticated, authChecked } = useAuth();
+  const { requestSignIn } = useAuthPrompt();
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -362,7 +368,7 @@ export default function OrderDetail() {
     setLoadError("");
 
     try {
-      const response = await base44.functions.invoke("fetchMyOrders", {
+      const response = await qurbiApi.functions.invoke("fetchMyOrders", {
         orderId,
       });
 
@@ -396,7 +402,7 @@ export default function OrderDetail() {
     setActionError("");
 
     try {
-      const response = await base44.functions.invoke("confirmMyOrderReceived", {
+      const response = await qurbiApi.functions.invoke("confirmMyOrderReceived", {
         orderId: order.id,
       });
 
@@ -428,11 +434,11 @@ export default function OrderDetail() {
     setActionError("");
 
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({
+      const { file_url } = await qurbiApi.integrations.Core.UploadFile({
         file: receivedFile,
       });
 
-      const response = await base44.functions.invoke(
+      const response = await qurbiApi.functions.invoke(
         "saveMyReceivedOrderProof",
         {
           orderId: order.id,
@@ -473,14 +479,14 @@ export default function OrderDetail() {
         files.map(
           async (file) =>
             (
-              await base44.integrations.Core.UploadFile({
+              await qurbiApi.integrations.Core.UploadFile({
                 file,
               })
             ).file_url,
         ),
       );
 
-      const response = await base44.functions.invoke("requestMyOrderRefund", {
+      const response = await qurbiApi.functions.invoke("requestMyOrderRefund", {
         orderId: order.id,
         reason,
         refundEvidence: evidence,
@@ -523,6 +529,25 @@ export default function OrderDetail() {
     );
   }
 
+  if (authChecked && !isAuthenticated) {
+    return (
+      <div className="aisyah-page min-h-screen pb-28">
+        <AppHeader title="Order Details" backTo="/orders" subtitle="Track your purchase and delivery progress" />
+        <div className="aisyah-content flex flex-col items-center justify-center gap-3 py-20 text-center">
+          <Package className="h-12 w-12 text-[#41362D]/35" />
+          <p className="text-sm text-[#41362D]/65">Sign in to view this order.</p>
+          <button
+            type="button"
+            onClick={() => requestSignIn({ returnTo: `/orders/${orderId}`, message: "Sign in to view this order and its delivery progress." })}
+            className="mt-2 rounded-xl bg-gradient-to-br from-[#41362D] to-[#6B594A] px-6 py-3 text-sm font-bold text-white"
+          >
+            Sign In
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (loadError) {
     return (
       <div className="qurbi-page flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center">
@@ -545,7 +570,7 @@ export default function OrderDetail() {
 
         <p className="text-gray-500">Order not found.</p>
 
-        <Link to="/orders" className="text-emerald-600 font-semibold">
+        <Link to="/orders" className="text-[#5A493C] font-semibold">
           Back to My Orders
         </Link>
       </div>
@@ -576,7 +601,7 @@ export default function OrderDetail() {
       />
 
       {message && (
-        <div className="fixed top-5 left-4 right-4 z-50 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-lg">
+        <div className="fixed top-5 left-4 right-4 z-50 rounded-xl bg-[#5A493C] px-4 py-3 text-sm font-semibold text-white shadow-lg">
           {message}
         </div>
       )}
@@ -684,7 +709,7 @@ export default function OrderDetail() {
 
             <p
               className={`mt-2 text-xs font-semibold ${
-                isRefundRejected ? "text-red-600" : "text-emerald-600"
+                isRefundRejected ? "text-red-600" : "text-[#5A493C]"
               }`}
             >
               {statusLabel(order)}
@@ -740,7 +765,7 @@ export default function OrderDetail() {
 
             {farmerPhotosComplete ? (
               <>
-                <label className="mt-3 flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-emerald-300 bg-emerald-50 px-3 text-sm font-bold text-emerald-700">
+                <label className="mt-3 flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[#C49A72] bg-[#F7EDE2] px-3 text-sm font-bold text-[#41362D]">
                   <Camera className="h-4 w-4" />
 
                   <span>
@@ -767,14 +792,14 @@ export default function OrderDetail() {
                     type="button"
                     onClick={saveReceivedProof}
                     disabled={actionLoading}
-                    className="mt-3 min-h-11 w-full rounded-xl border border-emerald-200 bg-white px-3 text-sm font-bold text-emerald-700 disabled:opacity-50"
+                    className="mt-3 min-h-11 w-full rounded-xl border border-[#D5B18D] bg-white px-3 text-sm font-bold text-[#41362D] disabled:opacity-50"
                   >
                     {actionLoading ? "Saving..." : "Save received proof photo"}
                   </button>
                 )}
 
                 {order.tracking_photos?.received?.image_url && (
-                  <p className="mt-2 text-xs font-semibold text-emerald-600">
+                  <p className="mt-2 text-xs font-semibold text-[#5A493C]"> 
                     Received proof saved. You may now confirm receipt.
                   </p>
                 )}

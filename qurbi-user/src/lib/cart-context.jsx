@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
+import { loadBulkListingById, loadLivestockById } from "@/lib/farmerClient";
 
 const CartContext = createContext(null);
 const CART_STORAGE_PREFIX = "qurbi_cart_v1:";
@@ -61,6 +62,30 @@ export function CartProvider({ children }) {
       // remains usable in memory for the current page session.
     }
   }, [cartItems, cartScope, hydratedScope, selectedKeys]);
+
+  useEffect(() => {
+    if (!cartScope || hydratedScope !== cartScope) return;
+    const missing = cartItems.filter((item) => !item.image && !item.image_checked);
+    if (!missing.length) return;
+    let active = true;
+    Promise.all(missing.map(async (item) => {
+      try {
+        const product = item.item_type === "bulk"
+          ? await loadBulkListingById(item.bulk_listing_id || item.id)
+          : await loadLivestockById(item.livestock_id || item.id);
+        return [item.key, product?.coverImage || product?.images?.[0] || ""];
+      } catch {
+        return [item.key, ""];
+      }
+    })).then((images) => {
+      if (!active) return;
+      const byKey = Object.fromEntries(images);
+      setCartItems((current) => current.map((item) => Object.prototype.hasOwnProperty.call(byKey, item.key)
+        ? { ...item, image: byKey[item.key], image_checked: true }
+        : item));
+    });
+    return () => { active = false; };
+  }, [cartItems, cartScope, hydratedScope]);
 
   const keyFor = (item) => item.item_type === "bulk"
     ? `bulk:${item.bulk_listing_id || item.id}`

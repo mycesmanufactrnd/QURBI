@@ -17,6 +17,7 @@ import {
 } from "@/lib/bulk-listing";
 
 const lotTotal = (listing) =>
+  listing.totalAnimals ??
   Number(listing.maleCount || 0) + Number(listing.femaleCount || 0);
 
 const toCartItem = (listing) => ({
@@ -32,6 +33,7 @@ const toCartItem = (listing) => ({
   breed_breakdown: listing.breedBreakdown || [],
   state: listing.state || "",
   price_per_head: Number(listing.totalPrice || 0),
+  image: listing.coverImage || listing.images?.[0] || "",
 });
 
 export default function BulkBuy() {
@@ -40,7 +42,7 @@ export default function BulkBuy() {
   const [state, setState] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const { addToCart, cartItems } = useCart();
+  const { addToCart, buyNow } = useCart();
   const requireAuth = useRequireAuth();
   const navigate = useNavigate();
 
@@ -93,12 +95,17 @@ export default function BulkBuy() {
           await load();
           return;
         }
-        if (!addToCart(toCartItem(listing))) {
-          alert("This bulk lot is already in your cart.");
-          return;
+        const item = toCartItem(listing);
+        if (goToCart) {
+          buyNow(item);
+          navigate("/payment");
+        } else {
+          if (!addToCart(item)) {
+            alert("This bulk lot is already in your cart.");
+            return;
+          }
+          animateProductToCart(animationSource);
         }
-        animateProductToCart(animationSource);
-        if (goToCart) navigate("/cart");
       } catch {
         alert("We couldn't verify this bulk lot. Please try again.");
       }
@@ -106,9 +113,10 @@ export default function BulkBuy() {
   };
 
   return (
-    <div className="qurbi-page pb-28">
+    <div className="aisyah-page pb-28">
       <AppHeader
         sticky
+        thresholdShrink
         title="Bulk Buy"
         subtitle="Purchase complete livestock lots from trusted farmers."
         search={
@@ -144,7 +152,7 @@ export default function BulkBuy() {
         </div>
       </AppHeader>
 
-      <main className="qurbi-content grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <main className="aisyah-content grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {loading && !listings.length && (
           <PageLoading contentOnly message="Loading bulk lots..." />
         )}
@@ -155,7 +163,7 @@ export default function BulkBuy() {
             <button
               type="button"
               onClick={load}
-              className="mt-3 qurbi-primary-button"
+              className="mt-3 aisyah-primary-button"
             >
               Retry
             </button>
@@ -177,15 +185,11 @@ export default function BulkBuy() {
             const image = listing.coverImage || listing.images?.[0];
             const total = lotTotal(listing);
             const breedBreakdown = getBreedGenderBreakdown(listing);
-            const inCart = cartItems.some(
-              (item) => item.key === `bulk:${listing.id}`,
-            );
-
             return (
               <article
                 data-cart-product
                 key={listing.id}
-                className="qurbi-card overflow-hidden transition-all duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.99]"
+                className="aisyah-card overflow-hidden transition-all duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.99]"
               >
                 <Link
                   to={`/bulk-buy/${encodeURIComponent(listing.id)}`}
@@ -200,8 +204,8 @@ export default function BulkBuy() {
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <div className="flex h-full items-center justify-center text-3xl">
-                        🐄
+                      <div className="flex h-full items-center justify-center text-xs font-bold text-[#41362D]">
+                        Bulk lot
                       </div>
                     )}
                   </div>
@@ -216,10 +220,6 @@ export default function BulkBuy() {
                         Available
                       </span>
                     </div>
-
-                    <p className="mt-1 text-xs text-white/70">
-                      {listing.farmer_name || "Unknown Farmer"}
-                    </p>
 
                     <p className="mt-1 flex items-center gap-1 text-xs text-white/70">
                       <MapPin className="h-3 w-3" />
@@ -254,7 +254,7 @@ export default function BulkBuy() {
                 <div className="grid grid-cols-2 gap-2 border-t border-[#E3C19F]/50 p-3">
                   <Link
                     to={`/bulk-buy/${encodeURIComponent(listing.id)}`}
-                    className="qurbi-secondary-button py-2.5 text-center"
+                    className="aisyah-secondary-button py-2.5 text-center"
                   >
                     View Details
                   </Link>
@@ -264,10 +264,9 @@ export default function BulkBuy() {
                     onClick={(event) =>
                       addLot(listing, true, event.currentTarget)
                     }
-                    disabled={inCart}
-                    className="qurbi-primary-button border border-[#F7EDE2]/60 py-2.5"
+                    className="aisyah-primary-button border border-[#F7EDE2]/60 py-2.5"
                   >
-                    {inCart ? "In Cart" : "Buy Now"}
+                    Buy Now
                   </button>
                 </div>
               </article>

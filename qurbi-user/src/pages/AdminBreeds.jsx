@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { qurbiApi } from "@/api/qurbiClient";
 import { Plus, Pencil, Trash2, Eye, EyeOff, Check, X } from "lucide-react";
 import { useReveal } from "@/hooks/useReveal";
 import AppHeader from "@/components/AppHeader";
 import { QurbiCardSkeleton } from "@/components/QurbiLoading";
+import { QurbiPageLoader } from "@/components/QurbiLoading";
+import { useAuth } from "@/lib/AuthContext";
+import { Link } from "react-router-dom";
 
 const GRADES = ["AA", "A", "B", "C", "D"];
 const GRADE_KEYS = {
@@ -60,7 +63,7 @@ function BreedForm({ initial, categories, onSave, onCancel }) {
             value={form.breed_name}
             onChange={(e) => set("breed_name", e.target.value)}
             required
-            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-400"
+            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#A9825F]"
             placeholder="e.g. Brahman"
           />
         </div>
@@ -72,7 +75,7 @@ function BreedForm({ initial, categories, onSave, onCancel }) {
             value={form.livestock_category_id}
             onChange={(e) => set("livestock_category_id", e.target.value)}
             required
-            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-400"
+            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#A9825F]"
           >
             <option value="">Select category...</option>
             {categories.map((c) => (
@@ -91,7 +94,7 @@ function BreedForm({ initial, categories, onSave, onCancel }) {
         <input
           value={form.origin}
           onChange={(e) => set("origin", e.target.value)}
-          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-400"
+          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#A9825F]"
           placeholder="e.g. India"
         />
       </div>
@@ -103,7 +106,7 @@ function BreedForm({ initial, categories, onSave, onCancel }) {
         <input
           value={form.image_url}
           onChange={(e) => set("image_url", e.target.value)}
-          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-400"
+          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#A9825F]"
           placeholder="https://..."
         />
       </div>
@@ -116,7 +119,7 @@ function BreedForm({ initial, categories, onSave, onCancel }) {
           <input
             value={form.age_range}
             onChange={(e) => set("age_range", e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-400"
+            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#A9825F]"
             placeholder="e.g. 2-3 years"
           />
         </div>
@@ -127,7 +130,7 @@ function BreedForm({ initial, categories, onSave, onCancel }) {
           <select
             value={form.gender}
             onChange={(e) => set("gender", e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-400"
+            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#A9825F]"
           >
             <option value="Male">Male</option>
             <option value="Female">Female</option>
@@ -155,7 +158,7 @@ function BreedForm({ initial, categories, onSave, onCancel }) {
                     e.target.value === "" ? "" : Number(e.target.value),
                   )
                 }
-                className="w-full border border-gray-200 rounded-xl px-2 py-2 text-sm text-gray-800 focus:outline-none focus:border-emerald-400 text-center"
+                className="w-full border border-gray-200 rounded-xl px-2 py-2 text-sm text-gray-800 focus:outline-none focus:border-[#A9825F] text-center"
                 placeholder="0"
                 min="0"
               />
@@ -172,7 +175,7 @@ function BreedForm({ initial, categories, onSave, onCancel }) {
           onChange={(e) =>
             set("status", e.target.checked ? "active" : "inactive")
           }
-          className="w-4 h-4 accent-emerald-500"
+          className="w-4 h-4 accent-[#F7EDE2]0"
         />
         <label htmlFor="status" className="text-gray-600 text-sm">
           Active (visible in marketplace)
@@ -183,7 +186,7 @@ function BreedForm({ initial, categories, onSave, onCancel }) {
         <button
           type="submit"
           disabled={saving}
-          className="flex-1 bg-emerald-500 text-white py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+          className="flex-1 bg-[#F7EDE2]0 text-white py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60"
         >
           <Check className="w-4 h-4" /> {saving ? "Saving..." : "Save"}
         </button>
@@ -249,7 +252,7 @@ function BreedRow({ breed, categoryMap, onEdit, onDelete, onToggle }) {
       <div className="flex items-center gap-1 flex-shrink-0">
         <button
           onClick={() => onToggle(breed)}
-          className={`w-8 h-8 rounded-lg flex items-center justify-center ${isActive ? "bg-emerald-50 text-emerald-500" : "bg-gray-100 text-gray-400"}`}
+          className={`w-8 h-8 rounded-lg flex items-center justify-center ${isActive ? "bg-[#F7EDE2] text-[#F7EDE2]0" : "bg-gray-100 text-gray-400"}`}
         >
           {isActive ? (
             <Eye className="w-4 h-4" />
@@ -275,6 +278,7 @@ function BreedRow({ breed, categoryMap, onEdit, onDelete, onToggle }) {
 }
 
 export default function AdminBreeds() {
+  const { user, authChecked } = useAuth();
   const [categories, setCategories] = useState([]);
   const [breeds, setBreeds] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -286,10 +290,14 @@ export default function AdminBreeds() {
   const categoryMap = Object.fromEntries(categories.map((c) => [c.id, c]));
 
   const loadAll = () => {
+    if (user?.role !== "admin") {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     Promise.all([
-      base44.entities.LivestockCategory.list(),
-      base44.entities.Breed.list("-created_date", 200),
+      qurbiApi.entities.LivestockCategory.list(),
+      qurbiApi.entities.Breed.list("-created_date", 200),
     ])
       .then(([cats, breds]) => {
         setCategories(cats);
@@ -300,13 +308,13 @@ export default function AdminBreeds() {
 
   useEffect(() => {
     loadAll();
-  }, []);
+  }, [authChecked, user?.role]);
 
   const handleSave = async (form) => {
     if (editing?.id) {
-      await base44.entities.Breed.update(editing.id, form);
+      await qurbiApi.entities.Breed.update(editing.id, form);
     } else {
-      await base44.entities.Breed.create(form);
+      await qurbiApi.entities.Breed.create(form);
     }
     setShowForm(false);
     setEditing(null);
@@ -324,12 +332,12 @@ export default function AdminBreeds() {
 
   const handleDelete = async (breed) => {
     if (!confirm(`Delete "${breed.breed_name}"?`)) return;
-    await base44.entities.Breed.delete(breed.id);
+    await qurbiApi.entities.Breed.delete(breed.id);
     loadAll();
   };
 
   const handleToggle = async (breed) => {
-    await base44.entities.Breed.update(breed.id, {
+    await qurbiApi.entities.Breed.update(breed.id, {
       status: breed.status === "active" ? "inactive" : "active",
     });
     loadAll();
@@ -339,6 +347,17 @@ export default function AdminBreeds() {
     filterCategoryId === "All"
       ? breeds
       : breeds.filter((b) => b.livestock_category_id === filterCategoryId);
+
+  if (!authChecked || loading) return <QurbiPageLoader label="Loading breed management…" />;
+
+  if (user?.role !== "admin") {
+    return (
+      <main className="qurbi-page flex min-h-screen flex-col items-center justify-center gap-3 p-8 text-center">
+        <p className="font-semibold text-[#41362D]/65">Administrator access is required.</p>
+        <Link to="/" className="font-bold text-[#6B594A]">Back to Home</Link>
+      </main>
+    );
+  }
 
   return (
     <div className="qurbi-page">
@@ -356,7 +375,7 @@ export default function AdminBreeds() {
               setEditing(null);
               setShowForm(true);
             }}
-            className="bg-emerald-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 shadow-sm"
+            className="bg-[#F7EDE2]0 text-white px-4 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 shadow-sm"
           >
             <Plus className="w-4 h-4" /> Add
           </button>
@@ -381,7 +400,7 @@ export default function AdminBreeds() {
         >
           <button
             onClick={() => setFilterCategoryId("All")}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${filterCategoryId === "All" ? "bg-emerald-500 text-white" : "bg-white text-gray-500 border border-gray-100"}`}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${filterCategoryId === "All" ? "bg-[#F7EDE2]0 text-white" : "bg-white text-gray-500 border border-gray-100"}`}
           >
             All
           </button>
@@ -389,7 +408,7 @@ export default function AdminBreeds() {
             <button
               key={cat.id}
               onClick={() => setFilterCategoryId(cat.id)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${filterCategoryId === cat.id ? "bg-emerald-500 text-white" : "bg-white text-gray-500 border border-gray-100"}`}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${filterCategoryId === cat.id ? "bg-[#F7EDE2]0 text-white" : "bg-white text-gray-500 border border-gray-100"}`} 
             >
               {cat.icon} {cat.name}
             </button>

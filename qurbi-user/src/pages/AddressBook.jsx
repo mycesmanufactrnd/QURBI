@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
+import { useSearchParams } from "react-router-dom";
 import {
   Plus,
   Pencil,
@@ -14,6 +16,8 @@ import { useUserProfile } from "@/lib/user-profile-context";
 import { useReveal } from "@/hooks/useReveal";
 import AppHeader from "@/components/AppHeader";
 import PageLoading from "@/components/PageLoading";
+import { useAuth } from "@/lib/AuthContext";
+import { useAuthPrompt } from "@/lib/auth-prompt-context";
 
 const EMPTY = {
   label: "",
@@ -29,30 +33,37 @@ const EMPTY = {
 };
 
 const inputCls =
-  "w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-300 text-sm outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition";
+  "w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-300 text-sm outline-none focus:border-[#A9825F] focus:ring-1 focus:ring-[#A9825F] transition";
 
 function AddressForm({ initial, onSave, onCancel }) {
   const { profile } = useUserProfile();
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     ...EMPTY,
-    name: profile?.name || "",
-    email: profile?.email || "",
-    phone: profile?.phone || "",
     ...(initial || {}),
+    name: initial?.name ?? profile?.name ?? "",
+    email: profile?.email || "",
+    phone: initial?.phone ?? profile?.phone ?? "",
   });
   const set = (k) => (e) =>
     setForm((prev) => ({ ...prev, [k]: e.target.value }));
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!form.name.trim()) return alert("Name is required.");
     if (!form.street.trim()) return alert("Street address is required.");
     if (!form.city.trim()) return alert("City is required.");
-    onSave(form);
+    setSaving(true);
+    try {
+      await onSave({ ...form, email: profile?.email || "" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       {/* Form Header */}
-      <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-3">
+      <div className="bg-gradient-to-r from-[#F7EDE2]0 to-[#5A493C] px-4 py-3">
         <h3 className="text-white font-bold">
           {initial?.id ? "Edit Address" : "Add New Address"}
         </h3>
@@ -84,10 +95,10 @@ function AddressForm({ initial, onSave, onCancel }) {
           <div className="relative">
             <User className="absolute left-3 top-3.5 h-4 w-4 text-white" />
             <input
-              value={profile?.name || ""}
-              readOnly
+              value={form.name}
+              onChange={set("name")}
               placeholder="Full Name *"
-              className={inputCls + " pl-9 bg-gray-100 cursor-not-allowed"}
+              className={inputCls + " pl-9"}
             />
           </div>
 
@@ -105,11 +116,11 @@ function AddressForm({ initial, onSave, onCancel }) {
           <div className="relative">
             <Phone className="absolute left-3 top-3.5 h-4 w-4 text-white" />
             <input
-              value={profile?.phone || ""}
-              readOnly
+              value={form.phone}
+              onChange={set("phone")}
               placeholder="Phone / WhatsApp"
               type="tel"
-              className={inputCls + " pl-9 bg-gray-100 cursor-not-allowed"}
+              className={inputCls + " pl-9"}
             />
           </div>
         </div>
@@ -179,7 +190,7 @@ function AddressForm({ initial, onSave, onCancel }) {
             </p>
           </div>
           {form.isDefault && (
-            <Star className="ml-auto h-4 w-4 fill-[#41362D] text-[#41362D]" />
+            <Star className="ml-auto h-4 w-4 fill-white text-white" />
           )}
         </button>
 
@@ -187,15 +198,17 @@ function AddressForm({ initial, onSave, onCancel }) {
         <div className="flex gap-2 pt-1">
           <button
             onClick={onCancel}
+            disabled={saving}
             className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-600 font-semibold text-sm active:scale-95 transition-transform"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="flex-1 py-3 rounded-xl bg-emerald-500 text-white font-bold text-sm active:scale-95 transition-transform shadow-sm shadow-emerald-200"
+            disabled={saving}
+            className="flex-1 py-3 rounded-xl bg-[#F7EDE2]0 text-white font-bold text-sm active:scale-95 transition-transform shadow-sm shadow-[#D5B18D]"
           >
-            Save Address
+            {saving ? "Saving..." : "Save Address"}
           </button>
         </div>
       </div>
@@ -227,7 +240,7 @@ function AddressCard({
             </span>
           )}
           {isSelected && !addr.isDefault && (
-            <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
+            <span className="bg-[#E3C19F] text-[#41362D] text-[10px] font-bold px-2 py-0.5 rounded-full">
               SELECTED
             </span>
           )}
@@ -237,7 +250,7 @@ function AddressCard({
             onClick={() => onEdit(addr)}
             className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] text-black transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98]"
           >
-            <Pencil className="h-4 w-4 text-black" />
+            <Pencil className="h-4 w-4 text-white" />
           </button>
           <button
             onClick={() => onDelete(addr.id)}
@@ -297,7 +310,7 @@ function AddressCard({
               onClick={() => onSetDefault(addr.id)}
               className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-[#E3C19F] bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] py-2 text-xs font-semibold text-[#41362D] transition-transform active:scale-95"
             >
-              <Star className="w-3 h-3" /> Set Default
+              <Star className="w-3 h-3 text-white" /> Set Default
             </button>
           )}
           <button
@@ -322,7 +335,32 @@ function AddressCard({
   );
 }
 
+function DeleteAddressModal({ address, onCancel, onConfirm }) {
+  if (!address) return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 p-5 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="delete-address-title">
+      <div className="w-full max-w-sm rounded-3xl border border-gray-100 bg-white p-5 shadow-2xl">
+        <h2 id="delete-address-title" className="text-lg font-bold text-gray-900">Delete address?</h2>
+        <p className="mt-2 text-sm leading-relaxed text-gray-500">
+          This will permanently remove {address.label ? `your ${address.label} address` : "this address"}.
+        </p>
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <button type="button" onClick={onCancel} className="rounded-xl border border-gray-200 py-3 text-sm font-semibold text-gray-700 transition-transform active:scale-95">
+            Cancel
+          </button>
+          <button type="button" onClick={onConfirm} className="rounded-xl bg-gradient-to-br from-red-500 to-red-700 py-3 text-sm font-bold text-white shadow-sm shadow-red-950/25 transition-transform active:scale-95">
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 export default function AddressBook() {
+  const { authChecked, isAuthenticated } = useAuth();
+  const { requestSignIn } = useAuthPrompt();
   const {
     addresses,
     addAddress,
@@ -332,32 +370,48 @@ export default function AddressBook() {
     setSelectedAddressId,
     profileLoading,
   } = useUserProfile();
+  const [searchParams] = useSearchParams();
   const { reveal } = useReveal();
-  const [showForm, setShowForm] = useState(false);
+  const openedFromPayment = searchParams.get("new") === "1";
+  const requestedReturnTo = searchParams.get("returnTo") || "";
+  const returnTo = requestedReturnTo.startsWith("/payment")
+    ? requestedReturnTo
+    : "/profile";
+  const [showForm, setShowForm] = useState(openedFromPayment);
   const [editingAddress, setEditingAddress] = useState(null);
+  const [deleteCandidate, setDeleteCandidate] = useState(null);
 
-  const handleSave = (form) => {
-    if (editingAddress) {
-      updateAddress(editingAddress.id, form);
-      setEditingAddress(null);
-    } else {
-      const newAddr = addAddress(form);
-      setShowForm(false);
+  const handleSave = async (form) => {
+    try {
+      const address = {
+        ...form,
+        email: form.email,
+      };
+      if (editingAddress) {
+        await updateAddress(editingAddress.id, address);
+        setEditingAddress(null);
+      } else {
+        const newAddress = await addAddress(address);
+        if (openedFromPayment) setSelectedAddressId(newAddress.id);
+        setShowForm(false);
+      }
+    } catch (error) {
+      alert(error.data?.error || error.message || "Contact information could not be saved.");
     }
   };
 
-  const handleSetDefault = (id) => {
+  const handleSetDefault = async (id) => {
     const addr = addresses.find((a) => a.id === id);
-    if (addr) updateAddress(id, { ...addr, isDefault: true });
+    if (addr) await updateAddress(id, { ...addr, isDefault: true });
     setSelectedAddressId(id);
   };
 
-  if (profileLoading) {
+  if (!authChecked || profileLoading) {
     return (
-      <div className="qurbi-page pb-10">
+      <div className="aisyah-page pb-10">
         <AppHeader
           title="Address Book"
-          backTo="/profile"
+          backTo={returnTo}
           subtitle="Manage your delivery addresses"
         />
         <PageLoading contentOnly message="Loading your address book..." />
@@ -365,15 +419,34 @@ export default function AddressBook() {
     );
   }
 
+  if (!isAuthenticated) {
+    return (
+      <div className="aisyah-page min-h-screen pb-10">
+        <AppHeader title="Address Book" backTo={returnTo} subtitle="Manage your delivery addresses" />
+        <div className="aisyah-content flex flex-col items-center justify-center gap-3 py-20 text-center">
+          <MapPin className="h-12 w-12 text-[#41362D]/35" />
+          <p className="text-sm text-[#41362D]/65">Sign in to manage your saved delivery addresses.</p>
+          <button
+            type="button"
+            onClick={() => requestSignIn({ returnTo: window.location.pathname + window.location.search, message: "Sign in to manage your delivery addresses." })}
+            className="mt-2 rounded-xl bg-gradient-to-br from-[#41362D] to-[#6B594A] px-6 py-3 text-sm font-bold text-white"
+          >
+            Sign In
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="qurbi-page pb-10">
+    <div className="aisyah-page pb-10">
       <AppHeader
         title="Address Book"
-        backTo="/profile"
+        backTo={returnTo}
         subtitle={`${addresses.length} saved address${addresses.length !== 1 ? "es" : ""}`}
       />
 
-      <div className="qurbi-content">
+      <div className="aisyah-content">
         {/* Add / Edit Form */}
         {showForm && !editingAddress && (
           <div className={reveal()} style={{ animationDelay: "80ms" }}>
@@ -403,7 +476,7 @@ export default function AddressBook() {
                 addr={addr}
                 isSelected={selectedAddressId === addr.id}
                 onEdit={setEditingAddress}
-                onDelete={deleteAddress}
+                onDelete={() => setDeleteCandidate(addr)}
                 onSetDefault={handleSetDefault}
                 onSelect={setSelectedAddressId}
               />
@@ -415,7 +488,7 @@ export default function AddressBook() {
         {addresses.length === 0 && !showForm && (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center">
-              <MapPin className="w-10 h-10 text-gray-300" />
+              <MapPin className="w-10 h-10 text-white" />
             </div>
             <p className="text-gray-800 font-bold">No addresses yet</p>
             <p className="text-gray-400 text-sm text-center">
@@ -428,13 +501,21 @@ export default function AddressBook() {
         {!showForm && !editingAddress && (
           <button
             onClick={() => setShowForm(true)}
-            className={`w-full py-4 border-2 border-dashed border-emerald-200 rounded-2xl text-emerald-500 font-semibold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform bg-emerald-50/30 ${reveal()}`}
+            className={`w-full py-4 border-2 border-dashed border-[#D5B18D] rounded-2xl text-[#F7EDE2]0 font-semibold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform bg-[#F7EDE2]/30 ${reveal()}`} 
             style={{ animationDelay: "200ms" }}
           >
-            <Plus className="w-4 h-4" /> Add New Address
+            <Plus className="w-4 h-4 text-white" /> Add New Address
           </button>
         )}
       </div>
+      <DeleteAddressModal
+        address={deleteCandidate}
+        onCancel={() => setDeleteCandidate(null)}
+        onConfirm={async () => {
+          await deleteAddress(deleteCandidate.id);
+          setDeleteCandidate(null);
+        }}
+      />
     </div>
   );
 }

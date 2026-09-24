@@ -104,17 +104,27 @@
 }
 
 @layer components {
-  .qurbi-page {
+  .aisyah-page {
     @apply min-h-screen pb-24;
     padding-bottom: calc(6rem + env(safe-area-inset-bottom));
     background: linear-gradient(135deg, #e3c19f 0%, #f7ede2 100%);
   }
 
-  .qurbi-content {
+  .aisyah-content {
     @apply mx-auto w-full max-w-5xl space-y-4 px-4 pt-5;
   }
 
-  .qurbi-card {
+  .aisyah-page > :not(.qurbi-shrinkable-header-shell):not(.fixed) {
+    translate: 0 0;
+    transition: translate 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .aisyah-page.qurbi-header-is-shrunk
+    > :not(.qurbi-shrinkable-header-shell):not(.fixed) {
+    translate: 0 calc(-1 * var(--qurbi-header-collapse-offset, 0px));
+  }
+
+  .aisyah-card {
     @apply rounded-2xl text-white shadow-lg shadow-black/20;
     background-image: linear-gradient(
       135deg,
@@ -124,11 +134,11 @@
     );
   }
 
-  .qurbi-primary-button {
+  .aisyah-primary-button {
     @apply rounded-xl bg-gradient-to-br from-[#41362D] to-[#6B594A] px-4 py-3 text-sm font-bold text-white shadow-md shadow-black/20 transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50;
   }
 
-  .qurbi-secondary-button {
+  .aisyah-secondary-button {
     @apply rounded-xl bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] px-4 py-3 text-sm font-bold text-black transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98];
   }
 }
@@ -204,7 +214,7 @@
   outline-offset: -1px;
 }
 
-#root .qurbi-card img:not([data-no-contrast-outline]),
+#root .aisyah-card img:not([data-no-contrast-outline]),
 #root .qurbi-dark-surface img:not([data-no-contrast-outline]),
 #root [class*="from-[#41362D]"] img:not([data-no-contrast-outline]),
 #root [class*="from-[#4B3E34]"] img:not([data-no-contrast-outline]),
@@ -261,7 +271,7 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
 }
 
-#root :where(.qurbi-card, .qurbi-dark-surface):not(header *):not(nav *) {
+#root :where(.aisyah-card, .qurbi-dark-surface):not(header *):not(nav *) {
   translate: 0 -1px;
   box-shadow:
     0 24px 46px -20px rgba(65, 54, 45, 0.66),
@@ -291,7 +301,7 @@
 }
 
 #root
-  :where(.qurbi-card, .qurbi-dark-surface):not(header *):not(nav *):hover {
+  :where(.aisyah-card, .qurbi-dark-surface):not(header *):not(nav *):hover {
   translate: 0 -3px;
   box-shadow:
     0 30px 54px -20px rgba(65, 54, 45, 0.7),
@@ -367,6 +377,37 @@ html {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes authPageEnterLogin {
+  from { filter: saturate(0.82) brightness(0.96); }
+  to { filter: saturate(1) brightness(1); }
+}
+
+@keyframes authPageEnterRegister {
+  from { filter: saturate(0.82) brightness(0.9); }
+  to { filter: saturate(1) brightness(1); }
+}
+
+.auth-page-enter-login { animation: authPageEnterLogin 360ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.auth-page-enter-register { animation: authPageEnterRegister 360ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@keyframes authModeContentLogin {
+  from { opacity: 0; transform: translateX(-14px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes authModeContentRegister {
+  from { opacity: 0; transform: translateX(14px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.auth-mode-content-login {
+  animation: authModeContentLogin 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.auth-mode-content-register {
+  animation: authModeContentRegister 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 .animate-fade-in-up {
   animation: fadeInUp 0.5s ease-out both;
@@ -705,9 +746,7 @@ html {
 
 /* QURBI migration layer: legacy utility classes remain in older, functional
    components, while these token mappings keep their visual treatment within
-   the shared taupe palette. Semantic status text can still be conveyed by its
-   label and icon without returning to the former emerald visual language. */
-[class*="bg-emerald"],
+   the shared taupe palette. Semantic status text is conveyed by labels and icons. */
 [class*="bg-green"],
 [class*="bg-blue"],
 [class*="bg-purple"],
@@ -721,8 +760,6 @@ html {
 [class*="bg-stone"] {
   background-color: #e3c19f !important;
 }
-[class*="from-emerald"],
-[class*="to-emerald"],
 [class*="from-green"],
 [class*="to-green"] {
   background-image: linear-gradient(
@@ -732,7 +769,6 @@ html {
     #6b594a 100%
   ) !important;
 }
-[class*="text-emerald"],
 [class*="text-green"],
 [class*="text-blue"],
 [class*="text-purple"],
@@ -754,7 +790,6 @@ html {
 [class*="text-[#F7EDE2]"] {
   color: #ffffff !important;
 }
-[class*="border-emerald"],
 [class*="border-green"],
 [class*="border-blue"],
 [class*="border-purple"],
@@ -766,7 +801,6 @@ html {
 [class*="border-zinc"],
 [class*="border-neutral"],
 [class*="border-stone"],
-[class*="ring-emerald"],
 [class*="ring-green"] {
   border-color: #e3c19f !important;
   --tw-ring-color: #e3c19f !important;
@@ -855,8 +889,7 @@ html {
   color: #f7ede2;
   border-color: #e3c19f !important;
 }
-.qurbi-dark-surface [class*="text-gray"],
-.qurbi-dark-surface [class*="text-emerald"] {
+.qurbi-dark-surface [class*="text-gray"] {
   color: #ffffff !important;
 }
 .qurbi-dark-surface [class*="text-gray-900"],

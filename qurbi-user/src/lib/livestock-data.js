@@ -3,7 +3,7 @@
 export const GRADES = ["AA", "A", "B", "C", "D"];
 
 export const GRADE_COLORS = {
-  AA: "bg-emerald-600 text-white",
+  AA: "bg-[#5A493C] text-white", 
   A: "bg-green-500 text-white",
   B: "bg-lime-500 text-white",
   C: "bg-yellow-500 text-white",
@@ -55,16 +55,6 @@ export const WEIGHT_TABLE = {
     C: { min: 280, max: 380 },
     D: { min: 180, max: 280 },
   },
-};
-
-export const SPECIES_EMOJIS = {
-  Cow: "🐄",
-  Goat: "🐐",
-  Buffalo: "🐃",
-  Sheep: "🐑",
-  Lamb: "🐑",
-  Camel: "🐪",
-  Horse: "🐎",
 };
 
 export const STATUS_COLORS = {

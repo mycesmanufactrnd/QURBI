@@ -9,8 +9,9 @@ import {
   Check,
   Trash2,
 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { qurbiApi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
+import { useAuthPrompt } from "@/lib/auth-prompt-context";
 import { useReveal } from "@/hooks/useReveal";
 import CancelOrderModal from "@/components/CancelOrderModal";
 import AppHeader from "@/components/AppHeader";
@@ -27,22 +28,22 @@ const TABS = [
   {
     key: "to-pay",
     label: "To Pay",
-    statuses: ["pending", "to_pay", "cancelled", "out_of_stock"],
+    statuses: ["pending", "pending_payment", "to_pay", "cancelled", "out_of_stock"],
   },
   {
     key: "to-ship",
     label: "To Ship",
-    statuses: ["paid", "to_ship", "processing"],
+    statuses: ["paid", "preparing", "to_ship", "processing"],
   },
   {
     key: "to-receive",
     label: "To Receive",
-    statuses: ["shipped", "to_receive", "delivering"],
+    statuses: ["in_transit", "shipped", "to_receive", "delivering"],
   },
   {
     key: "completed",
     label: "Completed",
-    statuses: ["completed", "delivered"],
+    statuses: ["completed", "delivered", "received"],
   },
   {
     key: "return-refund",
@@ -58,15 +59,19 @@ const TABS = [
 
 const STATUS_LABELS = {
   pending: "To Pay",
+  pending_payment: "To Pay",
   to_pay: "To Pay",
   paid: "To Ship",
+  preparing: "To Ship",
   to_ship: "To Ship",
   processing: "To Ship",
+  in_transit: "To Receive",
   shipped: "To Receive",
   to_receive: "To Receive",
   delivering: "To Receive",
   completed: "Completed",
   delivered: "Completed",
+  received: "Completed",
   return_requested: "Return Requested",
   refund_requested: "Refund Requested",
   return_refund: "Return / Refund",
@@ -105,7 +110,7 @@ function OrderCard({
 }) {
   const totalItems =
     order.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
-  const isPending = ["pending", "to_pay"].includes(order.status);
+  const isPending = ["pending", "pending_payment", "to_pay"].includes(order.status);
   const isHistory = ["cancelled", "out_of_stock"].includes(order.status);
   const originTab =
     fromTab || sessionStorage.getItem("gh_orders_active_tab") || "";
@@ -151,7 +156,7 @@ function OrderCard({
             className="flex min-w-0 flex-1 items-center gap-2.5"
             aria-label={`View order ${order.order_number}`}
           >
-            <div className="flex h-9 w-9 flex-none items-center justify-center overflow-hidden rounded-lg bg-emerald-50 text-base">
+            <div className="flex h-9 w-9 flex-none items-center justify-center overflow-hidden rounded-lg bg-[#F7EDE2] text-base">
               {item.image ? (
                 <img src={item.image} alt="" className="h-full w-full object-cover" />
               ) : (
@@ -191,12 +196,12 @@ function OrderCard({
           {isPending ? (
             <Link
               to={`/payment?order_id=${encodeURIComponent(order.id)}`}
-              className="whitespace-nowrap rounded-lg bg-emerald-500 px-2 py-1.5 text-[11px] font-bold text-white"
+              className="whitespace-nowrap rounded-lg bg-[#F7EDE2]0 px-2 py-1.5 text-[11px] font-bold text-white"
             >
               Pay Now
             </Link>
           ) : (
-            <Link to={detailsPath} className="text-emerald-600">
+            <Link to={detailsPath} className="text-[#5A493C]">
               <ChevronRight className="w-4 h-4" />
             </Link>
           )}
@@ -269,7 +274,7 @@ function OrderCard({
                       "delivered",
                       "refunded",
                     ].includes(order.status?.toLowerCase())
-                  ? "bg-emerald-50 text-emerald-700"
+                  ? "bg-[#F7EDE2] text-[#41362D]"
                   : [
                         "pending",
                         "to_ship",
@@ -324,7 +329,7 @@ function OrderCard({
               ? `/payment?order_id=${encodeURIComponent(order.id)}`
               : detailsPath
           }
-          className="flex items-center gap-1 text-emerald-600 text-xs font-semibold"
+          className="flex items-center gap-1 text-[#5A493C] text-xs font-semibold"
         >
           {isPending ? "Pay Now" : "View order"}{" "}
           <ChevronRight className="w-4 h-4" />
@@ -376,6 +381,7 @@ function DeleteHistoryModal({ count, loading, onClose, onConfirm }) {
 }
 
 export default function Orders() {
+  const { requestSignIn } = useAuthPrompt();
   const { user, isAuthenticated, authChecked } = useAuth();
   const navigate = useNavigate();
   const { reveal } = useReveal();
@@ -410,7 +416,7 @@ export default function Orders() {
     setLoading(true);
     setError("");
     try {
-      const response = await base44.functions.invoke("fetchMyOrders", {});
+      const response = await qurbiApi.functions.invoke("fetchMyOrders", {});
       setOrders(response.data?.orders || []);
     } catch {
       setError("We couldn't load your orders. Please try again.");
@@ -440,7 +446,7 @@ export default function Orders() {
     setCancellingOrderId(orderId);
     setCancelError("");
     try {
-      const response = await base44.functions.invoke("cancelMyOrder", {
+      const response = await qurbiApi.functions.invoke("cancelMyOrder", {
         orderId,
       });
       const cancelledOrder = response.data?.order;
@@ -475,7 +481,7 @@ export default function Orders() {
     if (!historyIds.length || deletingHistory) return;
     setDeletingHistory(true);
     try {
-      await base44.functions.invoke("hideMyOrderHistory", {
+      await qurbiApi.functions.invoke("hideMyOrderHistory", {
         orderIds: historyIds,
       });
       setOrders((current) =>
@@ -521,17 +527,19 @@ export default function Orders() {
 
   if (authChecked && !isAuthenticated)
     return (
-      <div className="qurbi-page flex flex-col items-center justify-center gap-4 p-8">
-        <ReceiptText className="w-12 h-12 text-emerald-300" />
-        <p className="text-gray-500 text-center">
-          Sign in to view your orders.
-        </p>
-        <button
-          onClick={() => navigate("/login?returnTo=/orders")}
-          className="bg-emerald-500 text-white px-5 py-3 rounded-xl font-bold text-sm"
-        >
-          Sign In
-        </button>
+      <div className="aisyah-page min-h-screen pb-28">
+        <AppHeader title="My Orders" subtitle="Track and manage your purchases" />
+        <div className="aisyah-content flex flex-col items-center justify-center gap-3 py-20 text-center">
+          <ReceiptText className="h-12 w-12 text-[#41362D]/35" />
+          <p className="text-sm text-[#41362D]/65">Sign in to view your orders.</p>
+          <button
+            type="button"
+            onClick={() => requestSignIn({ returnTo: "/orders", message: "Sign in to view and manage your orders." })}
+            className="mt-2 rounded-xl bg-gradient-to-br from-[#41362D] to-[#6B594A] px-6 py-3 text-sm font-bold text-white"
+          >
+            Sign In
+          </button>
+        </div>
       </div>
     );
 
@@ -579,7 +587,7 @@ export default function Orders() {
         </div>
       </AppHeader>
       {successMessage && (
-        <div className="fixed top-5 left-4 right-4 z-40 bg-emerald-600 text-white rounded-xl px-4 py-3 text-sm font-semibold shadow-lg">
+        <div className="fixed top-5 left-4 right-4 z-40 bg-[#5A493C] text-white rounded-xl px-4 py-3 text-sm font-semibold shadow-lg">
           {successMessage}
         </div>
       )}
@@ -640,15 +648,15 @@ export default function Orders() {
             <p className="text-gray-400">{error}</p>
             <button
               onClick={loadOrders}
-              className="text-emerald-600 text-sm font-semibold mt-3"
+              className="text-[#5A493C] text-sm font-semibold mt-3"
             >
               Retry
             </button>
           </div>
         ) : groupedOrders.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-20">
-            <div className="w-20 h-20 rounded-full bg-emerald-50 flex items-center justify-center">
-              <Package className="w-10 h-10 text-emerald-300" />
+            <div className="w-20 h-20 rounded-full bg-[#F7EDE2] flex items-center justify-center">
+              <Package className="w-10 h-10 text-[#C49A72]" /> 
             </div>
             <p className="text-gray-600 font-semibold">No orders to show</p>
             <p className="text-gray-400 text-sm text-center">

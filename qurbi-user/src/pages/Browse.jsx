@@ -6,106 +6,115 @@ import {
   SlidersHorizontal,
   RefreshCw,
   AlertCircle,
-  MapPin,
+  Mars,
+  Venus,
 } from "lucide-react";
-import { useCart } from "@/lib/cart-context";
 import { loadLivestockWithFarmers } from "@/lib/farmerClient";
 import {
-  SPECIES_EMOJIS,
-  STATUS_COLORS,
   extractState,
   MALAYSIAN_STATES,
 } from "@/lib/livestock-data";
 import FilterSidebar from "@/components/FilterSidebar";
 import { useReveal } from "@/hooks/useReveal";
 import AppHeader from "@/components/AppHeader";
-import ViewCartCard from "@/components/ViewCartCard";
 import PageLoading from "@/components/PageLoading";
+import { isProductExpired } from "@/lib/product-expiry";
 
 function LivestockCard({ livestock, index = 0 }) {
   const navigate = useNavigate();
+  const imageReferences = [livestock.coverImage, ...(livestock.images || [])]
+    .map((image) => {
+      if (typeof image === "string") return image.trim();
+      return image?.url || image?.file_url || image?.src || "";
+    })
+    .filter((image, position, images) => image && images.indexOf(image) === position);
+  const [imageIndex, setImageIndex] = useState(0);
+  const img = imageReferences[imageIndex] || "";
 
-  const emoji = SPECIES_EMOJIS[livestock.species] || "🐾";
-  const img = livestock.coverImage || livestock.images?.[0] || "";
+  useEffect(() => {
+    setImageIndex(0);
+  }, [livestock.id]);
 
-  const productName =
-    livestock.name ||
-    livestock.breed ||
-    livestock.species ||
-    "Livestock";
-
-  const details = [livestock.species, livestock.breed]
-    .filter(Boolean)
-    .filter(
-      (value, position, values) =>
-        values.indexOf(value) === position,
-    )
-    .join(" · ");
+  const productName = livestock.breed || livestock.name || livestock.species || "Livestock";
+  const normalizedGender = String(livestock.gender || "").trim().toLowerCase();
+  const isMale = normalizedGender === "male";
+  const isFemale = normalizedGender === "female";
+  const GenderIcon = isMale ? Mars : isFemale ? Venus : null;
+  const locationState = extractState(livestock.farmLocation);
+  const displayGrade = livestock.grade || "Grade N/A";
 
   return (
     <div
       onClick={() => navigate(`/livestock/${livestock.id}`)}
-      className="flex min-h-[300px] cursor-pointer flex-col overflow-hidden rounded-2xl bg-gradient-to-br from-[#41362D] to-[#6B594A] shadow-md shadow-[#41362D]/30 animate-fade-in-up active:scale-[0.98] transition-transform"
+      className="relative min-h-[210px] cursor-pointer overflow-hidden rounded-2xl bg-gradient-to-br from-[#41362D] to-[#6B594A] shadow-lg shadow-[#41362D]/30 animate-fade-in-up active:scale-[0.98] transition-transform sm:min-h-[285px]"
       style={{
         animationDelay: `${Math.min(index * 40, 300)}ms`,
       }}
     >
-      {/* Image */}
-      <div className="relative h-32 flex-none cursor-pointer">
+      <div className="absolute inset-0">
         {img ? (
           <img
             src={img}
             alt={livestock.breed}
+            loading="lazy"
+            onError={() => setImageIndex((current) => current + 1)}
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-[#E3C19F] text-3xl text-[#41362D]">
-            {emoji}
+          <div className="flex h-full w-full items-center justify-center bg-[#E3C19F] text-sm font-bold text-[#41362D]">
+            {livestock.species || "Livestock"}
           </div>
         )}
 
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-
-        {/* Status */}
-        <span
-          className={`absolute right-1.5 top-1.5 rounded-md px-1.5 py-0.5 text-[13px] font-bold ${
-            STATUS_COLORS[livestock.status]
-          }`}
-        >
-          {livestock.status || "N/A"}
-        </span>
+        <div className="absolute bottom-[6rem] right-0 z-20 inline-flex max-w-[82%] items-center rounded-l-lg border border-r-0 border-[#41362D] bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] px-2 py-1 text-xs font-bold leading-tight text-[#41362D] shadow-[0_3px_10px_rgba(65,54,45,0.24)] transition-[transform,box-shadow] duration-200 ease-out sm:bottom-[6.25rem] sm:max-w-[72%] sm:px-2.5 sm:text-sm">
+          <span className="truncate whitespace-nowrap">{locationState || "Location unavailable"}</span>
+        </div>
       </div>
 
-      {/* Details */}
-      <div className="flex min-h-0 flex-1 flex-col gap-1.5 p-2.5">
-        <div className="flex min-w-0 items-start justify-between gap-2">
-          <span className="min-w-0 break-words text-sm font-bold leading-tight text-white">
-            RM {(livestock.price || 0).toLocaleString()}
-          </span>
-
-          {livestock.gender && (
+      <div
+        className="absolute inset-x-0 bottom-0 h-28 px-2.5 pb-2.5 pt-1.5 text-white sm:h-28 sm:px-4 sm:pb-3 sm:pt-2"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(65, 54, 45, 0.48), rgba(107, 89, 74, 0.3))",
+        }}
+      >
+        <div className="relative flex h-full min-w-0 flex-col justify-start">
+          <h2 className="mt-2 min-h-11 min-w-0 break-words pb-1 pr-6 text-lg font-extrabold leading-tight sm:mt-1 sm:min-h-14 sm:pb-1.5 sm:pr-7 sm:text-2xl">
+            <span>{productName}</span>
+          </h2>
+          {GenderIcon && (
             <span
-              className="flex-none rounded-2xl px-2 py-0.5 text-[12px] font-bold"
-              style={{
-                background: "linear-gradient(to bottom right, #E3C19F, #F7EDE2)",
-                color: "#000000",
-              }}
+              aria-label={isMale ? "Male" : "Female"}
+              className={`absolute right-0 top-4 inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-white sm:top-2.5 sm:h-5 sm:w-5 ${
+                isMale ? "!text-[#2563EB]" : "!text-[#EC4899]"
+              }`}
             >
-              {livestock.gender}
-          </span>
+              <GenderIcon
+                aria-hidden="true"
+                className="h-3.5 w-3.5 sm:h-4 sm:w-4"
+                strokeWidth={3}
+              />
+            </span>
           )}
-        </div>
-
-        <p className="line-clamp-2 min-h-[28px] break-words text-[15px] font-bold leading-[14px] text-white/80">
-          {details || "Livestock details unavailable"}
-        </p>
-
-        <div className="mt-auto flex min-w-0 items-start gap-1 text-[5px] leading-[14px] text-white/70">
-          <MapPin className="mt-0.5 h-2.5 w-2.5 flex-shrink-0" />
-
-          <span className="min-w-0 flex-1 whitespace-normal break-words [overflow-wrap:anywhere] text-[15px] text-white/80">
-            {(livestock.farmLocation || "No location").toUpperCase()}
-          </span>
+          <div className="absolute bottom-7 left-0 right-0 flex min-w-0 flex-nowrap items-center gap-1 overflow-hidden text-xs font-semibold text-white/90 sm:bottom-8 sm:text-sm">
+            {livestock.age && (
+              <span className="whitespace-nowrap px-1 py-0.5">
+                {livestock.age}
+              </span>
+            )}
+            {livestock.age && (
+              <span aria-hidden="true">·</span>
+            )}
+            <span className="whitespace-nowrap px-1 py-0.5">
+              {displayGrade}
+            </span>
+          </div>
+          <div
+            className="absolute -bottom-2.5 -right-2.5 max-w-[8.5rem] truncate rounded-tl-xl bg-gradient-to-br from-[#41362D] to-[#6B594A] px-2 py-1 text-right text-lg font-extrabold leading-tight text-white shadow-md sm:-bottom-3 sm:-right-4 sm:max-w-[10rem] sm:px-2.5 sm:text-2xl"
+            title={`RM ${Number(livestock.price || 0).toLocaleString()}`}
+          >
+            RM {Number(livestock.price || 0).toLocaleString()}
+          </div>
         </div>
       </div>
     </div>
@@ -119,8 +128,6 @@ export default function Browse() {
   const [livestock, setLivestock] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  const { totalItems, totalPrice } = useCart();
 
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -272,6 +279,8 @@ export default function Browse() {
 
   const filtered = useMemo(() => {
     let result = livestock.filter((l) => {
+      if (isProductExpired(l)) return false;
+
       // Species
       if (
         activeSpecies !== "All" &&
@@ -536,7 +545,7 @@ export default function Browse() {
 
         <button
           onClick={loadData}
-          className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 px-6 py-3 text-sm font-bold text-white shadow-md shadow-emerald-200 transition-all active:scale-95"
+          className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#5A493C] to-[#41362D] px-6 py-3 text-sm font-bold text-white shadow-md shadow-[#D5B18D] transition-all active:scale-95"
         >
           <RefreshCw className="h-4 w-4" />
           Retry
@@ -552,11 +561,12 @@ export default function Browse() {
    */
 
   return (
-    <div className="qurbi-page pb-32">
+    <div className="aisyah-page pb-32">
       {sharedStyles}
 
       <AppHeader
         sticky
+        thresholdShrink
         title="Browse Livestock"
         search={
           <div className="flex gap-2">
@@ -598,7 +608,7 @@ export default function Browse() {
               <SlidersHorizontal className="h-4 w-4" />
 
               {activeFilterCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold text-white">
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#5A493C] px-1 text-[10px] font-bold text-white">
                   {activeFilterCount}
                 </span>
               )}
@@ -623,7 +633,7 @@ export default function Browse() {
             >
               {sp === "All"
                 ? "All"
-                : `${SPECIES_EMOJIS[sp] || "🐾"} ${sp}`}
+                : sp}
             </button>
           ))}
         </div>
@@ -633,8 +643,6 @@ export default function Browse() {
         <PageLoading contentOnly message="Loading livestock..." />
       ) : (
         <>
-          <ViewCartCard totalItems={totalItems} totalPrice={totalPrice} />
-
           {/* Result count */}
           <div
             className={`flex items-center justify-between px-4 pt-3 ${reveal()}`}
@@ -649,12 +657,12 @@ export default function Browse() {
           <div className="space-y-4 px-4 pt-3">
             {filtered.length === 0 ? (
               <div className="flex animate-fade-in-up flex-col items-center justify-center py-16 text-center">
-                <Search className="mb-2 h-10 w-10 text-emerald-100" />
+                <Search className="mb-2 h-10 w-10 text-[#E3C19F]" />
                 <p className="text-sm text-gray-400">No livestock found.</p>
                 {hasFilters && (
                   <button
                     onClick={clearAllFilters}
-                    className="mt-2 text-sm font-semibold text-emerald-700 transition-all active:scale-95"
+                    className="mt-2 text-sm font-semibold text-[#41362D] transition-all active:scale-95" 
                   >
                     Clear filters
                   </button>
@@ -663,7 +671,7 @@ export default function Browse() {
             ) : (
               <div
                 key={`${searchQuery}-${activeSpecies}`}
-                className="grid animate-fade-in-up grid-cols-2 gap-2.5 sm:grid-cols-3"
+                className="grid animate-fade-in-up grid-cols-2 gap-3 sm:gap-4"
               >
                 {filtered.map((l, idx) => (
                   <LivestockCard

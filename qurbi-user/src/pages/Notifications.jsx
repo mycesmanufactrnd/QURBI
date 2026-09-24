@@ -18,8 +18,9 @@ import {
   orderDayHeading,
   orderTimestamp,
 } from "@/lib/order-date";
-import { QurbiCardSkeleton } from "@/components/QurbiLoading";
+import { AisyahCardSkeleton } from "@/components/AisyahLoading";
 import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
+import AuthRequiredState from "@/components/AuthRequiredState";
 
 const TYPE_STYLE = {
   farmer_photo: {
@@ -28,7 +29,7 @@ const TYPE_STYLE = {
   },
   refund_approved: {
     icon: CheckCircle2,
-    iconClass: "bg-emerald-100 text-emerald-700",
+    iconClass: "bg-[#E3C19F] text-[#41362D]", 
   },
   refund_rejected: {
     icon: XCircle,
@@ -186,26 +187,11 @@ export default function Notifications() {
   };
 
   if (authChecked && !isAuthenticated) {
-    return (
-      <main className="qurbi-page flex min-h-screen flex-col items-center justify-center px-6 pb-28 text-center">
-        <Bell className="h-12 w-12 text-[#41362D]/35" />
-        <h1 className="mt-4 text-xl font-bold text-[#41362D]">Notifications</h1>
-        <p className="mt-2 text-sm text-[#41362D]/65">
-          Sign in to view your order notifications.
-        </p>
-        <button
-          type="button"
-          onClick={() => navigate("/login?returnTo=/notifications")}
-          className="mt-5 rounded-xl bg-gradient-to-br from-[#41362D] to-[#6B594A] px-6 py-3 text-sm font-bold text-white"
-        >
-          Sign In
-        </button>
-      </main>
-    );
+    return <AuthRequiredState title="Notifications" message="Sign in to view your order notifications." returnTo="/notifications" />;
   }
 
   return (
-    <main className="qurbi-page min-h-screen px-4 pb-28 pt-[max(2rem,env(safe-area-inset-top))] sm:px-6">
+    <main className="aisyah-page min-h-screen px-4 pb-28 pt-[max(2rem,env(safe-area-inset-top))] sm:px-6">
       <section className="mx-auto max-w-3xl">
         <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
           <div className="flex min-w-0 items-start gap-3">
@@ -258,7 +244,7 @@ export default function Notifications() {
 
         {loading && !notifications.length ? (
           <div className="mt-7">
-            <QurbiCardSkeleton count={4} variant="list" />
+            <AisyahCardSkeleton count={4} variant="list" />
           </div>
         ) : !groups.length ? (
           <div className="mt-8 rounded-3xl border border-[#41362D]/15 bg-white/55 px-6 py-14 text-center shadow-sm">
