@@ -1,5 +1,8 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { CartItemsService } from './cart-items.service';
+import { UserRole } from '../entities';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 import { AddCartItemDto } from './dto/add-cart-item.dto';
@@ -7,6 +10,8 @@ import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 
 // The owning cart is always the authenticated caller's — never a query/body field.
 @Controller('cart-items')
+@Roles(UserRole.BUYER)
+@UseGuards(RolesGuard)
 export class CartItemsController {
   constructor(private readonly cartItemsService: CartItemsService) {}
 

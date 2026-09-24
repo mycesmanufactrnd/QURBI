@@ -92,6 +92,11 @@ export class Livestock extends BaseEntity {
   @Column({ type: 'datetime', precision: 6, nullable: true })
   marketplaceEligibleFrom: Date | null;
 
+  // AVAILABLE listings are advertised for 14 days. Publishing again renews
+  // this server-owned window; buyers never set it directly.
+  @Column({ type: 'datetime', precision: 6, nullable: true })
+  marketplaceExpiresAt: Date | null;
+
   // Admin override: a block is a real, independent decision (not derivable
   // from anything else), so unlike marketplaceVisible it IS a stored column.
   // When set, it wins over every other visibility condition.

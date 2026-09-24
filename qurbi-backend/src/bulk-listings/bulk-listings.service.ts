@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, DeepPartial, EntityManager, FindOptionsWhere, Not, Repository } from 'typeorm';
+import { DataSource, DeepPartial, EntityManager, FindOptionsWhere, Repository } from 'typeorm';
 import { BulkListing, BulkListingStatus, UserRole } from '../entities';
 import { BaseCrudService } from '../common/base-crud.service';
 import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
@@ -24,9 +24,9 @@ export class BulkListingsService extends BaseCrudService<BulkListing> {
     const isOwnInventory = viewer.role === UserRole.FARMER && where?.farmerId === viewer.id;
     const isAdmin = viewer.role === UserRole.ADMIN;
     const finalWhere =
-      isAdmin || isOwnInventory || where?.status
+      isAdmin || isOwnInventory
         ? where
-        : { ...where, status: Not(BulkListingStatus.DRAFT) };
+        : { ...where, status: BulkListingStatus.OPEN };
 
     return this.repository.find({
       where: finalWhere,
@@ -40,6 +40,17 @@ export class BulkListingsService extends BaseCrudService<BulkListing> {
       throw new BadRequestException('a new bulk listing can only start as DRAFT or OPEN');
     }
     return this.create({ ...data, farmerId });
+  }
+
+  async findOneForViewer(id: string, viewer: AuthenticatedUser): Promise<BulkListing> {
+    const listing = await this.findOne(id);
+    const canSeeHidden =
+      viewer.role === UserRole.ADMIN ||
+      (viewer.role === UserRole.FARMER && listing.farmerId === viewer.id);
+    if (!canSeeHidden && listing.status !== BulkListingStatus.OPEN) {
+      throw new NotFoundException(`BulkListing ${id} not found`);
+    }
+    return listing;
   }
 
   async updateOwned(id: string, viewer: AuthenticatedUser, data: DeepPartial<BulkListing>): Promise<BulkListing> {

@@ -31,8 +31,8 @@ export class BulkListingsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.bulkListingsService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.bulkListingsService.findOneForViewer(id, user);
   }
 
   @Patch(':id')

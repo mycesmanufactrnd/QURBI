@@ -14,6 +14,8 @@ export class FarmVerificationsController {
   constructor(private readonly farmVerificationsService: FarmVerificationsService) {}
 
   // No farmerProfileId — always resolved from the authenticated caller's own profile.
+  @Roles(UserRole.FARMER)
+  @UseGuards(RolesGuard)
   @Post()
   submit(@CurrentUser() user: AuthenticatedUser, @Body() body: SubmitFarmVerificationDto) {
     return this.farmVerificationsService.submitForViewer(user, body);

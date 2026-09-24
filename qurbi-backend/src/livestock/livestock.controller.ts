@@ -58,8 +58,8 @@ export class LivestockController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.livestockService.findOneAndTrackView(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.livestockService.findOneForViewer(id, user);
   }
 
   @Patch(':id')

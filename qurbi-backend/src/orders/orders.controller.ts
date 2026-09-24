@@ -19,6 +19,8 @@ export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   // The buyer is always the authenticated caller — never a body field.
+  @Roles(UserRole.BUYER)
+  @UseGuards(RolesGuard)
   @Post('checkout')
   checkout(@CurrentUser() user: AuthenticatedUser, @Body() body: CheckoutDto) {
     return this.ordersService.checkout(user.id, body);

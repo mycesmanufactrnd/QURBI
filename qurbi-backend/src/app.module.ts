@@ -34,11 +34,9 @@ import { jwtConstants } from "./auth/jwt.constants";
       password: process.env.DB_PASSWORD,
       database: process.env.DB_DATABASE,
       charset: "utf8mb4",
-      // DEV ONLY: synchronize auto-generates/alters tables from the entities on
-      // every boot. Great for iterating on the schema now, but it can drop or
-      // rewrite columns without warning — turn this off (use migrations
-      // instead) before this ever points at a database with real data.
-      synchronize: true,
+      // DEV ONLY when DB_SYNC=true: automatic schema changes can rewrite data.
+      // Keep false outside local development and use reviewed migrations.
+      synchronize: process.env.DB_SYNC === 'true',
       entities: APP_ENTITIES,
       // debug:true,
     }),

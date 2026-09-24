@@ -9,7 +9,7 @@ import { jwtConstants } from './jwt.constants';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
-import { FirebaseLoginDto } from './dto/firebase-login.dto';
+import { FirebaseLoginDto, FirebasePortal } from './dto/firebase-login.dto';
 import { FirebaseAdminService } from './firebase-admin.service';
 
 export interface RequestMeta {
@@ -125,7 +125,7 @@ export class AuthService {
         email,
         passwordHash: null,
         fullName: (identity.name || email.split('@')[0]).slice(0, 150),
-        role: UserRole.FARMER,
+        role: dto.portal === FirebasePortal.BUYER ? UserRole.BUYER : UserRole.FARMER,
         status: UserStatus.ACTIVE,
         avatarUrl: identity.picture || null,
         googleId: identity.uid,

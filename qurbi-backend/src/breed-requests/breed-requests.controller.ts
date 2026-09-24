@@ -14,6 +14,8 @@ export class BreedRequestsController {
   constructor(private readonly breedRequestsService: BreedRequestsService) {}
 
   // No requestedByUserId — the requester is always @CurrentUser().
+  @Roles(UserRole.FARMER)
+  @UseGuards(RolesGuard)
   @Post()
   create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateBreedRequestDto) {
     return this.breedRequestsService.create({ ...body, requestedByUserId: user.id });

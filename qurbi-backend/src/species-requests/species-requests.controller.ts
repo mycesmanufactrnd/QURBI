@@ -14,6 +14,8 @@ export class SpeciesRequestsController {
   constructor(private readonly speciesRequestsService: SpeciesRequestsService) {}
 
   // No requestedByUserId — the requester is always @CurrentUser().
+  @Roles(UserRole.FARMER)
+  @UseGuards(RolesGuard)
   @Post()
   create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateSpeciesRequestDto) {
     return this.speciesRequestsService.create({ ...body, requestedByUserId: user.id });

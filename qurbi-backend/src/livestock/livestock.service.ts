@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, DeepPartial, EntityManager, Repository } from 'typeorm';
 import {
@@ -21,6 +21,8 @@ export interface DerivedMarketplaceVisibility {
 }
 
 export type LivestockWithVisibility = Livestock & DerivedMarketplaceVisibility;
+
+export const LISTING_LIFETIME_MS = 14 * 24 * 60 * 60 * 1000;
 
 export interface LivestockQuery extends PageQuery {
   farmerId?: string;
@@ -71,7 +73,10 @@ export class LivestockService extends BaseCrudService<Livestock> {
     }
 
     if (!showEverything) {
-      qb.andWhere('livestock.adminBlocked = false')
+      qb.andWhere('livestock.status = :availableStatus', {
+        availableStatus: LivestockStatus.AVAILABLE,
+      })
+        .andWhere('livestock.adminBlocked = false')
         .andWhere('farmerProfile.verificationStatus = :verified', { verified: VerificationStatus.VERIFIED })
         .andWhere('livestock.speciesApprovalStatus = :approved', { approved: RequestStatus.APPROVED })
         .andWhere('(livestock.breedId IS NULL OR livestock.breedApprovalStatus = :approved)', {
@@ -79,7 +84,11 @@ export class LivestockService extends BaseCrudService<Livestock> {
         })
         .andWhere('(livestock.marketplaceEligibleFrom IS NULL OR livestock.marketplaceEligibleFrom <= :now)', {
           now: new Date(),
-        });
+        })
+        .andWhere(
+          'COALESCE(livestock.marketplaceExpiresAt, DATE_ADD(livestock.createdAt, INTERVAL 14 DAY)) > :now',
+          { now: new Date() },
+        );
     }
 
     const total = await qb.getCount();
@@ -103,6 +112,21 @@ export class LivestockService extends BaseCrudService<Livestock> {
     );
   }
 
+  async findOneForViewer(id: string, viewer: AuthenticatedUser): Promise<LivestockWithVisibility> {
+    const listing = await this.findOneWithVisibility(id);
+    const canSeeHidden =
+      viewer.role === UserRole.ADMIN ||
+      (viewer.role === UserRole.FARMER && listing.farmerId === viewer.id);
+    if (!canSeeHidden && !listing.marketplaceVisible) {
+      throw new NotFoundException(`Livestock ${id} not found`);
+    }
+    if (!canSeeHidden) {
+      await this.repository.increment({ id }, 'viewCount', 1);
+      listing.viewCount += 1;
+    }
+    return listing;
+  }
+
   // Computes the same visible/reason pair the browse query filters on, purely
   // from facts that live elsewhere (farmer verification, species/breed
   // approval, eligibility date) plus the one real stored fact, the admin
@@ -123,6 +147,10 @@ export class LivestockService extends BaseCrudService<Livestock> {
     return this.create({
       ...data,
       farmerId,
+      marketplaceExpiresAt:
+        data.status === LivestockStatus.AVAILABLE
+          ? new Date(Date.now() + LISTING_LIFETIME_MS)
+          : null,
       speciesApprovalStatus: RequestStatus.APPROVED,
       breedApprovalStatus: RequestStatus.APPROVED,
     });
@@ -136,6 +164,10 @@ export class LivestockService extends BaseCrudService<Livestock> {
     const listing = await this.findOwned(id, viewer);
     if (data.status === LivestockStatus.SOLD) {
       throw new BadRequestException('status SOLD can only be set by completing a purchase');
+    }
+    if (data.status === LivestockStatus.AVAILABLE) {
+      data.marketplaceExpiresAt = new Date(Date.now() + LISTING_LIFETIME_MS);
+      data.soldAt = null;
     }
     if (data.speciesId !== undefined || data.breedId !== undefined) {
       const speciesId = data.speciesId ?? listing.speciesId;
@@ -189,20 +221,35 @@ export class LivestockService extends BaseCrudService<Livestock> {
     return this.findOneWithVisibility(id);
   }
 
-  // Public "view" endpoint: fetch and bump viewCount in one call so browsing
-  // the buyer app organically tracks popularity.
-  async findOneAndTrackView(id: string): Promise<LivestockWithVisibility> {
-    const listing = await this.findOneWithVisibility(id);
-    await this.repository.increment({ id }, 'viewCount', 1);
-    listing.viewCount += 1;
-    return listing;
-  }
-
   // Used by the order checkout flow inside its own transaction, hence the
   // optional manager — falls back to this service's own repository outside one.
   async markSold(id: string, manager?: EntityManager): Promise<void> {
-    const repo = manager ? manager.getRepository(Livestock) : this.repository;
-    await repo.update(id, { status: LivestockStatus.SOLD, soldAt: new Date() });
+    const run = async (entityManager: EntityManager): Promise<void> => {
+      const listing = await entityManager
+        .createQueryBuilder(Livestock, 'livestock')
+        .setLock('pessimistic_write')
+        .where('livestock.id = :id', { id })
+        .getOne();
+      if (!listing) throw new NotFoundException(`Livestock ${id} not found`);
+
+      const farmerProfile = await entityManager.findOne(FarmerProfile, {
+        where: { userId: listing.farmerId },
+      });
+      const visibility = computeMarketplaceVisibility(
+        listing,
+        farmerProfile?.verificationStatus ?? VerificationStatus.UNVERIFIED,
+      );
+      if (!visibility.marketplaceVisible) {
+        throw new ConflictException(`Livestock ${id} is no longer available for purchase`);
+      }
+
+      listing.status = LivestockStatus.SOLD;
+      listing.soldAt = new Date();
+      await entityManager.save(listing);
+    };
+
+    if (manager) return run(manager);
+    return this.dataSource.transaction(run);
   }
 
   // Inverse of markSold — used when an order containing this listing is
@@ -224,6 +271,7 @@ export class LivestockService extends BaseCrudService<Livestock> {
 
       listing.status = LivestockStatus.AVAILABLE;
       listing.soldAt = null;
+      listing.marketplaceExpiresAt = new Date(Date.now() + LISTING_LIFETIME_MS);
       await entityManager.save(listing);
     };
 
@@ -235,10 +283,21 @@ export class LivestockService extends BaseCrudService<Livestock> {
 export function computeMarketplaceVisibility(
   listing: Pick<
     Livestock,
-    'adminBlocked' | 'adminBlockReason' | 'speciesApprovalStatus' | 'breedApprovalStatus' | 'breedId' | 'marketplaceEligibleFrom'
+    | 'status'
+    | 'adminBlocked'
+    | 'adminBlockReason'
+    | 'speciesApprovalStatus'
+    | 'breedApprovalStatus'
+    | 'breedId'
+    | 'marketplaceEligibleFrom'
+    | 'marketplaceExpiresAt'
+    | 'createdAt'
   >,
   farmerVerificationStatus: VerificationStatus,
 ): DerivedMarketplaceVisibility {
+  if (listing.status !== LivestockStatus.AVAILABLE) {
+    return { marketplaceVisible: false, marketplaceVisibilityReason: `Listing is ${listing.status}` };
+  }
   if (listing.adminBlocked) {
     return { marketplaceVisible: false, marketplaceVisibilityReason: listing.adminBlockReason ?? 'Blocked by admin' };
   }
@@ -253,6 +312,12 @@ export function computeMarketplaceVisibility(
   }
   if (listing.marketplaceEligibleFrom && listing.marketplaceEligibleFrom > new Date()) {
     return { marketplaceVisible: false, marketplaceVisibilityReason: 'Not yet eligible for marketplace' };
+  }
+  const expiresAt =
+    listing.marketplaceExpiresAt ??
+    new Date(listing.createdAt.getTime() + LISTING_LIFETIME_MS);
+  if (expiresAt <= new Date()) {
+    return { marketplaceVisible: false, marketplaceVisibilityReason: 'Listing expired after 14 days' };
   }
   return { marketplaceVisible: true, marketplaceVisibilityReason: null };
 }
