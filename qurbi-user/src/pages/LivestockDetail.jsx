@@ -9,14 +9,12 @@ import {
   ShoppingCart,
   Check,
   MapPin,
-  User,
   RefreshCw,
   AlertCircle,
   ArrowLeft,
   Zap,
 } from "lucide-react";
 import { loadLivestockById } from "@/lib/farmerClient";
-import { SPECIES_EMOJIS } from "@/lib/livestock-data";
 import { useCart } from "@/lib/cart-context";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useReveal } from "@/hooks/useReveal";
@@ -60,7 +58,7 @@ function AvailabilityModal({ state, onClose, onBrowse, backLabel }) {
         <button
           type="button"
           onClick={unavailable ? onBrowse : onClose}
-          className="mt-5 min-h-11 w-full rounded-xl bg-emerald-500 px-4 text-sm font-bold text-white"
+          className="mt-5 min-h-11 w-full rounded-xl bg-[#F7EDE2]0 px-4 text-sm font-bold text-white"
         >
           {unavailable ? backLabel : "Close"}
         </button>
@@ -119,6 +117,11 @@ export default function LivestockDetail() {
     weight_max: livestock.weight ? Number(livestock.weight) : 0,
     farmer_id: livestock.ownerId || livestock.created_by_id || "",
     farmer_name: livestock.farmer_name || "Unknown Farmer",
+    image: livestock.coverImage || livestock.images?.[0] || "",
+    created_date: livestock.created_date || "",
+    listingPublishedAt: livestock.listingPublishedAt || "",
+    listingExpiresAt: livestock.listingExpiresAt || "",
+    listingRenewedAt: livestock.listingRenewedAt || "",
   });
 
   const handleAddToCart = (event) => {
@@ -173,7 +176,7 @@ export default function LivestockDetail() {
       }
       buyNow(buildCartItem());
       animateProductToCart(animationSource);
-      navigate("/cart");
+      navigate("/payment");
     });
   };
 
@@ -185,7 +188,7 @@ export default function LivestockDetail() {
 
   if (error) {
     return (
-      <div className="qurbi-page flex flex-col items-center justify-center gap-4 p-8">
+      <div className="aisyah-page flex flex-col items-center justify-center gap-4 p-8">
         <AlertCircle className="w-12 h-12 text-red-400" />
         <p className="text-gray-600 font-semibold text-center">
           Failed to load livestock
@@ -193,11 +196,11 @@ export default function LivestockDetail() {
         <p className="text-gray-400 text-sm text-center max-w-xs">{error}</p>
         <button
           onClick={load}
-          className="bg-emerald-500 text-white px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2"
+          className="bg-[#F7EDE2]0 text-white px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2"
         >
           <RefreshCw className="w-4 h-4" /> Retry
         </button>
-        <Link to={returnPath} className="text-emerald-500 text-sm font-semibold">
+        <Link to={returnPath} className="text-[#F7EDE2]0 text-sm font-semibold">
           ← {returnLabel}
         </Link>
       </div>
@@ -206,7 +209,6 @@ export default function LivestockDetail() {
 
   if (!livestock) return null;
 
-  const emoji = SPECIES_EMOJIS[livestock.species] || "🐾";
   const statusLabel = String(livestock.status || "Unavailable").trim();
   const isAvailableStatus = statusLabel.toLowerCase() === "available";
   const allImages = [livestock.coverImage, ...(livestock.images || [])].filter(
@@ -214,7 +216,7 @@ export default function LivestockDetail() {
   );
 
   const infoItems = [
-    { label: "Species", value: `${emoji} ${livestock.species}` },
+    { label: "Species", value: livestock.species },
     { label: "Breed", value: livestock.breed },
     { label: "Gender", value: livestock.gender },
     { label: "Age", value: livestock.age },
@@ -275,8 +277,8 @@ export default function LivestockDetail() {
             />
           </button>
         ) : (
-          <div className="w-full h-72 bg-gray-100 flex items-center justify-center text-6xl">
-            {emoji}
+          <div className="flex h-72 w-full items-center justify-center bg-[#F7EDE2] text-sm font-bold text-[#41362D]">
+            {livestock.species || "Livestock"}
           </div>
         )}
       </div>
@@ -300,7 +302,6 @@ export default function LivestockDetail() {
         {/* Title + price + add to cart */}
         <div className={reveal()} style={{ animationDelay: "80ms" }}>
           <div className="mb-2 flex items-center gap-2">
-            <span className="text-3xl">{emoji}</span>
             <h1 className="text-2xl font-extrabold text-white sm:text-3xl">
               {livestock.breed}
             </h1>
@@ -326,7 +327,7 @@ export default function LivestockDetail() {
                 disabled={isInCart}
                 className={`min-w-0 w-full px-3 py-3.5 rounded-2xl border border-[#F7EDE2]/60 font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 ease-out active:scale-[0.98] ${
                   isInCart
-                    ? "bg-emerald-100 text-emerald-600"
+                    ? "bg-[#E3C19F] text-[#5A493C]" 
                     : "bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white shadow-md shadow-black/20 transition-all duration-200 ease-out hover:scale-[1.02]"
                 }`}
               >
@@ -350,21 +351,9 @@ export default function LivestockDetail() {
           </div>
         </div>
 
-        {/* Farmer + Location */}
-        <LightDetailCard title="Farmer Details" className={reveal()}>
+        {/* Location */}
+        {livestock.farmLocation && <LightDetailCard title="Location" className={reveal()}>
           <div className="space-y-4" style={{ animationDelay: "140ms" }}>
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-[#F7EDE2]/60 bg-gradient-to-br from-[#41362D] to-[#6B594A]">
-                <User className="h-5 w-5 text-white" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-black/70">Farmer</p>
-                <p className="text-base font-bold text-black">
-                  {livestock.farmer_name}
-                </p>
-              </div>
-            </div>
-            {livestock.farmLocation && (
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-[#F7EDE2]/60 bg-gradient-to-br from-[#41362D] to-[#6B594A]">
                   <MapPin className="h-5 w-5 text-white" />
@@ -378,9 +367,8 @@ export default function LivestockDetail() {
                   </p>
                 </div>
               </div>
-            )}
           </div>
-        </LightDetailCard>
+        </LightDetailCard>}
 
         {/* Info grid */}
         <LightDetailCard title="Livestock Details" className={reveal()}>

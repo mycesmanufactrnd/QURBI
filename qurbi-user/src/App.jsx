@@ -1,14 +1,13 @@
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClientInstance } from "@/lib/query-client";
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import { BrowserRouter as Router, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import PageNotFound from "./lib/PageNotFound";
 import { AuthProvider } from "@/lib/AuthContext";
 import { CartProvider } from "@/lib/cart-context";
 import { UserProfileProvider } from "@/lib/user-profile-context";
 import AppLayout from "@/components/AppLayout";
-import Login from "@/pages/Login";
-import Register from "@/pages/Register";
+import Authentication from "@/pages/Authentication";
 import SignupDetails from "@/pages/SignupDetails";
 import Home from "@/pages/Home";
 import Browse from "@/pages/Browse";
@@ -28,6 +27,14 @@ import HeaderTransitionProvider from "@/components/HeaderTransitionProvider";
 import { NotificationProvider } from "@/lib/notification-context";
 import Notifications from "@/pages/Notifications";
 import AdminTest from "@/pages/AdminTest";
+import { AuthPromptProvider } from "@/lib/auth-prompt-context";
+
+function LegacyAuthRedirect({ mode }) {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  params.set("mode", mode);
+  return <Navigate to={`/auth?${params.toString()}`} replace />;
+}
 
 function App() {
   return (
@@ -36,11 +43,13 @@ function App() {
         <UserProfileProvider>
           <CartProvider>
             <Router>
-              <NotificationProvider>
-                <HeaderTransitionProvider>
+              <AuthPromptProvider>
+                <NotificationProvider>
+                  <HeaderTransitionProvider>
                   <Routes>
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
+                    <Route path="/auth" element={<Authentication />} />
+                    <Route path="/login" element={<LegacyAuthRedirect mode="login" />} />
+                    <Route path="/register" element={<LegacyAuthRedirect mode="register" />} />
                     <Route path="/signup-details" element={<SignupDetails />} />
                     <Route element={<AppLayout />}>
                       <Route path="/" element={<Home />} />
@@ -74,8 +83,9 @@ function App() {
                     <Route path="/receipt" element={<Receipt />} />
                     <Route path="*" element={<PageNotFound />} />
                   </Routes>
-                </HeaderTransitionProvider>
-              </NotificationProvider>
+                  </HeaderTransitionProvider>
+                </NotificationProvider>
+              </AuthPromptProvider>
             </Router>
           </CartProvider>
         </UserProfileProvider>

@@ -1,169 +1,140 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
-import { appParams } from '@/lib/app-params';
-import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
-import { clearSession } from '@/lib/clearSession';
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { signInWithPopup, signOut } from "firebase/auth";
+import {
+  authApi,
+  clearSessionTokens,
+  getAccessToken,
+  getRefreshToken,
+  setSessionTokens,
+} from "@/api/apiClient";
+import { clearSession } from "@/lib/clearSession";
+import { firebaseAuth, googleAuthProvider } from "@/lib/firebase";
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
+const ALLOWED_ROLES = new Set(["buyer", "farmer"]);
+
+function normalizeUser(user) {
+  if (!user) return null;
+  return {
+    ...user,
+    full_name: user.fullName ?? user.full_name,
+    display_name: user.fullName ?? user.display_name ?? user.full_name,
+    data: { ...(user.data || {}), name: user.fullName ?? user.full_name },
+  };
+}
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(true);
   const [authError, setAuthError] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
-  const [appPublicSettings, setAppPublicSettings] = useState(null); // Contains only { id, public_settings }
 
-  useEffect(() => {
-    checkAppState();
+  const clearAuth = useCallback(() => {
+    clearSession();
+    clearSessionTokens();
+    try { localStorage.removeItem("qurbi_firebase_user"); } catch {}
+    setUser(null);
+    setIsAuthenticated(false);
   }, []);
 
-  const checkAppState = async () => {
-    try {
-      setIsLoadingPublicSettings(true);
+  const acceptSession = useCallback((session) => {
+    if (!session?.accessToken || !session?.refreshToken || !ALLOWED_ROLES.has(session.user?.role)) {
+      clearAuth();
+      throw new Error("This account does not have access to the QURBI User portal.");
+    }
+    setSessionTokens(session);
+    const normalized = normalizeUser(session.user);
+    setUser(normalized);
+    try { localStorage.setItem("qurbi_firebase_user", JSON.stringify(normalized)); } catch {}
+    setIsAuthenticated(true);
+    setAuthError(null);
+    setAuthChecked(true);
+    return normalized;
+  }, [clearAuth]);
+
+  const checkUserAuth = useCallback(async () => {
+    if (!getAccessToken()) {
+      clearAuth();
       setAuthError(null);
-      
-      // First, check app public settings (with token if available)
-      // This will tell us if auth is required, user not registered, etc.
-      const appClient = createAxiosClient({
-        baseURL: `/api/apps/public`,
-        headers: {
-          'X-App-Id': appParams.appId
-        },
-        token: appParams.token, // Include token if available
-        interceptResponses: true
-      });
-      
-      try {
-        const publicSettings = await appClient.get(
-          `/prod/public-settings/by-id/${appParams.appId}`,
-          { timeout: 5000 },
-        );
-        setAppPublicSettings(publicSettings);
-        
-        // If we got the app public settings successfully, check if user is authenticated
-        if (appParams.token) {
-          await checkUserAuth();
-        } else {
-          setIsLoadingAuth(false);
-          setIsAuthenticated(false);
-          setAuthChecked(true);
-        }
-        setIsLoadingPublicSettings(false);
-      } catch (appError) {
-        console.error('App state check failed:', appError);
-        
-        // Handle app-level errors
-        if (appError.status === 403 && appError.data?.extra_data?.reason) {
-          const reason = appError.data.extra_data.reason;
-          if (reason === 'auth_required') {
-            setAuthError({
-              type: 'auth_required',
-              message: 'Authentication required'
-            });
-          } else if (reason === 'user_not_registered') {
-            setAuthError({
-              type: 'user_not_registered',
-              message: 'User not registered for this app'
-            });
-          } else {
-            setAuthError({
-              type: reason,
-              message: appError.message
-            });
-          }
-        } else {
-          setAuthError({
-            type: 'unknown',
-            message: appError.message || 'Failed to load app'
-          });
-        }
-        setIsLoadingPublicSettings(false);
-        setIsLoadingAuth(false);
-        setAuthChecked(true);
-      }
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      setAuthError({
-        type: 'unknown',
-        message: error.message || 'An unexpected error occurred'
-      });
-      setIsLoadingPublicSettings(false);
       setIsLoadingAuth(false);
       setAuthChecked(true);
+      return null;
     }
-  };
-
-  const checkUserAuth = async () => {
+    setIsLoadingAuth(true);
     try {
-      // Now check if the user is authenticated
-      setIsLoadingAuth(true);
-      const currentUser = await base44.auth.me();
-      setUser(currentUser);
+      const currentUser = await authApi.me();
+      if (!ALLOWED_ROLES.has(currentUser?.role)) throw new Error("This account does not have access to the QURBI User portal.");
+      const normalized = normalizeUser(currentUser);
+      setUser(normalized);
       setIsAuthenticated(true);
-      setIsLoadingAuth(false);
-      setAuthChecked(true);
+      setAuthError(null);
+      return normalized;
     } catch (error) {
-      console.error('User auth check failed:', error);
+      clearAuth();
+      setAuthError({ type: "auth_required", message: error.message || "Authentication required" });
+      return null;
+    } finally {
       setIsLoadingAuth(false);
-      setIsAuthenticated(false);
       setAuthChecked(true);
-      
-      // If user auth fails, it might be an expired token
-      if (error.status === 401 || error.status === 403) {
-        setAuthError({
-          type: 'auth_required',
-          message: 'Authentication required'
-        });
-      }
     }
-  };
+  }, [clearAuth]);
 
-  const logout = (shouldRedirect = true) => {
-    // Flush all account-specific session data so no previous account's
-    // profile, addresses, or other app data remains for the next user.
-    clearSession();
-    setUser(null);
-    setIsAuthenticated(false);
+  useEffect(() => { checkUserAuth(); }, [checkUserAuth]);
 
-    if (shouldRedirect) {
-      // Redirect to Home so the logged-out state lands on the splash page
-      base44.auth.logout(window.location.origin + "/");
-    } else {
-      // Just remove the token without redirect
-      base44.auth.logout();
+  const loginWithGoogle = useCallback(async () => {
+    setIsLoadingAuth(true);
+    setAuthError(null);
+    try {
+      const credential = await signInWithPopup(firebaseAuth, googleAuthProvider);
+      const idToken = await credential.user.getIdToken();
+      return acceptSession(await authApi.firebase(idToken));
+    } catch (error) {
+      await signOut(firebaseAuth).catch(() => {});
+      clearAuth();
+      const message = !error.response && error.code === "ERR_NETWORK"
+        ? "Cannot reach the QURBI server. Start the local NestJS backend on port 3000 and try again."
+        : error.code === "auth/unauthorized-domain"
+          ? "Firebase does not allow this address. Open QURBI using http://localhost and add the host to Firebase Authentication's authorized domains."
+          : error.code === "auth/popup-blocked"
+            ? "The browser blocked the Google sign-in popup. Allow popups for QURBI and try again."
+            : error.code === "auth/popup-closed-by-user"
+              ? "Google sign-in was cancelled."
+              : error.response?.data?.message || error.message || "Google sign-in failed";
+      setAuthError({ type: "auth_failed", message });
+      throw error;
+    } finally {
+      setIsLoadingAuth(false);
+      setAuthChecked(true);
     }
-  };
+  }, [acceptSession, clearAuth]);
 
-  const navigateToLogin = () => {
-    // Use the SDK's redirectToLogin method
-    base44.auth.redirectToLogin(window.location.href);
-  };
+  const logout = useCallback(async (shouldRedirect = true) => {
+    const refreshToken = getRefreshToken();
+    try {
+      if (refreshToken) await authApi.logout(refreshToken);
+    } catch {
+      // Always clear both sessions even if revocation cannot reach the API.
+    } finally {
+      clearAuth();
+      setAuthError(null);
+      setAuthChecked(true);
+      await signOut(firebaseAuth).catch(() => {});
+    }
+    if (shouldRedirect) window.location.assign("/");
+  }, [clearAuth]);
 
-  // Soft logout: clears the token + auth state without an SDK redirect/reload,
-  // so the app can SPA-navigate to Home with the branded splash transition.
-  const softLogout = () => {
-    clearSession();
-    try { localStorage.removeItem("base44_access_token"); } catch {}
-    setUser(null);
-    setIsAuthenticated(false);
-  };
+  const navigateToLogin = useCallback(() => {
+    const returnTo = `${window.location.pathname}${window.location.search}`;
+    window.location.assign(`/auth?mode=login&returnTo=${encodeURIComponent(returnTo)}`);
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated, 
-      isLoadingAuth,
-      isLoadingPublicSettings,
-      authError,
-      appPublicSettings,
-      authChecked,
-      logout,
-      softLogout,
-      navigateToLogin,
-      checkUserAuth,
-      checkAppState
+    <AuthContext.Provider value={{
+      user, isAuthenticated, isLoadingAuth, isLoadingPublicSettings: false,
+      authError, appPublicSettings: null, authChecked, loginWithGoogle, logout,
+      softLogout: () => logout(false), navigateToLogin, checkUserAuth,
+      checkAppState: checkUserAuth,
     }}>
       {children}
     </AuthContext.Provider>
@@ -172,8 +143,6 @@ export const AuthProvider = ({ children }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error("useAuth must be used within an AuthProvider");
   return context;
 };

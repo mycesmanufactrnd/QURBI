@@ -1,43 +1,86 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { User, Mail, Phone, MapPin, Check, ArrowRight } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
+import { User, Phone, MapPin, Check, ArrowRight } from "lucide-react";
 import { useUserProfile } from "@/lib/user-profile-context";
 import { useAuth } from "@/lib/AuthContext";
 import AuthLayout from "@/components/AuthLayout";
+import { safeReturnTo } from "@/lib/authReturnTo";
 
-const inputCls = "w-full bg-gray-50 border border-gray-100 rounded-xl pl-10 pr-3 py-3 text-gray-900 placeholder-gray-300 text-sm outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition-all";
-const primaryBtn = "w-full bg-gradient-to-r from-emerald-600 to-emerald-700 text-white py-3 rounded-xl font-bold text-sm active:scale-95 transition-all flex items-center justify-center gap-2 shadow-md shadow-emerald-200 disabled:opacity-60";
+const inputCls = "w-full bg-gradient-to-br from-[#41362D] to-[#6B594A] border border-[#F7EDE2]/30 rounded-xl pl-10 pr-3 py-3 text-white placeholder:text-white/60 text-sm outline-none focus:border-[#A9825F] focus:ring-1 focus:ring-[#A9825F] transition-all";
+const primaryBtn = "w-full bg-gradient-to-r from-[#5A493C] to-[#41362D] text-white py-3 rounded-xl font-bold text-sm active:scale-95 transition-all flex items-center justify-center gap-2 shadow-md shadow-[#D5B18D] disabled:opacity-60"; 
 
 export default function SignupDetails() {
   const { profile, updateProfile, addAddress } = useUserProfile();
-  const { user } = useAuth();
+  const { user, authChecked, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const returnTo = safeReturnTo();
   const [form, setForm] = useState({
     name: profile.name || user?.full_name || "",
-    email: profile.email || user?.email || "",
     phone: profile.phone || "",
     address: "",
   });
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
 
-  const handleSave = () => {
-    updateProfile({ name: form.name, email: form.email, phone: form.phone });
-    if (form.address.trim()) {
-      addAddress({ label: "Home", street: form.address.trim(), name: form.name, phone: form.phone, isDefault: true });
+  useEffect(() => {
+    setForm((current) => ({
+      ...current,
+      name: current.name || profile.name || user?.full_name || "",
+      phone: current.phone || profile.phone || user?.phone || "",
+    }));
+  }, [profile.name, profile.phone, user]);
+
+  const handleSave = async () => {
+    if (saving) return;
+    if (!form.name.trim()) {
+      setSaveError("Please enter your name.");
+      return;
     }
-    setSaved(true);
-    setTimeout(() => navigate("/"), 800);
+    if (form.phone.replace(/\D/g, "").length < 7) {
+      setSaveError("Please enter a valid phone number.");
+      return;
+    }
+    setSaving(true);
+    setSaveError("");
+    try {
+      await updateProfile({ name: form.name, phone: form.phone });
+      if (form.address.trim()) {
+        await addAddress({
+          label: "Home",
+          street: form.address.trim(),
+          city: "Not specified",
+          state: "",
+          postcode: "",
+          country: "Malaysia",
+          name: form.name,
+          phone: form.phone,
+          isDefault: true,
+        });
+      }
+      setSaved(true);
+      setTimeout(() => navigate(returnTo, { replace: true }), 500);
+    } catch (error) {
+      setSaveError(error.message || "Your profile could not be saved.");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleSkip = () => navigate("/");
+  const handleSkip = () => navigate(returnTo, { replace: true });
+
+  if (authChecked && !isAuthenticated) {
+    return <Navigate to="/auth?mode=register" replace />;
+  }
 
   return (
     <AuthLayout
+      mode="register"
       icon={User}
       title="Complete your profile"
-      subtitle="You can fill this in now or skip and do it later"
+      subtitle="Add your details to finish setting up your QURBI account"
     >
       <div className="space-y-3">
         <div className="space-y-1.5">
@@ -45,13 +88,6 @@ export default function SignupDetails() {
           <div className="relative">
             <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
             <input value={form.name} onChange={set("name")} placeholder="Your full name" className={inputCls} />
-          </div>
-        </div>
-        <div className="space-y-1.5">
-          <label className="text-gray-500 text-xs font-semibold">Email</label>
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
-            <input value={form.email} onChange={set("email")} type="email" placeholder="you@example.com" className={inputCls} />
           </div>
         </div>
         <div className="space-y-1.5">
@@ -69,10 +105,11 @@ export default function SignupDetails() {
           </div>
         </div>
 
-        <button onClick={handleSave} className={primaryBtn + " mt-1"}>
-          {saved ? <><Check className="w-4 h-4" /> Saved!</> : <>Save & continue <ArrowRight className="w-4 h-4" /></>}
+        {saveError && <p role="alert" className="text-center text-xs text-red-600">{saveError}</p>}
+        <button disabled={saving} onClick={handleSave} className={primaryBtn + " mt-1"}>
+          {saving ? "Saving…" : saved ? <><Check className="w-4 h-4" /> Saved!</> : <>Save & continue <ArrowRight className="w-4 h-4" /></>}
         </button>
-        <button onClick={handleSkip} className="w-full bg-gray-50 text-gray-600 py-3 rounded-xl font-bold text-sm active:scale-95 transition-all">
+        <button onClick={handleSkip} className="w-full bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white py-3 rounded-xl font-bold text-sm active:scale-95 transition-all">
           Skip for now
         </button>
       </div>

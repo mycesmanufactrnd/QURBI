@@ -1,39 +1,27 @@
-**Welcome to your Base44 project** 
+# QURBI User
 
-**About**
+Buyer-facing React application for QURBI.
 
-View and Edit  your app on [Base44.com](http://Base44.com) 
+## Architecture
 
-This project contains everything you need to run your app locally.
+- React and Vite frontend
+- Firebase Authentication for Google sign-in only
+- Axios for the QURBI NestJS API
+- MySQL (`qurbidb`) as the application data store through NestJS
 
-**Edit the code in your local development environment**
+Firebase databases and Firebase Storage are not used.
 
-Any change pushed to the repo will also be reflected in the Base44 Builder.
+## Local setup
 
-**Prerequisites:** 
+1. Install dependencies with `npm install`.
+2. Create `.env.local` with `VITE_API_BASE_URL` and the `VITE_FIREBASE_*` web configuration values.
+3. Start the NestJS backend.
+4. Run `npm run dev`.
 
-1. Clone the repository using the project's Git URL 
-2. Navigate to the project directory
-3. Install dependencies: `npm install`
-4. Create an `.env.local` file and set the right environment variables
+The frontend defaults to port `5137` and the API defaults to `http://localhost:3000/api`.
 
-```
-VITE_BASE44_APP_ID=your_app_id
-VITE_BASE44_APP_BASE_URL=your_backend_url
+## Checks
 
-e.g.
-VITE_BASE44_APP_ID=cbef744a8545c389ef439ea6
-VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
-```
-
-Run the app: `npm run dev`
-
-**Publish your changes**
-
-Open [Base44.com](http://Base44.com) and click on Publish.
-
-**Docs & Support**
-
-Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
-
-Support: [https://app.base44.com/support](https://app.base44.com/support)
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build`

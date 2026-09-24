@@ -1,4 +1,4 @@
-const CART_ARRIVAL_EVENT = "qurbi:cart-arrived";
+const CART_ARRIVAL_EVENT = "aisyah:cart-arrived";
 
 export function captureCartAnimationSource(trigger, fallbackImageUrl = "") {
   const scope = trigger?.closest?.("[data-cart-product]") || document;

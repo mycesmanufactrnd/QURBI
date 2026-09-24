@@ -8,7 +8,7 @@ const TYPE_STYLE = {
   },
   refund_approved: {
     icon: CheckCircle2,
-    iconClass: "bg-emerald-100 text-emerald-700",
+    iconClass: "bg-[#E3C19F] text-[#41362D]",
   },
   refund_rejected: {
     icon: XCircle,
@@ -43,7 +43,7 @@ export default function NotificationBanner({ notification, onOpen, onClose }) {
       aria-live="polite"
     >
       <div className="relative overflow-hidden rounded-2xl border border-[#41362D]/15 bg-[#FFFDF9]/95 shadow-lg shadow-[#41362D]/15 backdrop-blur-md">
-        <span className="absolute inset-y-0 left-0 w-1 bg-emerald-600/80" />
+        <span className="absolute inset-y-0 left-0 w-1 bg-[#5A493C]/80" /> 
         <button
           type="button"
           onClick={() => onOpen(notification)}

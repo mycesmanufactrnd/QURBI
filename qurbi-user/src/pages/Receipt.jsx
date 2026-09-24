@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { CheckCircle, Home, Clock } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { qurbiApi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
 import { GRADE_COLORS } from "@/lib/livestock-data";
 import { useReveal } from "@/hooks/useReveal";
 import { QurbiPageLoader } from "@/components/QurbiLoading";
+import { useAuthPrompt } from "@/lib/auth-prompt-context";
 
 const ANIMAL_EMOJIS = {
   Cow: "🐄",
@@ -23,6 +24,7 @@ export default function Receipt() {
   const [retryToken, setRetryToken] = useState(0);
   const { reveal } = useReveal();
   const { user, isAuthenticated, authChecked } = useAuth();
+  const { requestSignIn } = useAuthPrompt();
 
   const sessionId = searchParams.get("session_id");
   const orderId = searchParams.get("order_id");
@@ -33,14 +35,14 @@ export default function Receipt() {
       setLoadError("");
       try {
         if (orderId && isAuthenticated && user?.id) {
-          const response = await base44.functions.invoke("fetchMyOrders", {
+          const response = await qurbiApi.functions.invoke("fetchMyOrders", {
             orderId,
           });
           let o = response.data?.order;
           if (!o) return;
           // Verify payment server-side, then idempotently reserve the livestock
           // and notify each farmer. Re-running this function is safe after refresh.
-          const confirmation = await base44.functions.invoke(
+          const confirmation = await qurbiApi.functions.invoke(
             "markPurchasedLivestock",
             { orderId, sessionId },
           );
@@ -75,6 +77,22 @@ export default function Receipt() {
     return <QurbiPageLoader label="Loading your receipt…" />;
   }
 
+  if (authChecked && !isAuthenticated && orderId) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-green-950 to-green-900 flex flex-col items-center justify-center gap-4 p-8 text-center">
+        <Clock className="h-12 w-12 text-[#C49A72]" />
+        <p className="text-sm text-[#E3C19F]">Sign in to view your receipt.</p>
+        <button
+          type="button"
+          onClick={() => requestSignIn({ returnTo: window.location.pathname + window.location.search, message: "Sign in to view this receipt." })}
+          className="rounded-xl bg-[#F7EDE2]0 px-6 py-3 text-sm font-bold text-white"
+        >
+          Sign In
+        </button>
+      </div>
+    );
+  }
+
   if (loadError) {
     return (
       <div className="qurbi-page flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center">
@@ -96,8 +114,8 @@ export default function Receipt() {
   if (!order) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-green-950 to-green-900 flex flex-col items-center justify-center gap-4 p-8">
-        <p className="text-emerald-300">Order not found.</p>
-        <Link to="/" className="text-emerald-400 underline">
+        <p className="text-[#C49A72]">Order not found.</p>
+        <Link to="/" className="text-[#A9825F] underline">
           Go Home
         </Link>
       </div>
@@ -110,13 +128,13 @@ export default function Receipt() {
     <div className="min-h-screen bg-gradient-to-b from-green-950 to-green-900 pb-10">
       {/* Success Banner */}
       <div
-        className={`bg-emerald-500 px-4 py-8 flex flex-col items-center gap-3 ${reveal()}`}
+        className={`bg-[#F7EDE2]0 px-4 py-8 flex flex-col items-center gap-3 ${reveal()}`}
       >
         <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center">
-          <CheckCircle className="w-10 h-10 text-emerald-500" />
+          <CheckCircle className="w-10 h-10 text-[#F7EDE2]0" />
         </div>
         <h1 className="text-white font-bold text-2xl">Payment Confirmed!</h1>
-        <p className="text-emerald-100 text-sm text-center">
+        <p className="text-[#E3C19F] text-sm text-center">
           Your livestock order has been placed successfully
         </p>
       </div>
@@ -124,34 +142,34 @@ export default function Receipt() {
       <div className="px-4 pt-4 space-y-4">
         {/* Order Info */}
         <div
-          className={`bg-green-900/60 border border-emerald-700/40 rounded-2xl p-4 space-y-3 ${reveal()}`}
+          className={`bg-green-900/60 border border-[#41362D]/40 rounded-2xl p-4 space-y-3 ${reveal()}`}
           style={{ animationDelay: "80ms" }}
         >
           <div className="flex justify-between items-center">
-            <span className="text-emerald-400 text-sm">Order Number</span>
-            <span className="text-emerald-100 font-bold">
+            <span className="text-[#A9825F] text-sm">Order Number</span>
+            <span className="text-[#E3C19F] font-bold">
               {order.order_number}
             </span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-emerald-400 text-sm">Buyer</span>
-            <span className="text-emerald-100">{order.buyer_name}</span>
+            <span className="text-[#A9825F] text-sm">Buyer</span>
+            <span className="text-[#E3C19F]">{order.buyer_name}</span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-emerald-400 text-sm">Email</span>
-            <span className="text-emerald-100 text-sm">
+            <span className="text-[#A9825F] text-sm">Email</span>
+            <span className="text-[#E3C19F] text-sm">
               {order.buyer_email}
             </span>
           </div>
           {order.buyer_phone && (
             <div className="flex justify-between items-center">
-              <span className="text-emerald-400 text-sm">Phone</span>
-              <span className="text-emerald-100">{order.buyer_phone}</span>
+              <span className="text-[#A9825F] text-sm">Phone</span>
+              <span className="text-[#E3C19F]">{order.buyer_phone}</span>
             </div>
           )}
           <div className="flex justify-between items-center">
-            <span className="text-emerald-400 text-sm">Status</span>
-            <span className="bg-emerald-500 text-white text-xs font-bold px-2.5 py-1 rounded-lg">
+            <span className="text-[#A9825F] text-sm">Status</span>
+            <span className="bg-[#F7EDE2]0 text-white text-xs font-bold px-2.5 py-1 rounded-lg">
               ✓ PAID
             </span>
           </div>
@@ -159,22 +177,22 @@ export default function Receipt() {
 
         {/* Items */}
         <div
-          className={`bg-green-900/60 border border-emerald-700/40 rounded-2xl p-4 ${reveal()}`}
+          className={`bg-green-900/60 border border-[#41362D]/40 rounded-2xl p-4 ${reveal()}`}
           style={{ animationDelay: "140ms" }}
         >
-          <h3 className="text-emerald-100 font-bold mb-3">
+          <h3 className="text-[#E3C19F] font-bold mb-3">
             Order Items ({totalItems} head)
           </h3>
           <div className="space-y-3">
             {order.items?.map((item, idx) => (
               <div
                 key={idx}
-                className="flex items-start justify-between border-b border-emerald-800/40 pb-3 last:border-0 last:pb-0"
+                className="flex items-start justify-between border-b border-[#41362D]/40 pb-3 last:border-0 last:pb-0"
               >
                 <div>
                   <div className="flex items-center gap-2">
                     <span>{ANIMAL_EMOJIS[item.animal] || "🐾"}</span>
-                    <span className="text-emerald-100 font-semibold text-sm">
+                    <span className="text-[#E3C19F] font-semibold text-sm">
                       {item.breed}
                     </span>
                     {item.grade && (
@@ -185,22 +203,22 @@ export default function Receipt() {
                       </span>
                     )}
                   </div>
-                  <p className="text-emerald-400 text-xs mt-0.5">
+                  <p className="text-[#A9825F] text-xs mt-0.5">
                     {item.quantity} seekor × RM{" "}
                     {item.price_per_head?.toLocaleString()} | ⚖️{" "}
                     {item.weight_min}–{item.weight_max} kg
                   </p>
                 </div>
-                <span className="text-emerald-100 font-bold text-sm">
+                <span className="text-[#E3C19F] font-bold text-sm">
                   RM {item.total?.toLocaleString()}
                 </span>
               </div>
             ))}
           </div>
 
-          <div className="border-t border-emerald-700/40 pt-3 mt-1 flex justify-between font-bold">
-            <span className="text-emerald-100">Total Paid</span>
-            <span className="text-emerald-400 text-xl">
+          <div className="border-t border-[#41362D]/40 pt-3 mt-1 flex justify-between font-bold">
+            <span className="text-[#E3C19F]">Total Paid</span>
+            <span className="text-[#A9825F] text-xl">
               RM {order.total?.toLocaleString()}
             </span>
           </div>
@@ -213,13 +231,13 @@ export default function Receipt() {
         >
           <Link
             to="/"
-            className="bg-green-800/60 border border-emerald-700/40 text-emerald-300 py-3 rounded-xl font-semibold text-center flex items-center justify-center gap-2"
+            className="bg-green-800/60 border border-[#41362D]/40 text-[#C49A72] py-3 rounded-xl font-semibold text-center flex items-center justify-center gap-2"
           >
             <Home className="w-4 h-4" /> Home
           </Link>
           <Link
             to="/history"
-            className="bg-emerald-400 text-green-950 py-3 rounded-xl font-bold text-center flex items-center justify-center gap-2"
+            className="bg-[#A9825F] text-green-950 py-3 rounded-xl font-bold text-center flex items-center justify-center gap-2" 
           >
             <Clock className="w-4 h-4" /> History
           </Link>

@@ -7,12 +7,10 @@ import {
 } from "react-router-dom";
 import {
   ArrowLeft,
-  Building2,
   Check,
   MapPin,
   RefreshCw,
   ShoppingCart,
-  UserRound,
 } from "lucide-react";
 import { loadBulkListingById } from "@/lib/farmerClient";
 import { checkBulkListingAvailability } from "@/lib/livestock-availability";
@@ -66,16 +64,16 @@ export default function BulkListingDetail() {
 
   if (error) {
     return (
-      <div className="qurbi-page flex flex-col items-center justify-center gap-4 p-8 text-center">
+      <div className="aisyah-page flex flex-col items-center justify-center gap-4 p-8 text-center">
         <p className="text-black/70">{error}</p>
         <button
           type="button"
           onClick={load}
-          className="qurbi-primary-button flex items-center gap-2"
+          className="aisyah-primary-button flex items-center gap-2"
         >
           <RefreshCw className="h-4 w-4" /> Retry
         </button>
-        <Link to={returnPath} className="qurbi-primary-button">
+        <Link to={returnPath} className="aisyah-primary-button">
           {returnLabel}
         </Link>
       </div>
@@ -86,7 +84,7 @@ export default function BulkListingDetail() {
     return <PageLoading hideHeader message="Loading bulk details..." />;
   }
 
-  const total =
+  const total = listing.totalAnimals ??
     Number(listing.maleCount || 0) + Number(listing.femaleCount || 0);
   const image = listing.coverImage || listing.images?.[0];
   const inCart = cartItems.some((item) => item.key === `bulk:${listing.id}`);
@@ -104,6 +102,7 @@ export default function BulkListingDetail() {
     breed_breakdown: listing.breedBreakdown || [],
     state: listing.state || "",
     price_per_head: Number(listing.totalPrice || 0),
+    image: image || "",
   };
 
   const verify = (now, trigger) => {
@@ -118,7 +117,7 @@ export default function BulkListingDetail() {
         if (now) {
           buyNow(item);
           animateProductToCart(animationSource);
-          navigate("/cart");
+          navigate("/payment");
         } else {
           if (!addToCart(item)) {
             alert("This bulk lot is already in your cart.");
@@ -138,6 +137,7 @@ export default function BulkListingDetail() {
     { label: "Male count", value: Number(listing.maleCount || 0) },
     { label: "Female count", value: Number(listing.femaleCount || 0) },
     { label: "State", value: listing.state || "Not specified" },
+    { label: "Quantity", value: "1 complete lot" },
   ];
 
   return (
@@ -162,8 +162,8 @@ export default function BulkListingDetail() {
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-6xl">
-            🐄
+          <div className="flex h-full items-center justify-center text-sm font-bold text-[#41362D]">
+            Bulk lot
           </div>
         )}
         <span className="absolute right-4 top-4 rounded-xl bg-gradient-to-br from-[#41362D] to-[#6B594A] px-4 py-2 text-lg font-extrabold uppercase text-white shadow-lg shadow-black/20">
@@ -184,18 +184,8 @@ export default function BulkListingDetail() {
           </p>
         </header>
 
-        <LightDetailCard title="Farmer Details">
-          <div className="space-y-4">
-            <p className="flex items-center gap-3 text-base font-bold text-black">
-              <Building2 className="h-5 w-5 shrink-0 text-black" />
-              {listing.farm_name || listing.farmer_name || "Unknown Farm"}
-            </p>
-            {listing.farm_name && listing.farmer_name && (
-              <p className="flex items-center gap-3 text-base font-bold text-black">
-                <UserRound className="h-5 w-5 shrink-0 text-black" />
-                {listing.farmer_name}
-              </p>
-            )}
+        <LightDetailCard title="Location">
+          <div>
             <p className="flex items-start gap-3 text-base font-bold text-black">
               <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-black" />
               <span className="break-words">

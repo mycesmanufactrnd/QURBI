@@ -105,7 +105,7 @@ export default function BottomNav() {
                 </span>
 
                 {badge && totalItems > 0 && (
-                  <span className="absolute right-4 top-0 flex h-4 min-w-4 items-center justify-center rounded-full border border-white/70 bg-emerald-500 px-1 text-[9px] font-bold text-white shadow-sm">
+                  <span className="absolute right-4 top-0 flex h-4 min-w-4 items-center justify-center rounded-full border border-white/70 bg-[#F7EDE2]0 px-1 text-[9px] font-bold text-white shadow-sm"> 
                     {totalItems}
                   </span>
                 )}

@@ -15,7 +15,7 @@ import {
 import { useCart } from "@/lib/cart-context";
 import { useUserProfile } from "@/lib/user-profile-context";
 import { useAuth } from "@/lib/AuthContext";
-import { base44 } from "@/api/base44Client";
+import { qurbiApi } from "@/api/qurbiClient";
 import { useReveal } from "@/hooks/useReveal";
 import {
   availabilityMessage,
@@ -25,6 +25,8 @@ import AddressPickerModal from "@/components/AddressPickerModal";
 import CancelOrderModal from "@/components/CancelOrderModal";
 import { loadLivestockById } from "@/lib/farmerClient";
 import { QurbiPageLoader } from "@/components/QurbiLoading";
+import { useAuthPrompt } from "@/lib/auth-prompt-context";
+import AuthRequiredState from "@/components/AuthRequiredState";
 
 const ANIMAL_EMOJIS = {
   Cow: "🐄",
@@ -36,8 +38,9 @@ const ANIMAL_EMOJIS = {
 const DUMMY_DELIVERY_FEE_PER_FARMER = 10;
 
 export default function Payment() {
+  const { requestSignIn } = useAuthPrompt();
   const { selectedItems, selectedSubtotal, removeSelected } = useCart();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, authChecked } = useAuth();
   const {
     addresses,
     selectedAddressId,
@@ -75,11 +78,11 @@ export default function Payment() {
         return;
       }
       try {
-        const response = await base44.functions.invoke("fetchMyOrders", {
+        const response = await qurbiApi.functions.invoke("fetchMyOrders", {
           orderId: resumeOrderId,
         });
         const order = response.data?.order;
-        if (!order || !["pending", "to_pay"].includes(order.status))
+        if (!order || !["pending", "pending_payment", "to_pay"].includes(order.status))
           throw new Error("This order is no longer awaiting payment.");
         if (active) {
           setResumedOrder(order);
@@ -180,7 +183,7 @@ export default function Payment() {
 
   const handleCheckout = async () => {
     if (!isAuthenticated || !user?.id) {
-      navigate("/login?returnTo=/payment");
+      requestSignIn({ returnTo: "/payment", message: "Sign in to securely continue with checkout." });
       return;
     }
     if (paymentItems.length === 0)
@@ -233,7 +236,7 @@ export default function Payment() {
       const orderNumber = resumedOrder?.order_number || "GH-" + Date.now();
       const order =
         resumedOrder ||
-        (await base44.entities.Order.create({
+        (await qurbiApi.entities.Order.create({
           order_number: orderNumber,
           items: paymentItems.map((i) =>
             i.item_type === "bulk"
@@ -276,7 +279,7 @@ export default function Payment() {
           buyer_phone: buyerPhone,
           buyer_id: user.id,
         }));
-      const res = await base44.functions.invoke("createCheckout", {
+      const res = await qurbiApi.functions.invoke("createCheckout", {
         orderId: order.id,
         orderNumber,
         items: paymentItems,
@@ -285,6 +288,16 @@ export default function Payment() {
         subtotal: paymentSubtotal,
         deliveryFee,
         total: grandTotal,
+        fulfillmentMethod,
+        deliveryAddress: selectedAddress || {
+          recipientName: buyerName,
+          recipientPhone: buyerPhone,
+          addressLine1: "Self pickup",
+          city: "N/A",
+          state: "N/A",
+          postcode: "00000",
+          country: "Malaysia",
+        },
       });
       if (res.data?.url) {
         if (!isResumingOrder) removeSelected();
@@ -302,7 +315,7 @@ export default function Payment() {
     setCancelling(true);
     setCancelError("");
     try {
-      await base44.functions.invoke("cancelMyOrder", {
+      await qurbiApi.functions.invoke("cancelMyOrder", {
         orderId: resumedOrder.id,
       });
       navigate("/orders", { replace: true });
@@ -317,6 +330,10 @@ export default function Payment() {
     }
   };
 
+  if (!authChecked) return <QurbiPageLoader label="Checking your session…" />;
+  if (!isAuthenticated) {
+    return <AuthRequiredState title="Payment" message="Sign in to securely continue with payment." returnTo={window.location.pathname + window.location.search} />;
+  }
   if (loadingOrder || loadingProductDetails)
     return <QurbiPageLoader label="Preparing payment…" />;
   if (resumeError)
@@ -325,7 +342,7 @@ export default function Payment() {
         <p className="text-gray-500 text-center">{resumeError}</p>
         <button
           onClick={() => navigate("/orders")}
-          className="bg-emerald-500 text-white px-6 py-3 rounded-xl font-bold text-sm"
+          className="bg-[#F7EDE2]0 text-white px-6 py-3 rounded-xl font-bold text-sm"
         >
           Back to My Orders
         </button>
@@ -337,7 +354,7 @@ export default function Payment() {
         <p className="text-gray-500">No items selected for payment.</p>
         <button
           onClick={() => navigate(isResumingOrder ? "/orders" : "/cart")}
-          className="bg-emerald-500 text-white px-6 py-3 rounded-xl font-bold text-sm"
+          className="bg-[#F7EDE2]0 text-white px-6 py-3 rounded-xl font-bold text-sm"
         >
           {isResumingOrder ? "Back to My Orders" : "Back to Cart"}
         </button>
@@ -402,7 +419,7 @@ export default function Payment() {
                       className="w-11 h-11 rounded-lg object-cover flex-shrink-0"
                     />
                   ) : (
-                    <span className="w-11 h-11 rounded-lg bg-emerald-50 flex items-center justify-center text-lg flex-shrink-0">
+                    <span className="w-11 h-11 rounded-lg bg-[#F7EDE2] flex items-center justify-center text-lg flex-shrink-0">
                       {ANIMAL_EMOJIS[item.animal]}
                     </span>
                   )}
@@ -448,26 +465,26 @@ export default function Payment() {
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => setFulfillmentMethod("delivery")}
-                className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${fulfillmentMethod === "delivery" ? "border-emerald-400 bg-emerald-50" : "border-gray-100"}`}
+                className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${fulfillmentMethod === "delivery" ? "border-[#A9825F] bg-[#F7EDE2]" : "border-gray-100"}`}
               >
                 <Truck
-                  className={`w-6 h-6 ${fulfillmentMethod === "delivery" ? "text-emerald-500" : "text-gray-300"}`}
+                  className={`w-6 h-6 ${fulfillmentMethod === "delivery" ? "text-[#F7EDE2]0" : "text-gray-300"}`}
                 />
                 <span
-                  className={`text-sm font-bold ${fulfillmentMethod === "delivery" ? "text-emerald-700" : "text-gray-400"}`}
+                  className={`text-sm font-bold ${fulfillmentMethod === "delivery" ? "text-[#41362D]" : "text-gray-400"}`}
                 >
                   Delivery
                 </span>
               </button>
               <button
                 onClick={() => setFulfillmentMethod("pickup")}
-                className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${fulfillmentMethod === "pickup" ? "border-emerald-400 bg-emerald-50" : "border-gray-100"}`}
+                className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${fulfillmentMethod === "pickup" ? "border-[#A9825F] bg-[#F7EDE2]" : "border-gray-100"}`}
               >
                 <Store
-                  className={`w-6 h-6 ${fulfillmentMethod === "pickup" ? "text-emerald-500" : "text-gray-300"}`}
+                  className={`w-6 h-6 ${fulfillmentMethod === "pickup" ? "text-[#F7EDE2]0" : "text-gray-300"}`}
                 />
                 <span
-                  className={`text-sm font-bold ${fulfillmentMethod === "pickup" ? "text-emerald-700" : "text-gray-400"}`}
+                  className={`text-sm font-bold ${fulfillmentMethod === "pickup" ? "text-[#41362D]" : "text-gray-400"}`}
                 >
                   Pickup
                 </span>
@@ -481,13 +498,13 @@ export default function Payment() {
           <>
             <button
               onClick={() => setShowPicker(true)}
-              className={`w-full bg-white rounded-2xl shadow-sm border-2 overflow-hidden transition-all text-left active:scale-[0.99] ${selectedAddress ? "border-emerald-200" : "border-dashed border-orange-200"}`}
+              className={`w-full bg-white rounded-2xl shadow-sm border-2 overflow-hidden transition-all text-left active:scale-[0.99] ${selectedAddress ? "border-[#D5B18D]" : "border-dashed border-orange-200"}`}
             >
               <div
-                className={`px-4 py-2 flex items-center justify-between ${selectedAddress ? "bg-emerald-50" : "bg-orange-50"}`}
+                className={`px-4 py-2 flex items-center justify-between ${selectedAddress ? "bg-[#F7EDE2]" : "bg-orange-50"}`}
               >
                 <span
-                  className={`text-xs font-bold ${selectedAddress ? "text-emerald-700" : "text-orange-500"}`}
+                  className={`text-xs font-bold ${selectedAddress ? "text-[#41362D]" : "text-orange-500"}`}
                 >
                   DELIVERY ADDRESS
                 </span>
@@ -497,10 +514,10 @@ export default function Payment() {
               </div>
               <div className="px-4 py-3 flex items-start gap-3">
                 <div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${selectedAddress ? "bg-emerald-50" : "bg-orange-50"}`}
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${selectedAddress ? "bg-[#F7EDE2]" : "bg-orange-50"}`}
                 >
                   <MapPin
-                    className={`w-5 h-5 ${selectedAddress ? "text-emerald-500" : "text-orange-300"}`}
+                    className={`w-5 h-5 ${selectedAddress ? "text-[#F7EDE2]0" : "text-orange-300"}`}
                   />
                 </div>
                 {selectedAddress ? (
@@ -512,8 +529,8 @@ export default function Payment() {
                         </span>
                       )}
                       {selectedAddress.isDefault && (
-                        <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
-                          <Star className="w-2.5 h-2.5 fill-emerald-600" />{" "}
+                        <span className="bg-[#E3C19F] text-[#41362D] text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                          <Star className="w-2.5 h-2.5 fill-[#5A493C]" />{" "}
                           DEFAULT
                         </span>
                       )}
@@ -603,7 +620,7 @@ export default function Payment() {
               <h3 className="text-gray-800 font-bold text-sm">
                 Contact Information
               </h3>
-              <span className="text-[10px] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full">
+              <span className="text-[10px] text-[#5A493C] font-semibold bg-[#F7EDE2] px-2 py-0.5 rounded-full">
                 From your profile
               </span>
             </div>
@@ -614,7 +631,7 @@ export default function Payment() {
               <input
                 value={pickupName}
                 onChange={(e) => setPickupName(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-400"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#A9825F]"
                 placeholder="Your full name"
               />
             </div>
@@ -626,7 +643,7 @@ export default function Payment() {
                 type="email"
                 value={pickupEmail}
                 onChange={(e) => setPickupEmail(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-400"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#A9825F]"
                 placeholder="your@email.com"
               />
             </div>
@@ -637,7 +654,7 @@ export default function Payment() {
               <input
                 value={pickupPhone}
                 onChange={(e) => setPickupPhone(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-400"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#A9825F]" 
                 placeholder="012-345 6789"
               />
             </div>
@@ -720,7 +737,7 @@ export default function Payment() {
             )}
           </button>
           {isResumingOrder &&
-            ["pending", "to_pay"].includes(resumedOrder?.status) && (
+            ["pending", "pending_payment", "to_pay"].includes(resumedOrder?.status) && (
               <button
                 onClick={() => {
                   setCancelError("");

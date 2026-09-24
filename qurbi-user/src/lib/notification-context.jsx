@@ -8,7 +8,7 @@ import React, {
   useState,
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { qurbiApi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
 import NotificationBanner from "@/components/NotificationBanner";
 
@@ -99,7 +99,7 @@ export function NotificationProvider({ children }) {
       const initialLoad = loadedAccountRef.current !== user.id;
       if (!silent || initialLoad) setLoading(true);
       try {
-        const response = await base44.functions.invoke(
+        const response = await qurbiApi.functions.invoke(
           "fetchMyNotifications",
           {},
         );
@@ -150,7 +150,7 @@ export function NotificationProvider({ children }) {
       ),
     );
     try {
-      await base44.functions.invoke("markMyNotificationRead", {
+      await qurbiApi.functions.invoke("markMyNotificationRead", {
         notificationId,
       });
       return true;
@@ -174,7 +174,7 @@ export function NotificationProvider({ children }) {
     async (notificationId) => {
       if (!notificationId) return false;
       try {
-        await base44.functions.invoke("clearMyNotifications", {
+        await qurbiApi.functions.invoke("clearMyNotifications", {
           notificationId,
         });
         setNotifications((current) =>
@@ -195,7 +195,7 @@ export function NotificationProvider({ children }) {
 
   const clearAllNotifications = useCallback(async () => {
     try {
-      await base44.functions.invoke("clearMyNotifications", {
+      await qurbiApi.functions.invoke("clearMyNotifications", {
         clearAll: true,
       });
       setNotifications([]);

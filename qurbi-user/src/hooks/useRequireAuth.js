@@ -1,14 +1,14 @@
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
+import { useAuthPrompt } from "@/lib/auth-prompt-context";
 
 /**
  * Returns a function that checks authentication before performing an action.
- * If the user is not authenticated, it redirects to /login with a returnTo
- * param and returns false. Otherwise returns true.
+ * If the user is not authenticated, it opens the shared sign-in prompt and
+ * returns false. Otherwise returns true.
  */
 export function useRequireAuth() {
   const { isAuthenticated, authChecked, isLoadingAuth } = useAuth();
-  const navigate = useNavigate();
+  const { requestSignIn } = useAuthPrompt();
 
   return (onAuthed) => {
     // Still resolving auth state — ignore the tap to avoid a false redirect
@@ -17,8 +17,7 @@ export function useRequireAuth() {
       onAuthed?.();
       return true;
     }
-    const returnTo = window.location.pathname + window.location.search;
-    navigate(`/login?returnTo=${encodeURIComponent(returnTo)}`);
+    requestSignIn({ onAuthenticated: onAuthed });
     return false;
   };
 }

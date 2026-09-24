@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "@/lib/AuthContext";
-import { base44 } from "@/api/base44Client";
+import { qurbiApi } from "@/api/qurbiClient";
+import apiClient from "@/api/apiClient";
 
 /**
  * Per-user profile & address storage.
@@ -17,6 +18,31 @@ const emptyProfile = { name: "", email: "", phone: "" };
 const profileKey = (uid) => `gh_profile_${uid}`;
 const addressesKey = (uid) => `gh_addresses_${uid}`;
 const selectedKey = (uid) => `gh_selected_addr_${uid}`;
+
+const fromAddressApi = (address) => ({
+  ...address,
+  name: address.recipientName,
+  phone: address.recipientPhone,
+  street: address.addressLine1,
+  isDefault: address.isDefault,
+});
+
+const toAddressApi = (address, userId) => ({
+  userId,
+  label: ["home", "work", "other"].includes(String(address.label).toLowerCase())
+    ? String(address.label).toLowerCase()
+    : "other",
+  recipientName: address.name,
+  recipientPhone: address.phone,
+  addressLine1: address.street,
+  addressLine2: address.addressLine2 || null,
+  city: address.city,
+  state: address.state || "",
+  postcode: address.postcode || "",
+  country: address.country || "Malaysia",
+  deliveryNote: address.deliveryNote || null,
+  isDefault: Boolean(address.isDefault),
+});
 
 export function UserProfileProvider({ children }) {
   const { user, isAuthenticated } = useAuth();
@@ -42,16 +68,18 @@ export function UserProfileProvider({ children }) {
     setProfileLoading(true);
     setProfile({ name: user?.display_name || user?.full_name || "", email: user?.email || "", phone: user?.phone || "" });
     let active = true;
-    base44.functions.invoke("getMyProfile", {}).then((response) => {
+    qurbiApi.functions.invoke("getMyProfile", {}).then((response) => {
       if (active && response.data?.profile) setProfile(response.data.profile);
     }).catch(() => {
       // Keep the authenticated identity visible if the profile read is temporarily unavailable.
     }).finally(() => {
       if (active) setProfileLoading(false);
     });
-    try {
-      setAddresses(JSON.parse(localStorage.getItem(addressesKey(userId))) || []);
-    } catch { setAddresses([]); }
+    apiClient.get("/addresses", { params: { userId } }).then(({ data }) => {
+      if (active) setAddresses((data || []).map(fromAddressApi));
+    }).catch(() => {
+      if (active) setAddresses([]);
+    });
     setSelectedAddressId(localStorage.getItem(selectedKey(userId)) || null);
     return () => { active = false; };
   }, [userId, user]);
@@ -81,43 +109,44 @@ export function UserProfileProvider({ children }) {
   }, [profile, userId]);
   useEffect(() => {
     if (!userId) return;
-    localStorage.setItem(addressesKey(userId), JSON.stringify(addresses));
-  }, [addresses, userId]);
-  useEffect(() => {
-    if (!userId) return;
     if (selectedAddressId) localStorage.setItem(selectedKey(userId), selectedAddressId);
     else localStorage.removeItem(selectedKey(userId));
   }, [selectedAddressId, userId]);
 
   const updateProfile = async (data) => {
-    const response = await base44.functions.invoke("updateMyProfile", { name: data.name, phone: data.phone, email: profile.email });
+    const response = await qurbiApi.functions.invoke("updateMyProfile", { name: data.name, phone: data.phone, email: profile.email });
     const savedProfile = response.data?.profile;
     if (!savedProfile) throw new Error("Profile was not saved");
     setProfile(savedProfile);
     return savedProfile;
   };
 
-  const addAddress = (address) => {
-    const newAddr = { ...address, id: Date.now().toString() };
-    setAddresses((prev) => {
-      const updated = address.isDefault
-        ? prev.map((a) => ({ ...a, isDefault: false }))
-        : prev;
-      return [...updated, newAddr];
-    });
-    if (address.isDefault || addresses.length === 0) setSelectedAddressId(newAddr.id);
+  const addAddress = async (address) => {
+    const { data } = await apiClient.post("/addresses", toAddressApi(address, userId));
+    const newAddr = fromAddressApi(data);
+    setAddresses((prev) => [
+      ...(newAddr.isDefault ? prev.map((item) => ({ ...item, isDefault: false })) : prev),
+      newAddr,
+    ]);
+    if (newAddr.isDefault || addresses.length === 0) setSelectedAddressId(newAddr.id);
     return newAddr;
   };
 
-  const updateAddress = (id, data) => {
+  const updateAddress = async (id, data) => {
+    const response = data.isDefault
+      ? await apiClient.patch(`/addresses/${id}/set-default`, { userId })
+      : await apiClient.patch(`/addresses/${id}`, toAddressApi(data, userId));
+    const saved = fromAddressApi(response.data);
     setAddresses((prev) =>
-      data.isDefault
-        ? prev.map((a) => a.id === id ? { ...a, ...data } : { ...a, isDefault: false })
-        : prev.map((a) => a.id === id ? { ...a, ...data } : a)
+      saved.isDefault
+        ? prev.map((item) => item.id === id ? saved : { ...item, isDefault: false })
+        : prev.map((item) => item.id === id ? saved : item)
     );
+    return saved;
   };
 
-  const deleteAddress = (id) => {
+  const deleteAddress = async (id) => {
+    await apiClient.delete(`/addresses/${id}`);
     setAddresses((prev) => {
       const filtered = prev.filter((a) => a.id !== id);
       if (selectedAddressId === id) {

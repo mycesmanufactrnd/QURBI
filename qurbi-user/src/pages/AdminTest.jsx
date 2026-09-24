@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FlaskConical, Package } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { qurbiApi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
 import AppHeader from "@/components/AppHeader";
 import { QurbiPageLoader } from "@/components/QurbiLoading";
@@ -22,7 +22,7 @@ export default function AdminTest() {
       return undefined;
     }
 
-    base44.functions
+    qurbiApi.functions
       .invoke("fetchLivestock", {})
       .then((response) => {
         if (active) setLivestock(response.data?.livestock || []);
@@ -44,7 +44,7 @@ export default function AdminTest() {
     setCreatingId(item.id);
     setError("");
     try {
-      const response = await base44.functions.invoke("createTestOrder", {
+      const response = await qurbiApi.functions.invoke("createTestOrder", {
         livestockId: item.id,
       });
       const orderId = response.data?.order?.id;

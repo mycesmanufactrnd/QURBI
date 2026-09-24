@@ -16,9 +16,14 @@ import AuthButtons from "@/components/AuthButtons";
 import AppHeader from "@/components/AppHeader";
 import PageLoading from "@/components/PageLoading";
 import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useAuth } from "@/lib/AuthContext";
+import AuthRequiredState from "@/components/AuthRequiredState";
 
 export default function Profile() {
   const { navigateFromIconPage } = useHeaderTransition();
+  const requireAuth = useRequireAuth();
+  const { authChecked, isAuthenticated } = useAuth();
   const { profile, profileLoading, updateProfile } = useUserProfile();
   const { reveal } = useReveal();
   const [form, setForm] = useState(profile);
@@ -50,21 +55,27 @@ export default function Profile() {
   };
 
   const openEdit = () => {
-    setForm(profile);
-    setShowEdit(true);
+    requireAuth(() => {
+      setForm(profile);
+      setShowEdit(true);
+    });
   };
 
-  if (profileLoading) {
+  if (!authChecked || profileLoading) {
     return (
-      <div className="qurbi-page">
+      <div className="aisyah-page">
         <AppHeader title="Profile" subtitle="Manage your details" />
         <PageLoading contentOnly message="Loading your profile..." />
       </div>
     );
   }
 
+  if (!isAuthenticated) {
+    return <AuthRequiredState title="Profile" message="Sign in to view and manage your profile." returnTo="/profile" />;
+  }
+
   return (
-    <div className="qurbi-page">
+    <div className="aisyah-page">
       <style>{`
         @keyframes profileFadeIn {
           from { opacity: 0; }
@@ -82,7 +93,7 @@ export default function Profile() {
       `}</style>
       <AppHeader title="Profile" subtitle="Manage your details" />
 
-      <div className="qurbi-content">
+      <div className="aisyah-content">
         {/* Avatar */}
         <div
           className={`${cardGradientCls} p-5 flex items-center gap-4 ${reveal()}`}
@@ -214,7 +225,7 @@ export default function Profile() {
 
         {/* Address Book */}
         <button
-          onClick={() => navigateFromIconPage("/address-book")}
+          onClick={() => requireAuth(() => navigateFromIconPage("/address-book"))}
           className={`w-full ${cardGradientCls} p-4 flex items-center gap-4 active:bg-white/10 transition ${reveal()}`}
           style={{ animationDelay: "200ms" }}
         >
@@ -232,7 +243,7 @@ export default function Profile() {
 
         {/* Order History */}
         <button
-          onClick={() => navigateFromIconPage("/history")}
+          onClick={() => requireAuth(() => navigateFromIconPage("/history"))}
           className={`w-full ${cardGradientCls} p-4 flex items-center gap-4 active:bg-white/10 transition ${reveal()}`}
           style={{ animationDelay: "260ms" }}
         >

@@ -9,7 +9,6 @@ import { Leaf } from "lucide-react";
 export default function SplashScreen({ duration = 3200, onDone }) {
   const [hiding, setHiding] = useState(false);
   const [showName, setShowName] = useState(false);
-  const [showDescription, setShowDescription] = useState(false);
   const timingScale = duration / 7200;
   const exitDuration = 1200 * timingScale;
 
@@ -17,10 +16,6 @@ export default function SplashScreen({ duration = 3200, onDone }) {
     const nameTimer = window.setTimeout(
       () => setShowName(true),
       400 * timingScale,
-    );
-    const descriptionTimer = window.setTimeout(
-      () => setShowDescription(true),
-      1000 * timingScale,
     );
     const exitTimer = window.setTimeout(
       () => setHiding(true),
@@ -30,7 +25,6 @@ export default function SplashScreen({ duration = 3200, onDone }) {
 
     return () => {
       window.clearTimeout(nameTimer);
-      window.clearTimeout(descriptionTimer);
       window.clearTimeout(exitTimer);
       window.clearTimeout(completionTimer);
     };
@@ -56,16 +50,6 @@ export default function SplashScreen({ duration = 3200, onDone }) {
       >
         QURBI
       </h1>
-      <p
-        className={`relative z-10 mt-2 text-center text-sm font-medium tracking-wide text-[#F1DFCD] transition-all ease-out ${
-          showDescription
-            ? "translate-y-0 opacity-100"
-            : "translate-y-2 opacity-0"
-        }`}
-        style={{ transitionDuration: `${1000 * timingScale}ms` }}
-      >
-        Sembelih lembu anda
-      </p>
     </div>,
     document.body,
   );
