@@ -117,8 +117,11 @@ const Livestock = {
   create: async (input) => normalizeLivestock(await data(apiClient.post("/livestock", await livestockPayload(input)))),
   update: async (id, input) => {
     let updated = null;
-    if (input.disabled !== undefined || input.marketplaceVisible !== undefined) {
-      const blocked = input.disabled ?? !input.marketplaceVisible;
+    // `marketplaceVisible` is derived by the normal farmer form from status,
+    // approval and expiry. It must never call the admin-only block endpoint.
+    // Only the admin screens send `disabled` for an explicit override.
+    if (input.disabled !== undefined) {
+      const blocked = input.disabled;
       updated = await data(apiClient.patch(`/livestock/${id}/marketplace-visibility`, {
         blocked,
         reason: blocked ? input.marketplaceVisibilityReason || "Hidden by administrator" : undefined,
