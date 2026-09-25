@@ -118,7 +118,7 @@ export const authApi = {
   me: () => unwrap(apiClient.get("/auth/me")),
   refresh: (refreshToken) => unwrap(apiClient.post("/auth/refresh", { refreshToken })),
   logout: (refreshToken) => unwrap(apiClient.post("/auth/logout", { refreshToken })),
-  firebase: (idToken) => unwrap(apiClient.post("/auth/firebase", { idToken })),
+  firebase: (idToken) => unwrap(apiClient.post("/auth/firebase", { idToken, portal: "farmer" })),
 };
 
 export const uploadApi = {

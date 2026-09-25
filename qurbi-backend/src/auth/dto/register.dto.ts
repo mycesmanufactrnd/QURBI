@@ -1,4 +1,4 @@
-import { IsEmail, IsIn, IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { UserRole } from '../../entities';
 
 // admin is deliberately excluded here — it must never be self-assignable
@@ -19,6 +19,11 @@ export class RegisterDto {
   @IsNotEmpty()
   @MaxLength(150)
   fullName: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  phone?: string;
 
   @IsIn(SELF_ASSIGNABLE_ROLES)
   role: SelfAssignableRole;

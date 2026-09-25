@@ -10,6 +10,7 @@ import { UpdateLivestockDto } from './dto/update-livestock.dto';
 import { SetMarketplaceBlockDto } from './dto/set-marketplace-visibility.dto';
 import { SetFeaturedDto } from './dto/set-featured.dto';
 import { toPageInt } from '../common/pagination';
+import { Public } from '../auth/decorators/public.decorator';
 
 function toBoolean(value?: string): boolean | undefined {
   if (value === undefined) return undefined;
@@ -34,9 +35,10 @@ export class LivestockController {
   // admins — see LivestockService.findAllForViewer. Paginated the same way
   // as the other admin lists, since admins use this same route with
   // farmerId/status/adminBlocked filters rather than a separate endpoint.
+  @Public()
   @Get()
   findAll(
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentUser() user: AuthenticatedUser | undefined,
     @Query('farmerId') farmerId?: string,
     @Query('speciesId') speciesId?: string,
     @Query('categoryId') categoryId?: string,
@@ -57,8 +59,9 @@ export class LivestockController {
     return this.livestockService.findAllForViewer(query, user);
   }
 
+  @Public()
   @Get(':id')
-  findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser | undefined) {
     return this.livestockService.findOneForViewer(id, user);
   }
 

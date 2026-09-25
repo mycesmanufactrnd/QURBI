@@ -5,6 +5,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { SpeciesService } from './species.service';
 import { CreateSpeciesDto } from './dto/create-species.dto';
 import { UpdateSpeciesDto } from './dto/update-species.dto';
+import { Public } from '../auth/decorators/public.decorator';
 
 @Controller('species')
 export class SpeciesController {
@@ -19,11 +20,13 @@ export class SpeciesController {
     return this.speciesService.create(body);
   }
 
+  @Public()
   @Get()
   findAll() {
     return this.speciesService.findAll();
   }
 
+  @Public()
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.speciesService.findOne(id);

@@ -8,6 +8,7 @@ import type { AuthenticatedUser } from '../auth/decorators/current-user.decorato
 import { BulkListingsService } from './bulk-listings.service';
 import { CreateBulkListingDto } from './dto/create-bulk-listing.dto';
 import { UpdateBulkListingDto } from './dto/update-bulk-listing.dto';
+import { Public } from '../auth/decorators/public.decorator';
 
 @Controller('bulk-listings')
 export class BulkListingsController {
@@ -21,17 +22,19 @@ export class BulkListingsController {
     return this.bulkListingsService.createForFarmer(user.id, body);
   }
 
+  @Public()
   @Get()
   findAll(
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentUser() user: AuthenticatedUser | undefined,
     @Query('farmerId') farmerId?: string,
     @Query('status') status?: BulkListing['status'],
   ) {
     return this.bulkListingsService.findAllForViewer(stripUndefined({ farmerId, status }), user);
   }
 
+  @Public()
   @Get(':id')
-  findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser | undefined) {
     return this.bulkListingsService.findOneForViewer(id, user);
   }
 

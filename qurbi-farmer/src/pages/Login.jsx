@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { Loader2, ShieldCheck } from "lucide-react";
 import BrandLogo from "@/components/agri/BrandLogo";
 import GoogleIcon from "@/components/GoogleIcon";
@@ -52,7 +53,7 @@ export default function Login() {
           <section className="animate-slide-up rounded-[2rem] border border-white/35 bg-card/95 p-5 shadow-[0_24px_70px_rgba(35,28,23,0.32)] backdrop-blur-xl sm:p-7">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-secondary text-primary"><ShieldCheck className="h-5 w-5" /></div>
             <p className="mt-5 text-2xl font-extrabold tracking-tight text-foreground">Welcome back</p>
-            <p className="mt-1.5 text-sm leading-6 text-muted-foreground">Sign in with your registered Google account to continue.</p>
+            <p className="mt-1.5 text-sm leading-6 text-muted-foreground">Sign in or create a farmer account with Google to continue.</p>
             {error && <div role="alert" className="mt-4 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
             <button
               type="button"
@@ -63,6 +64,12 @@ export default function Login() {
               {loading ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <GoogleIcon className="h-5 w-5" />}
               {loading ? "Signing in..." : "Continue with Google"}
             </button>
+            <p className="mt-4 text-center text-sm text-muted-foreground">
+              Prefer email and password?{" "}
+              <Link to="/register" className="font-semibold text-primary hover:underline">
+                Create farmer account
+              </Link>
+            </p>
             <div className="mt-5 flex items-start gap-2.5 rounded-2xl bg-muted/65 p-3 text-xs leading-5 text-muted-foreground">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
               <span>Secure sign-in. Farmer accounts must be verified before livestock can be listed.</span>

@@ -76,6 +76,7 @@ export class AuthService {
         email,
         passwordHash,
         fullName: dto.fullName,
+        phone: dto.phone?.trim() || null,
         role: dto.role,
       }),
     );
