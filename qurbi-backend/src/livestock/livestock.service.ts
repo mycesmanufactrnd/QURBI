@@ -50,10 +50,10 @@ export class LivestockService extends BaseCrudService<Livestock> {
   // place of it — a non-admin can never use them to see past their own scope,
   // at worst they narrow it down to nothing (e.g. adminBlocked=true as a
   // buyer: blocked listings are never in the buyer-visible set anyway).
-  async findAllForViewer(query: LivestockQuery, viewer: AuthenticatedUser): Promise<Paginated<LivestockWithVisibility>> {
+  async findAllForViewer(query: LivestockQuery, viewer?: AuthenticatedUser): Promise<Paginated<LivestockWithVisibility>> {
     const { page, limit, skip, take } = resolvePage(query);
-    const isOwnInventory = viewer.role === UserRole.FARMER && query.farmerId === viewer.id;
-    const isAdmin = viewer.role === UserRole.ADMIN;
+    const isOwnInventory = viewer?.role === UserRole.FARMER && query.farmerId === viewer.id;
+    const isAdmin = viewer?.role === UserRole.ADMIN;
     const showEverything = isAdmin || isOwnInventory;
 
     const qb = this.repository
@@ -146,11 +146,11 @@ export class LivestockService extends BaseCrudService<Livestock> {
     return listing;
   }
 
-  async findOneForViewer(id: string, viewer: AuthenticatedUser): Promise<LivestockWithVisibility> {
+  async findOneForViewer(id: string, viewer?: AuthenticatedUser): Promise<LivestockWithVisibility> {
     const listing = await this.findOneWithVisibility(id);
     const canSeeHidden =
-      viewer.role === UserRole.ADMIN ||
-      (viewer.role === UserRole.FARMER && listing.farmerId === viewer.id);
+      viewer?.role === UserRole.ADMIN ||
+      (viewer?.role === UserRole.FARMER && listing.farmerId === viewer.id);
     if (!canSeeHidden && !listing.marketplaceVisible) {
       throw new NotFoundException(`Livestock ${id} not found`);
     }

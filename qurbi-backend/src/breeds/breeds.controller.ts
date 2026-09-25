@@ -5,6 +5,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { BreedsService } from './breeds.service';
 import { CreateBreedDto } from './dto/create-breed.dto';
 import { UpdateBreedDto } from './dto/update-breed.dto';
+import { Public } from '../auth/decorators/public.decorator';
 
 @Controller('breeds')
 export class BreedsController {
@@ -19,11 +20,13 @@ export class BreedsController {
     return this.breedsService.create(body);
   }
 
+  @Public()
   @Get()
   findAll(@Query('speciesId') speciesId?: string) {
     return speciesId ? this.breedsService.findBySpecies(speciesId) : this.breedsService.findAll();
   }
 
+  @Public()
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.breedsService.findOne(id);

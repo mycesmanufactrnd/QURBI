@@ -5,6 +5,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { LivestockCategoriesService } from './livestock-categories.service';
 import { CreateLivestockCategoryDto } from './dto/create-livestock-category.dto';
 import { UpdateLivestockCategoryDto } from './dto/update-livestock-category.dto';
+import { Public } from '../auth/decorators/public.decorator';
 
 @Controller('livestock-categories')
 export class LivestockCategoriesController {
@@ -18,11 +19,13 @@ export class LivestockCategoriesController {
     return this.categoriesService.create(body);
   }
 
+  @Public()
   @Get()
   findAll() {
     return this.categoriesService.findAll();
   }
 
+  @Public()
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.categoriesService.findOne(id);

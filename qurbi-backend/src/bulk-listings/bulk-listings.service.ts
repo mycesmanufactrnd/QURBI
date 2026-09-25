@@ -19,10 +19,10 @@ export class BulkListingsService extends BaseCrudService<BulkListing> {
   // as LivestockService.findAllForViewer.
   findAllForViewer(
     where: FindOptionsWhere<BulkListing> | undefined,
-    viewer: AuthenticatedUser,
+    viewer?: AuthenticatedUser,
   ): Promise<BulkListing[]> {
-    const isOwnInventory = viewer.role === UserRole.FARMER && where?.farmerId === viewer.id;
-    const isAdmin = viewer.role === UserRole.ADMIN;
+    const isOwnInventory = viewer?.role === UserRole.FARMER && where?.farmerId === viewer.id;
+    const isAdmin = viewer?.role === UserRole.ADMIN;
     const finalWhere =
       isAdmin || isOwnInventory
         ? where
@@ -42,11 +42,11 @@ export class BulkListingsService extends BaseCrudService<BulkListing> {
     return this.create({ ...data, farmerId });
   }
 
-  async findOneForViewer(id: string, viewer: AuthenticatedUser): Promise<BulkListing> {
+  async findOneForViewer(id: string, viewer?: AuthenticatedUser): Promise<BulkListing> {
     const listing = await this.findOne(id);
     const canSeeHidden =
-      viewer.role === UserRole.ADMIN ||
-      (viewer.role === UserRole.FARMER && listing.farmerId === viewer.id);
+      viewer?.role === UserRole.ADMIN ||
+      (viewer?.role === UserRole.FARMER && listing.farmerId === viewer.id);
     if (!canSeeHidden && listing.status !== BulkListingStatus.OPEN) {
       throw new NotFoundException(`BulkListing ${id} not found`);
     }
