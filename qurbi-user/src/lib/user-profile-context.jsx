@@ -27,8 +27,7 @@ const fromAddressApi = (address) => ({
   isDefault: address.isDefault,
 });
 
-const toAddressApi = (address, userId) => ({
-  userId,
+const toAddressApi = (address) => ({
   label: ["home", "work", "other"].includes(String(address.label).toLowerCase())
     ? String(address.label).toLowerCase()
     : "other",
@@ -75,7 +74,7 @@ export function UserProfileProvider({ children }) {
     }).finally(() => {
       if (active) setProfileLoading(false);
     });
-    apiClient.get("/addresses", { params: { userId } }).then(({ data }) => {
+    apiClient.get("/addresses").then(({ data }) => {
       if (active) setAddresses((data || []).map(fromAddressApi));
     }).catch(() => {
       if (active) setAddresses([]);
@@ -122,7 +121,7 @@ export function UserProfileProvider({ children }) {
   };
 
   const addAddress = async (address) => {
-    const { data } = await apiClient.post("/addresses", toAddressApi(address, userId));
+    const { data } = await apiClient.post("/addresses", toAddressApi(address));
     const newAddr = fromAddressApi(data);
     setAddresses((prev) => [
       ...(newAddr.isDefault ? prev.map((item) => ({ ...item, isDefault: false })) : prev),
@@ -134,8 +133,8 @@ export function UserProfileProvider({ children }) {
 
   const updateAddress = async (id, data) => {
     const response = data.isDefault
-      ? await apiClient.patch(`/addresses/${id}/set-default`, { userId })
-      : await apiClient.patch(`/addresses/${id}`, toAddressApi(data, userId));
+      ? await apiClient.patch(`/addresses/${id}/set-default`)
+      : await apiClient.patch(`/addresses/${id}`, toAddressApi(data));
     const saved = fromAddressApi(response.data);
     setAddresses((prev) =>
       saved.isDefault
