@@ -247,11 +247,7 @@ function OrderCard({
             <GuardedOrderLink
               selecting={selecting}
               to={`/payment?order_id=${encodeURIComponent(order.id)}`}
-<<<<<<< HEAD
-              className="flex-inline rounded-lg item-center justify-center bg-green whitespace-nowrap rounded-lg bg-[#F7EDE2] px-2 py-1.5 text-[11px] font-bold text-white"
-=======
               className="flex-inline justify-center item-center rounded-lg border border-[#41362D] bg-gradient-to-br from-green-700 via-green-500 to-green-300 px-2 py-1.5 text-[11px] font-bold text-white"
->>>>>>> main
             >
               Complete Payment
             </GuardedOrderLink>
@@ -259,7 +255,7 @@ function OrderCard({
             <GuardedOrderLink
               selecting={selecting}
               to={detailsPath}
-              className="text-[#5A493C]"
+              className="text-white"
             >
               <ChevronRight className="w-4 h-4" />
             </GuardedOrderLink>
@@ -393,7 +389,7 @@ function OrderCard({
               ? `/payment?order_id=${encodeURIComponent(order.id)}`
               : detailsPath
           }
-          className="flex items-center gap-1 text-[#5A493C] text-xs font-semibold"
+          className="flex items-center gap-1 text-white text-xs font-semibold"
         >
           {isPending ? "Complete Payment" : "View order"}{" "}
           <ChevronRight className="w-4 h-4" />

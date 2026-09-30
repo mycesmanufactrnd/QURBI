@@ -909,18 +909,8 @@ html {
    components, while these token mappings keep their visual treatment within
    the shared taupe palette. Semantic status text is conveyed by labels and icons. */
 
-<<<<<<< HEAD
-[class*="from-green"],
-[class*="to-green"] {
-  background-image: linear-gradient(
-    135deg,
-    #41362d 0%,
-    #51443a 54%,
-    #6b594a 100%
-  ) !important;
-}
 
-=======
+
 [class*="bg-blue"],
 [class*="bg-purple"],
 [class*="bg-red"],
@@ -947,7 +937,6 @@ html {
 [class*="text-stone"] {
   color: #000000 !important;
 }
->>>>>>> main
 [class*="text-[#F7EDE2]"] {
   color: #ffffff !important;
 }
