@@ -212,6 +212,11 @@ export class OrdersService {
           const itemsToInsert: DeepPartial<OrderItem>[] = [];
 
           for (const item of items) {
+            if (item.quantity !== 1) {
+              throw new BadRequestException(
+                `Cart item ${item.id} has an invalid quantity. Remove it and add the listing again.`,
+              );
+            }
             const isLivestock = item.itemType === OrderItemType.LIVESTOCK;
             const unitPrice = isLivestock
               ? (item.livestock as Livestock).price
