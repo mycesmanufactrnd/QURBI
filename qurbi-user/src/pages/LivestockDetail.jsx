@@ -140,6 +140,11 @@ export default function LivestockDetail() {
     weight_max: livestock.weight ? Number(livestock.weight) : 0,
     farmer_id: livestock.ownerId || livestock.created_by_id || "",
     farmer_name: livestock.farmer_name || "Unknown Farmer",
+    farm_location:
+      livestock.farm_location ||
+      livestock.farmLocation ||
+      livestock.farm_address ||
+      "",
     image: livestock.coverImage || livestock.images?.[0] || "",
     created_date: livestock.created_date || "",
     listingPublishedAt: livestock.listingPublishedAt || "",

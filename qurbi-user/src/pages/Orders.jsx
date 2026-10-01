@@ -25,6 +25,7 @@ import {
 } from "@/lib/order-date";
 import PageLoading from "@/components/PageLoading";
 import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
+import ProductImage from "@/components/ProductImage";
 
 const TABS = [
   {
@@ -80,7 +81,13 @@ const STATUS_LABELS = {
   refunded: "Refund Complete",
   cancelled: "Cancelled",
   out_of_stock: "Out of Stock",
+  rejected: "Rejected",
 };
+
+function displayedOrderStatus(order) {
+  if (order.refund_status?.toLowerCase() === "rejected") return "Rejected";
+  return STATUS_LABELS[order.status] || order.status || "Unknown";
+}
 
 function reservationLabel(order) {
   if (!order.reservation_expires_at || order.reservation_status !== "active")
@@ -143,6 +150,7 @@ function OrderCard({
   const itemRows = (order.items || []).map((item) => ({
     name: item.breed || item.listing_name || "Order item",
     price: Number(item.total ?? item.line_total ?? item.price_per_head ?? 0),
+    image: item.image || "",
   }));
   const isPending = ["pending", "pending_payment", "to_pay"].includes(order.status);
   const reservedUntil = isPending ? reservationLabel(order) : "";
@@ -332,9 +340,7 @@ function OrderCard({
                     : "bg-red-50 text-red-700"
             }`}
           >
-            {order.refund_status?.toLowerCase() === "rejected"
-              ? "Rejected"
-              : STATUS_LABELS[order.status] || order.status}
+            {displayedOrderStatus(order)}
           </span>
         </div>
         {reservedUntil && (
@@ -353,9 +359,16 @@ function OrderCard({
                   key={`${itemRow.name}-${index}`}
                   className="flex min-w-0 items-start justify-between gap-3 py-0.5"
                 >
-                  <p className="min-w-0 break-words whitespace-normal [overflow-wrap:anywhere] text-sm font-semibold text-gray-800">
-                    {itemRow.name}
-                  </p>
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <ProductImage
+                      src={itemRow.image}
+                      alt={itemRow.name}
+                      className="h-11 w-11"
+                    />
+                    <p className="min-w-0 break-words whitespace-normal [overflow-wrap:anywhere] text-sm font-semibold text-white">
+                      {itemRow.name}
+                    </p>
+                  </div>
                   <p className="flex-none whitespace-nowrap text-sm font-bold text-white">
                     RM {itemRow.price.toLocaleString()}
                   </p>
@@ -477,6 +490,7 @@ export default function Orders() {
   const [historyIds, setHistoryIds] = useState([]);
   const [deletingHistory, setDeletingHistory] = useState(false);
   const [showDeleteHistory, setShowDeleteHistory] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const loadOrders = useCallback(async () => {
     if (!authChecked) return;
@@ -572,9 +586,27 @@ export default function Orders() {
   };
 
   const active = TABS.find((tab) => tab.key === activeTab);
-  const visibleOrders = useMemo(
+  const ordersInActiveTab = useMemo(
     () => orders.filter((order) => active.statuses.includes(order.status)),
     [active, orders],
+  );
+  const statusOptions = useMemo(
+    () => [...new Set(ordersInActiveTab.map(displayedOrderStatus))],
+    [ordersInActiveTab],
+  );
+  useEffect(() => {
+    if (statusFilter !== "all" && !statusOptions.includes(statusFilter)) {
+      setStatusFilter("all");
+    }
+  }, [statusFilter, statusOptions]);
+  const visibleOrders = useMemo(
+    () =>
+      statusFilter === "all"
+        ? ordersInActiveTab
+        : ordersInActiveTab.filter(
+            (order) => displayedOrderStatus(order) === statusFilter,
+          ),
+    [ordersInActiveTab, statusFilter],
   );
   const selectableHistoryIds = useMemo(
     () =>
@@ -651,6 +683,7 @@ export default function Orders() {
                   key={tab.key}
                   onClick={() => {
                     setActiveTab(tab.key);
+                    setStatusFilter("all");
                     setSelectingHistory(false);
                     setHistoryIds([]);
                   }}
@@ -673,19 +706,50 @@ export default function Orders() {
           <PageLoading contentOnly message="Loading orders..." />
         ) : (
           <>
-            {activeTab === "to-pay" && (
-          <div className="flex justify-end">
-            <button
-              onClick={() => {
-                setSelectingHistory(!selectingHistory);
-                setHistoryIds([]);
-              }}
-              className={`rounded-xl border px-4 py-2 text-sm font-bold shadow-sm transition-transform active:scale-[0.98] ${selectingHistory ? "border-[#41362D] bg-gradient-to-br from-[#EF4444] to-[#B91C1C] text-white shadow-red-950/25" : "border-[#F7EDE2]/60 bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white shadow-black/20"}`}
-            >
-              {selectingHistory ? "Cancel" : "Select"}
-            </button>
-          </div>
-        )}
+            {(statusOptions.length > 0 || activeTab === "to-pay") && (
+              <div className="flex min-w-0 items-center gap-2">
+                {statusOptions.length > 0 && (
+                  <div className="horizontal-filter-scroll no-scrollbar -mx-1 min-w-0 flex-1 overflow-x-auto px-1">
+                    <div className="flex min-w-max gap-2">
+                      {["all", ...statusOptions].map((status) => {
+                        const selected = statusFilter === status;
+                        return (
+                          <button
+                            key={status}
+                            type="button"
+                            onClick={() => {
+                              setStatusFilter(status);
+                              setSelectingHistory(false);
+                              setHistoryIds([]);
+                            }}
+                            aria-pressed={selected}
+                            className={`rounded-full border px-3.5 py-2 text-xs font-bold transition-colors ${
+                              selected
+                                ? "border-[#41362D] bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white"
+                                : "border-[#D5B18D] bg-[#F7EDE2] text-[#41362D]"
+                            }`}
+                          >
+                            {status === "all" ? "All statuses" : status}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {activeTab === "to-pay" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectingHistory(!selectingHistory);
+                      setHistoryIds([]);
+                    }}
+                    className={`flex-none rounded-xl border px-4 py-2 text-sm font-bold shadow-sm transition-transform active:scale-[0.98] ${selectingHistory ? "border-[#41362D] bg-gradient-to-br from-[#EF4444] to-[#B91C1C] text-white shadow-red-950/25" : "border-[#F7EDE2]/60 bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white shadow-black/20"}`}
+                  >
+                    {selectingHistory ? "Cancel" : "Select"}
+                  </button>
+                )}
+              </div>
+            )}
             {selectingHistory && (
           <div className="grid grid-cols-2 gap-2">
             <button

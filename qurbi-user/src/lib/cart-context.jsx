@@ -73,7 +73,10 @@ export function CartProvider({ children }) {
           !item.farmer_name ||
           item.farmer_name === "Unknown Farmer") &&
         !item.farmer_checked;
-      return needsImage || needsFarmer;
+      const needsLocation =
+        !item.farm_location && !item.farmLocation && !item.farm_address &&
+        !item.location_checked;
+      return needsImage || needsFarmer || needsLocation;
     });
     if (!missing.length) return;
     let active = true;
@@ -96,12 +99,23 @@ export function CartProvider({ children }) {
               ? item.farmer_name
               : product?.farmer_name || "Unknown Farmer",
           farmer_checked: true,
+          farm_location:
+            item.farm_location ||
+            item.farmLocation ||
+            item.farm_address ||
+            product?.farm_location ||
+            product?.farmLocation ||
+            product?.farm_address ||
+            product?.state ||
+            "",
+          location_checked: true,
         }];
       } catch {
         return [item.key, {
           image: item.image || "",
           image_checked: true,
           farmer_checked: true,
+          location_checked: true,
         }];
       }
     })).then((updates) => {

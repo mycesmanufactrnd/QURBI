@@ -23,7 +23,8 @@ import {
 import AddressPickerModal from "@/components/AddressPickerModal";
 import CancelOrderModal from "@/components/CancelOrderModal";
 import PaymentErrorModal from "@/components/PaymentErrorModal";
-import { loadLivestockById } from "@/lib/farmerClient";
+import ProductImage from "@/components/ProductImage";
+import { loadBulkListingById, loadLivestockById } from "@/lib/farmerClient";
 import { QurbiPageLoader } from "@/components/QurbiLoading";
 import { useAuthPrompt } from "@/lib/auth-prompt-context";
 import AuthRequiredState from "@/components/AuthRequiredState";
@@ -97,31 +98,17 @@ function paymentItemImageUrl(item, product) {
   );
 }
 
-function PaymentItemImage({ item, product }) {
-  const [imageFailed, setImageFailed] = useState(false);
-  const imageUrl = paymentItemImageUrl(item, product);
-
+function paymentItemLocation(item, product) {
   return (
-    <div
-      className={`flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl shadow-md shadow-black/15 ${
-        imageUrl && !imageFailed
-          ? ""
-          : "border-2 border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A]"
-      }`}
-    >
-      {imageUrl && !imageFailed ? (
-        <img
-          src={imageUrl}
-          alt={item.listing_name || item.breed || "Order product"}
-          className="h-full w-full object-cover"
-          onError={() => setImageFailed(true)}
-        />
-      ) : (
-        <span className="px-1 text-center text-[9px] font-bold leading-tight text-white">
-          No image
-        </span>
-      )}
-    </div>
+    item.farm_location ||
+    item.farmLocation ||
+    item.farm_address ||
+    product?.farm_location ||
+    product?.farmLocation ||
+    product?.farm_address ||
+    item.state ||
+    product?.state ||
+    "Location unavailable"
   );
 }
 
@@ -182,9 +169,7 @@ export default function Payment() {
         }
         if (active) {
           setResumedOrder(order);
-          setLoadingProductDetails(
-            (order.items || []).some((item) => item.livestock_id),
-          );
+          setLoadingProductDetails(Boolean(order.items?.length));
         }
       } catch (error) {
         if (active)
@@ -208,9 +193,12 @@ export default function Payment() {
     let active = true;
     Promise.all(
       resumedOrder.items.map(async (item) => {
-        if (!item.livestock_id) return null;
         try {
-          return await loadLivestockById(item.livestock_id);
+          if (item.item_type === "bulk" && item.bulk_listing_id) {
+            return await loadBulkListingById(item.bulk_listing_id);
+          }
+          if (item.livestock_id) return await loadLivestockById(item.livestock_id);
+          return null;
         } catch {
           return null;
         }
@@ -423,7 +411,7 @@ export default function Payment() {
         });
       }
     } catch (err) {
-      setCheckoutError(friendlyPaymentError(err, isResumingOrder));
+      setCheckoutError(friendlyPaymentError(err, true));
     } finally {
       setLoading(false);
     }
@@ -544,11 +532,14 @@ export default function Payment() {
                 ? `${item.item_type === "bulk" ? "/bulk-buy" : "/livestock"}/${encodeURIComponent(productId)}?from=payment&returnTo=${encodeURIComponent(returnTo)}`
                 : "";
               const ItemContainer = productPath ? "button" : "div";
-              const product = productDetails[item.livestock_id];
+              const product = productDetails[
+                item.item_type === "bulk" ? item.bulk_listing_id : item.livestock_id
+              ];
               const productLabel =
                 (item.item_type === "bulk"
                   ? item.listing_name
                   : item.breed) || "Product details";
+              const farmerLocation = paymentItemLocation(item, product);
 
               return (
                 <ItemContainer
@@ -575,15 +566,20 @@ export default function Payment() {
                   }
                 >
                   <div className="flex min-w-0 items-center gap-3">
-                    <PaymentItemImage item={item} product={product} />
+                    <ProductImage
+                      src={paymentItemImageUrl(item, product)}
+                      alt={productLabel}
+                      className="h-12 w-12 shadow-md shadow-black/15"
+                    />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-bold text-white">
                         {item.item_type === "bulk"
                           ? item.listing_name
                           : item.breed}
                       </p>
-                      <p className="truncate text-xs font-medium text-white/65">
-                        {item.farmer_name || "Unknown Farmer"}
+                      <p className="flex min-w-0 items-center gap-1 truncate text-xs font-medium text-white/65">
+                        <MapPin className="h-3 w-3 flex-none text-[#E3C19F]" />
+                        <span className="truncate">{farmerLocation}</span>
                       </p>
                     </div>
                   </div>

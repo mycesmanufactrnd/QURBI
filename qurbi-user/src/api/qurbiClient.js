@@ -174,7 +174,7 @@ function orderForUser(order) {
       farmer_id: order.farmerId || "",
       breed: isBulk ? "" : item.titleSnapshot,
       listing_name: isBulk ? item.titleSnapshot : "",
-      image: item.imageSnapshot || "",
+      image: mediaUrl(item.imageSnapshot || ""),
       price_per_head: Number(item.unitPrice || 0),
       total: Number(item.lineTotal || 0),
     };

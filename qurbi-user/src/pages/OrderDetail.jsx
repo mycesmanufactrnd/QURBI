@@ -13,6 +13,7 @@ import { formatOrderDateTime } from "@/lib/order-date";
 import ImageLightbox from "@/components/ImageLightbox";
 import AppHeader from "@/components/AppHeader";
 import PageLoading from "@/components/PageLoading";
+import ProductImage from "@/components/ProductImage";
 
 const RECEIVABLE_STATUSES = ["in_transit", "shipped", "to_receive", "delivering", "delivered"];
 
@@ -745,13 +746,11 @@ export default function OrderDetail() {
                 aria-label={productPath ? `View ${itemName} details` : undefined}
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-12 w-12 flex-none items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] text-[10px] font-bold text-[#41362D]">
-                    {item.image ? (
-                      <img src={item.image} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      "No image"
-                    )}
-                  </div>
+                  <ProductImage
+                    src={item.image}
+                    alt={itemName}
+                    className="h-12 w-12"
+                  />
                   <div className="min-w-0">
                     <p className="break-words text-sm font-semibold text-gray-800">
                       {itemName} × {item.quantity}

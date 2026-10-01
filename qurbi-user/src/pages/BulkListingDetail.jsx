@@ -127,6 +127,12 @@ export default function BulkListingDetail() {
     listing_name: listing.name,
     farmer_id: listing.ownerId || "",
     farmer_name: listing.farmer_name || "Unknown Farmer",
+    farm_location:
+      listing.farm_location ||
+      listing.farmLocation ||
+      listing.farm_address ||
+      listing.state ||
+      "",
     male_count: Number(listing.maleCount || 0),
     female_count: Number(listing.femaleCount || 0),
     total_animals: total,
