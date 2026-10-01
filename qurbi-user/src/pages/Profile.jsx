@@ -33,7 +33,7 @@ export default function Profile() {
   const [showEdit, setShowEdit] = useState(false);
 
   const inputCls =
-    "w-full rounded-xl border border-[#E3C19F] bg-[#F7EDE2] px-4 py-3 text-sm text-black placeholder-black/70 outline-none focus:border-[#6B594A] focus:ring-1 focus:ring-[#6B594A]";
+    "w-full bg-transparent py-3.5 pl-11 pr-4 text-sm font-medium text-white placeholder:text-white/45 outline-none";
   const cardGradientCls =
     "rounded-2xl bg-gradient-to-br from-[#41362D] to-[#6B594A] shadow-xl shadow-[#41362D]/25";
 
@@ -155,57 +155,97 @@ export default function Profile() {
         {showEdit && (
           <>
             <div
-              className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm profile-backdrop"
+              className="fixed inset-0 z-40 bg-[#241D18]/55 backdrop-blur-[3px] profile-backdrop"
               onClick={() => setShowEdit(false)}
             />
             <div className="fixed inset-0 z-50 flex items-center justify-center p-5 pointer-events-none">
-              <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl pointer-events-auto profile-modal">
-                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                  <h3 className="text-gray-900 font-bold text-lg">
-                    Edit Personal Info
-                  </h3>
+              <div
+                className="w-full max-w-sm overflow-hidden rounded-[28px] border border-[#E3C19F]/70 bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] shadow-[0_24px_70px_rgba(34,27,22,0.42)] pointer-events-auto profile-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="edit-personal-info-title"
+              >
+                <div className="flex items-center justify-between bg-gradient-to-br from-[#41362D] to-[#6B594A] px-5 py-5">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-11 w-11 flex-none items-center justify-center rounded-2xl border border-[#F7EDE2]/50 bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] shadow-lg">
+                      <Pencil className="h-5 w-5 text-[#41362D]" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3
+                        id="edit-personal-info-title"
+                        className="text-lg font-bold leading-tight text-white"
+                      >
+                        Edit Personal Info
+                      </h3>
+                      <p className="mt-1 text-xs text-white/65">
+                        Keep your contact details up to date
+                      </p>
+                    </div>
+                  </div>
                   <button
+                    type="button"
                     onClick={() => setShowEdit(false)}
-                    className="w-8 h-8 bg-gray-50 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+                    aria-label="Close edit personal info"
+                    className="flex h-9 w-9 flex-none items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition-all hover:bg-white/20 active:scale-90"
                   >
-                    <X className="w-4 h-4 text-gray-500" />
+                    <X className="h-4 w-4" />
                   </button>
                 </div>
-                <div className="p-5 space-y-3">
-                  <input
-                    value={form.name}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, name: e.target.value }))
-                    }
-                    placeholder="Full Name"
-                    className={inputCls}
-                  />
-                  <input
-                    value={profile.email}
-                    placeholder="Email Address"
-                    type="email"
-                    readOnly
-                    aria-readonly="true"
-                    className="w-full rounded-xl border border-[#E3C19F] bg-[#E3C19F] px-4 py-3 text-sm text-black/70 cursor-not-allowed"
-                  />
-                  <input
-                    value={form.phone}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, phone: e.target.value }))
-                    }
-                    placeholder="Phone Number"
-                    type="tel"
-                    className={inputCls}
-                  />
+                <form
+                  className="space-y-5 p-5"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    handleSave();
+                  }}
+                >
+                  <div className="space-y-2">
+                    <label htmlFor="profile-full-name" className="block text-sm font-bold text-[#41362D]">
+                      Full Name
+                    </label>
+                    <div className="relative overflow-hidden rounded-2xl border border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] shadow-md shadow-[#41362D]/15 transition focus-within:border-white/80 focus-within:ring-2 focus-within:ring-[#41362D]/20">
+                      <User className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#E3C19F]" />
+                      <input
+                        id="profile-full-name"
+                        value={form.name}
+                        onChange={(e) =>
+                          setForm((p) => ({ ...p, name: e.target.value }))
+                        }
+                        placeholder="Enter your full name"
+                        autoComplete="name"
+                        className={inputCls}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="profile-phone" className="block text-sm font-bold text-[#41362D]">
+                      Phone Number
+                    </label>
+                    <div className="relative overflow-hidden rounded-2xl border border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] shadow-md shadow-[#41362D]/15 transition focus-within:border-white/80 focus-within:ring-2 focus-within:ring-[#41362D]/20">
+                      <Phone className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#E3C19F]" />
+                      <input
+                        id="profile-phone"
+                        value={form.phone}
+                        onChange={(e) =>
+                          setForm((p) => ({ ...p, phone: e.target.value }))
+                        }
+                        placeholder="e.g. 012-345 6789"
+                        type="tel"
+                        autoComplete="tel"
+                        className={inputCls}
+                      />
+                    </div>
+                  </div>
+
                   {saveError && (
-                    <p className="text-red-500 text-xs text-center">
+                    <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-center text-xs font-medium text-red-700">
                       {saveError}
                     </p>
                   )}
                   <button
-                    onClick={handleSave}
+                    type="submit"
                     disabled={saving}
-                    className={`w-full py-3 rounded-xl font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 ${saved ? "bg-[#E3C19F] text-[#41362D]" : "bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white"}`}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] py-3.5 text-sm font-bold text-white shadow-lg shadow-[#41362D]/25 transition-all hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {saving ? (
                       "Saving..."
@@ -217,7 +257,7 @@ export default function Profile() {
                       "Save Changes"
                     )}
                   </button>
-                </div>
+                </form>
               </div>
             </div>
           </>
