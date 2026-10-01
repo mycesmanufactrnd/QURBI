@@ -49,7 +49,7 @@ function friendlyPaymentError(error, reservationAlreadyExists = false) {
       title: "Payment was not completed",
       message:
         "The payment provider could not complete this payment. Please check your balance or payment method before trying again.",
-      reserved: true,
+      reserved: reservationAlreadyExists,
     };
   }
   if (status === 409 || /reserved|no longer available/.test(rawMessage)) {
@@ -275,6 +275,36 @@ export default function Payment() {
     ? Boolean(resumedOrder)
     : Boolean(paymentItems.length > 0 && buyerName && buyerEmail && selectedAddress);
 
+  const confirmReservedOrderExists = async () => {
+    if (isResumingOrder && resumedOrder?.id) return true;
+
+    const requestedProducts = new Set(
+      paymentItems.map((item) =>
+        item.item_type === "bulk"
+          ? `bulk:${item.bulk_listing_id || item.id}`
+          : `livestock:${item.livestock_id || item.id}`,
+      ),
+    );
+
+    try {
+      const response = await qurbiApi.functions.invoke("fetchMyOrders", {});
+      return (response.data?.orders || []).some((order) => {
+        if (!["pending", "pending_payment", "to_pay"].includes(order.status)) {
+          return false;
+        }
+        return (order.items || []).some((item) => {
+          const key =
+            item.item_type === "bulk"
+              ? `bulk:${item.bulk_listing_id}`
+              : `livestock:${item.livestock_id}`;
+          return requestedProducts.has(key);
+        });
+      });
+    } catch {
+      return false;
+    }
+  };
+
   const handleCheckout = async () => {
     if (!isAuthenticated || !user?.id) {
       requestSignIn({ returnTo: "/payment", message: "Sign in to securely continue with checkout." });
@@ -326,15 +356,6 @@ export default function Payment() {
       }
     } catch (error) {
       setCheckoutError(friendlyPaymentError(error, isResumingOrder));
-      return;
-    }
-    if (window.self !== window.top) {
-      setCheckoutError({
-        title: "Open QURBI in a full browser",
-        message:
-          "For your payment security, open QURBI in a new browser tab and try again.",
-        reserved: isResumingOrder,
-      });
       return;
     }
     setLoading(true);
@@ -411,7 +432,8 @@ export default function Payment() {
         });
       }
     } catch (err) {
-      setCheckoutError(friendlyPaymentError(err, true));
+      const reservationWasSaved = await confirmReservedOrderExists();
+      setCheckoutError(friendlyPaymentError(err, reservationWasSaved));
     } finally {
       setLoading(false);
     }

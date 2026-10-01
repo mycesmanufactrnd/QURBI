@@ -34,6 +34,8 @@ import {
 function AvailabilityModal({ state, onClose, onBrowse, backLabel }) {
   if (!state) return null;
   const unavailable = state === "unavailable";
+  const reserved = ["reserved", "reserved_by_you"].includes(state);
+  const returnToOrders = state === "reserved_by_you";
   return (
     <div
       className="fixed inset-0 z-[75] flex items-center justify-center bg-black/45 p-5 backdrop-blur-sm"
@@ -46,21 +48,31 @@ function AvailabilityModal({ state, onClose, onBrowse, backLabel }) {
         onClick={(event) => event.stopPropagation()}
       >
         <h2 className="text-lg font-bold text-gray-900">
-          {unavailable
+          {reserved
+            ? "Livestock Reserved"
+            : unavailable
             ? "Livestock Unavailable"
             : "Unable to Verify Availability"}
         </h2>
         <p className="mt-2 text-sm leading-6 text-gray-500">
-          {unavailable
+          {reserved
+            ? returnToOrders
+              ? "This livestock is already reserved in your existing order. Continue payment from My Orders instead of adding it to the cart again."
+              : "This livestock is currently reserved and cannot be added to the cart. Please choose another available livestock."
+            : unavailable
             ? "This livestock is no longer available for purchase. Please browse other available livestock."
             : "We couldn't verify this livestock right now. Please try again."}
         </p>
         <button
           type="button"
-          onClick={unavailable ? onBrowse : onClose}
-          className="mt-5 min-h-11 w-full rounded-xl bg-[#F7EDE2]0 px-4 text-sm font-bold text-white"
+          onClick={reserved || unavailable ? onBrowse : onClose}
+          className="mt-5 min-h-11 w-full rounded-xl bg-gradient-to-br from-[#41362D] to-[#6B594A] px-4 text-sm font-bold text-white"
         >
-          {unavailable ? backLabel : "Close"}
+          {returnToOrders
+            ? "View My Orders"
+            : reserved || unavailable
+              ? backLabel
+              : "Close"}
         </button>
       </div>
     </div>
@@ -162,9 +174,13 @@ export default function LivestockDetail() {
       try {
         const latest = await checkLivestockAvailability([livestock.id]);
         const result = latest[livestock.id];
-        if (!result?.available) {
+        if (result?.state !== "available") {
           setAvailabilityModal(
-            result?.state === "unavailable" ? "unavailable" : "verification",
+            ["reserved", "reserved_by_you"].includes(result?.state)
+              ? result.state
+              : result?.state === "unavailable"
+                ? "unavailable"
+                : "verification",
           );
           load();
           return;
@@ -191,9 +207,13 @@ export default function LivestockDetail() {
       try {
         const latest = await checkLivestockAvailability([livestock.id]);
         const result = latest[livestock.id];
-        if (!result?.available) {
+        if (result?.state !== "available") {
           setAvailabilityModal(
-            result?.state === "unavailable" ? "unavailable" : "verification",
+            ["reserved", "reserved_by_you"].includes(result?.state)
+              ? result.state
+              : result?.state === "unavailable"
+                ? "unavailable"
+                : "verification",
           );
           load();
           return;
@@ -488,7 +508,11 @@ export default function LivestockDetail() {
       <AvailabilityModal
         state={availabilityModal}
         onClose={() => setAvailabilityModal("")}
-        onBrowse={() => navigateWithTransition(returnPath)}
+        onBrowse={() =>
+          navigateWithTransition(
+            availabilityModal === "reserved_by_you" ? "/orders" : returnPath,
+          )
+        }
         backLabel={returnLabel}
       />
     </div>

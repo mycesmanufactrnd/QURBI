@@ -217,10 +217,10 @@ export class OrdersService {
         return await this.dataSource.transaction(async (manager) => {
           await this.reservationsService.expireDue(manager);
           const existingOrder = await manager.findOne(Order, {
-            where: { checkoutKey, buyerId, status: OrderStatus.PENDING_PAYMENT },
+            where: { checkoutKey, buyerId },
             relations: { items: true },
           });
-          if (existingOrder) {
+          if (existingOrder?.status === OrderStatus.PENDING_PAYMENT) {
             const existingPayment = await manager.findOne(Payment, {
               where: { orderId: existingOrder.id },
             });
@@ -233,6 +233,16 @@ export class OrdersService {
             await this.ensurePendingDeliveryFee(manager, existingOrder);
             await manager.delete(CartItem, items.map((item) => item.id));
             return existingOrder;
+          }
+
+          // checkoutKey is unique so retries can safely return the same
+          // pending order. Once that order is terminal, however, the buyer
+          // must be allowed to purchase the released listing again. Clear a
+          // legacy terminal key before inserting the new order; current
+          // cancellations clear it immediately in applyStatusChange below.
+          if (existingOrder) {
+            existingOrder.checkoutKey = null;
+            await manager.save(existingOrder);
           }
 
           let subtotal = 0;
@@ -392,7 +402,10 @@ export class OrdersService {
     Object.assign(order, opts.extra ?? {}, { status: toStatus });
     if (toStatus === OrderStatus.DELIVERED) order.deliveredAt = new Date();
     if (toStatus === OrderStatus.RECEIVED) order.receivedAt = new Date();
-    if (toStatus === OrderStatus.CANCELLED) order.cancelledAt = new Date();
+    if (toStatus === OrderStatus.CANCELLED) {
+      order.cancelledAt = new Date();
+      order.checkoutKey = null;
+    }
     await manager.save(order);
 
     await manager.save(
