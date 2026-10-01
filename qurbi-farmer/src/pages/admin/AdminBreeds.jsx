@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { qurbi } from "@/api/qurbiClient";
+import { resolveApiAssetUrl } from "@/api/apiClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Check, Loader2, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -175,13 +176,13 @@ export default function AdminBreeds() {
               <div key={request.id} className="overflow-hidden rounded-2xl border border-border bg-card">
                 {request.referenceImage && (
                   <a
-                    href={request.referenceImage}
+                    href={resolveApiAssetUrl(request.referenceImage)}
                     target="_blank"
                     rel="noreferrer"
                     className="flex h-52 w-full items-center justify-center border-b border-border bg-muted/40 p-3"
                     title="Open full image"
                   >
-                    <img src={request.referenceImage} alt={request.proposedName} className="h-full w-full object-contain" />
+                    <img src={resolveApiAssetUrl(request.referenceImage)} alt={request.proposedName} className="h-full w-full object-contain" />
                   </a>
                 )}
                 <div className="p-4">
@@ -203,7 +204,7 @@ export default function AdminBreeds() {
           <div className="overflow-hidden rounded-2xl border border-border bg-card divide-y divide-border">
             {breeds.map((breed) => (
               <div key={breed.id} className="flex items-center gap-3 p-3.5">
-                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-muted">{breed.image && <img src={breed.image} alt="" className="h-full w-full object-cover" />}</div>
+                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-muted">{breed.image && <img src={resolveApiAssetUrl(breed.image)} alt="" className="h-full w-full object-cover" />}</div>
                 <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{breed.name}</p><p className="text-xs text-muted-foreground">{breed.species}</p></div>
                 <Button variant="outline" size="sm" onClick={() => toggleBreed(breed)} disabled={processing === breed.id}>{breed.status === "Inactive" ? "Activate" : "Deactivate"}</Button>
               </div>
