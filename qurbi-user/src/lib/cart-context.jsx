@@ -66,7 +66,15 @@ export function CartProvider({ children }) {
 
   useEffect(() => {
     if (!cartScope || hydratedScope !== cartScope) return;
-    const missing = cartItems.filter((item) => !item.image && !item.image_checked);
+    const missing = cartItems.filter((item) => {
+      const needsImage = !item.image && !item.image_checked;
+      const needsFarmer =
+        (!item.farmer_id ||
+          !item.farmer_name ||
+          item.farmer_name === "Unknown Farmer") &&
+        !item.farmer_checked;
+      return needsImage || needsFarmer;
+    });
     if (!missing.length) return;
     let active = true;
     Promise.all(missing.map(async (item) => {
@@ -74,15 +82,33 @@ export function CartProvider({ children }) {
         const product = item.item_type === "bulk"
           ? await loadBulkListingById(item.bulk_listing_id || item.id)
           : await loadLivestockById(item.livestock_id || item.id);
-        return [item.key, product?.coverImage || product?.images?.[0] || ""];
+        return [item.key, {
+          image: item.image || product?.coverImage || product?.images?.[0] || "",
+          image_checked: true,
+          farmer_id:
+            item.farmer_id ||
+            product?.ownerId ||
+            product?.farmer_id ||
+            product?.created_by_id ||
+            "",
+          farmer_name:
+            item.farmer_name && item.farmer_name !== "Unknown Farmer"
+              ? item.farmer_name
+              : product?.farmer_name || "Unknown Farmer",
+          farmer_checked: true,
+        }];
       } catch {
-        return [item.key, ""];
+        return [item.key, {
+          image: item.image || "",
+          image_checked: true,
+          farmer_checked: true,
+        }];
       }
-    })).then((images) => {
+    })).then((updates) => {
       if (!active) return;
-      const byKey = Object.fromEntries(images);
+      const byKey = Object.fromEntries(updates);
       setCartItems((current) => current.map((item) => Object.prototype.hasOwnProperty.call(byKey, item.key)
-        ? { ...item, image: byKey[item.key], image_checked: true }
+        ? { ...item, ...byKey[item.key] }
         : item));
     });
     return () => { active = false; };

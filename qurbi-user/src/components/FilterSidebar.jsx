@@ -17,8 +17,6 @@ export default function FilterSidebar({ open, onClose, filters, options }) {
     setFilterGender,
     filterAge,
     setFilterAge,
-    filterStatus,
-    setFilterStatus,
     filterLocation,
     setFilterLocation,
     priceMin,
@@ -134,12 +132,6 @@ export default function FilterSidebar({ open, onClose, filters, options }) {
             options={options.ageOptions}
             value={filterAge}
             onSelect={setFilterAge}
-          />
-          <FilterDropdown
-            title="Status"
-            options={options.statusOptions}
-            value={filterStatus}
-            onSelect={setFilterStatus}
           />
           <FilterDropdown
             title="Location"

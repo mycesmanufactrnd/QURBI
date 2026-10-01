@@ -72,8 +72,27 @@ export default function LivestockDetail() {
   const { navigateWithTransition, completeProductTransition } = useHeaderTransition();
   const [searchParams] = useSearchParams();
   const openedFromCart = searchParams.get("from") === "cart";
-  const returnPath = openedFromCart ? "/cart" : "/browse";
-  const returnLabel = openedFromCart ? "Back to Cart" : "Back to Browse";
+  const openedFromOrders = ["order", "orders"].includes(searchParams.get("from"));
+  const openedFromPayment = searchParams.get("from") === "payment";
+  const requestedReturnTo = searchParams.get("returnTo");
+  const paymentReturnPath =
+    requestedReturnTo?.startsWith("/") && !requestedReturnTo.startsWith("//")
+      ? requestedReturnTo
+      : "/payment";
+  const returnPath = openedFromCart
+    ? "/cart"
+    : openedFromPayment
+      ? paymentReturnPath
+    : openedFromOrders
+      ? "/orders"
+      : "/browse";
+  const returnLabel = openedFromCart
+    ? "Back to Cart"
+    : openedFromPayment
+      ? "Back to Payment"
+      : openedFromOrders
+        ? "Back to Orders"
+        : "Back to Browse";
   const { addToCart, buyNow, cartItems } = useCart();
   const requireAuth = useRequireAuth();
   const { reveal } = useReveal();
@@ -217,8 +236,6 @@ export default function LivestockDetail() {
 
   if (!livestock) return null;
 
-  const statusLabel = String(livestock.status || "Unavailable").trim();
-  const isAvailableStatus = statusLabel.toLowerCase() === "available";
   const allImages = [livestock.coverImage, ...(livestock.images || [])].filter(
     Boolean,
   );
@@ -340,19 +357,10 @@ export default function LivestockDetail() {
             </h1>
           </div>
           <div className="space-y-3">
-            <div className="flex min-w-0 items-center justify-between gap-3">
-              <p className="min-w-0 text-3xl font-extrabold text-white sm:text-4xl">
+            <div>
+              <p className="text-3xl font-extrabold text-white sm:text-4xl">
                 RM {(livestock.price || 0).toLocaleString()}
               </p>
-              <span
-                className="max-w-[42%] flex-none truncate rounded-full px-3 py-1 text-xs font-bold text-white shadow-sm"
-                style={{
-                  backgroundColor: isAvailableStatus ? "#16a34a" : "#dc2626",
-                }}
-                title={statusLabel}
-              >
-                {statusLabel}
-              </span>
             </div>
             <div className="grid w-full grid-cols-2 gap-2">
               <button

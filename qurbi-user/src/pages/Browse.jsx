@@ -151,7 +151,6 @@ export default function Browse() {
   const [filterBreed, setFilterBreed] = useState("");
   const [filterGender, setFilterGender] = useState("");
   const [filterAge, setFilterAge] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
   const [filterLocation, setFilterLocation] = useState("");
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
@@ -268,18 +267,6 @@ export default function Browse() {
     [livestock],
   );
 
-  const statusOptions = useMemo(
-    () =>
-      [
-        ...new Set(
-          livestock
-            .map((l) => l.status)
-            .filter(Boolean),
-        ),
-      ].sort(),
-    [livestock],
-  );
-
   const locationOptions = useMemo(
     () => MALAYSIAN_STATES,
     [],
@@ -323,14 +310,6 @@ export default function Browse() {
       if (
         filterAge &&
         l.age !== filterAge
-      ) {
-        return false;
-      }
-
-      // Status
-      if (
-        filterStatus &&
-        l.status !== filterStatus
       ) {
         return false;
       }
@@ -435,7 +414,6 @@ export default function Browse() {
     filterBreed,
     filterGender,
     filterAge,
-    filterStatus,
     filterLocation,
     priceMin,
     priceMax,
@@ -454,7 +432,6 @@ export default function Browse() {
     filterBreed ||
     filterGender ||
     filterAge ||
-    filterStatus ||
     filterLocation ||
     priceMin ||
     priceMax ||
@@ -467,7 +444,6 @@ export default function Browse() {
     filterBreed,
     filterGender,
     filterAge,
-    filterStatus,
     filterLocation,
     priceMin,
     priceMax,
@@ -484,7 +460,6 @@ export default function Browse() {
     setFilterBreed("");
     setFilterGender("");
     setFilterAge("");
-    setFilterStatus("");
     setFilterLocation("");
     setPriceMin("");
     setPriceMax("");
@@ -719,8 +694,6 @@ export default function Browse() {
           setFilterGender,
           filterAge,
           setFilterAge,
-          filterStatus,
-          setFilterStatus,
           filterLocation,
           setFilterLocation,
           priceMin,
@@ -735,7 +708,6 @@ export default function Browse() {
           breedOptions,
           genderOptions,
           ageOptions,
-          statusOptions,
           locationOptions,
         }}
       />

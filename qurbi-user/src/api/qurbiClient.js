@@ -164,17 +164,21 @@ function orderForUser(order) {
   const activeReservation = (order.reservations || []).find(
     (reservation) => reservation.status === "active",
   );
-  const items = (order.items || []).map((item) => ({
-    ...item,
-    item_type: item.itemType === "bulk_share" ? "bulk" : "livestock",
-    livestock_id: item.livestockId,
-    bulk_listing_id: item.bulkListingId,
-    breed: item.itemType === "livestock" ? item.titleSnapshot : "",
-    listing_name: item.itemType === "bulk_share" ? item.titleSnapshot : "",
-    image: item.imageSnapshot || "",
-    price_per_head: Number(item.unitPrice || 0),
-    total: Number(item.lineTotal || 0),
-  }));
+  const items = (order.items || []).map((item) => {
+    const isBulk = ["bulk", "bulk_share", "bulk_listing"].includes(item.itemType);
+    return {
+      ...item,
+      item_type: isBulk ? "bulk" : "livestock",
+      livestock_id: item.livestockId,
+      bulk_listing_id: item.bulkListingId,
+      farmer_id: order.farmerId || "",
+      breed: isBulk ? "" : item.titleSnapshot,
+      listing_name: isBulk ? item.titleSnapshot : "",
+      image: item.imageSnapshot || "",
+      price_per_head: Number(item.unitPrice || 0),
+      total: Number(item.lineTotal || 0),
+    };
+  });
   return {
     ...order,
     items,

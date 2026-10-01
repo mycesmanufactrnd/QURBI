@@ -9,6 +9,7 @@ import {
   Star,
   CreditCard,
   ArrowLeft,
+  Package,
 } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
 import { useUserProfile } from "@/lib/user-profile-context";
@@ -28,7 +29,7 @@ import { useAuthPrompt } from "@/lib/auth-prompt-context";
 import AuthRequiredState from "@/components/AuthRequiredState";
 import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
 
-const DUMMY_DELIVERY_FEE_PER_FARMER = 10;
+const DELIVERY_FEE_PER_FARMER = 10;
 const PAYMENT_CARD_SHADOW = "shadow-[0_12px_28px_rgba(65,54,45,0.18)]";
 
 function friendlyPaymentError(error, reservationAlreadyExists = false) {
@@ -82,9 +83,8 @@ function friendlyPaymentError(error, reservationAlreadyExists = false) {
   };
 }
 
-function PaymentItemImage({ item, product }) {
-  const [imageFailed, setImageFailed] = useState(false);
-  const imageUrl =
+function paymentItemImageUrl(item, product) {
+  return (
     item.image ||
     item.coverImage ||
     item.cover_image ||
@@ -93,7 +93,13 @@ function PaymentItemImage({ item, product }) {
     item.images?.[0] ||
     product?.coverImage ||
     product?.images?.[0] ||
-    "";
+    ""
+  );
+}
+
+function PaymentItemImage({ item, product }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const imageUrl = paymentItemImageUrl(item, product);
 
   return (
     <div
@@ -130,7 +136,8 @@ export default function Payment() {
     selectedAddress,
     profile,
   } = useUserProfile();
-  const { navigateWithTransition } = useHeaderTransition();
+  const { navigateWithTransition, navigateFromProductCard } =
+    useHeaderTransition();
   const [searchParams] = useSearchParams();
   const { reveal } = useReveal();
   const resumeOrderId = searchParams.get("order_id");
@@ -244,17 +251,37 @@ export default function Payment() {
     ? resumedOrder?.buyer_phone || ""
     : selectedAddress?.phone || profile.phone || "";
 
-  // Delivery fee: RM 10 per unique farmer (charged once per farmer), only for delivery
+  // A resumed order always belongs to exactly one farmer. A new checkout may
+  // contain several farmers, so count each stable farmer identity once. The
+  // listing fallback prevents legacy cart rows with missing farmer metadata
+  // from being incorrectly collapsed into a single "Unknown Farmer" fee.
   const farmerSet = new Set(
-    paymentItems.map((i) => i.farmer_id || i.farmer_name || "unknown"),
+    paymentItems.map((item, index) => {
+      const farmerName = String(item.farmer_name || "").trim();
+      return (
+        item.farmer_id ||
+        item.ownerId ||
+        item.created_by_id ||
+        (farmerName && farmerName !== "Unknown Farmer"
+          ? `name:${farmerName.toLowerCase()}`
+          : `listing:${item.key || item.livestock_id || item.bulk_listing_id || item.id || index}`)
+      );
+    }),
   );
-  const farmerCount = farmerSet.size;
-  const deliveryFee =
-    resumedOrder?.delivery_fee ??
-    (paymentItems.length > 0
-      ? farmerCount * DUMMY_DELIVERY_FEE_PER_FARMER
-      : 0);
-  const grandTotal = resumedOrder?.total ?? paymentSubtotal + deliveryFee;
+  const farmerCount = isResumingOrder
+    ? paymentItems.length > 0 ? 1 : 0
+    : farmerSet.size;
+  const savedDeliveryFee = Number(resumedOrder?.delivery_fee || 0);
+  const deliveryFee = isResumingOrder
+    ? resumedOrder?.fulfillment_method === "pickup"
+      ? 0
+      : savedDeliveryFee || farmerCount * DELIVERY_FEE_PER_FARMER
+    : paymentItems.length > 0
+      ? farmerCount * DELIVERY_FEE_PER_FARMER
+      : 0;
+  const grandTotal = isResumingOrder
+    ? Number(paymentSubtotal) + deliveryFee - Number(resumedOrder?.discount || 0)
+    : paymentSubtotal + deliveryFee;
 
   const canCheckout = isResumingOrder
     ? Boolean(resumedOrder)
@@ -455,7 +482,7 @@ export default function Payment() {
   }
 
   return (
-    <div className="qurbi-page pb-28">
+    <div className="aisyah-page pb-28">
       {showPicker && (
         <AddressPickerModal
           addresses={addresses}
@@ -487,41 +514,99 @@ export default function Payment() {
         </div>
       </div>
 
-      <div className="qurbi-content">
+      <div className="aisyah-content">
         {/* Selected Items (read-only) */}
         <div
           className={`bg-white rounded-2xl p-4 border border-gray-50 ${reveal()}`}
           style={{ animationDelay: "80ms" }}
         >
-          <h3 className="text-gray-900 font-bold mb-3">Order Items</h3>
-          <div className="space-y-2">
-            {paymentItems.map((item) => (
-              <div
-                key={item.key}
-                className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <PaymentItemImage
-                    item={item}
-                    product={productDetails[item.livestock_id]}
-                  />
-                  <div className="min-w-0">
-                    <p className="text-gray-800 font-semibold text-sm truncate">
-                      {item.item_type === "bulk"
-                        ? item.listing_name
-                        : item.breed}{" "}
-                         {item.item_type === "bulk" ? "1 lot" : item.quantity}
-                    </p>
-                    <p className="text-gray-400 text-xs truncate">
-                      {item.farmer_name || "Unknown Farmer"}
-                    </p>
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-xl border border-[#F7EDE2] bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] text-[#41362D] shadow-sm">
+              <Package className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-white">Order Items</h3>
+              <p className="text-xs font-medium text-white/65">
+                Tap a product to view its details
+              </p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            {paymentItems.map((item) => {
+              const productId =
+                item.item_type === "bulk"
+                  ? item.bulk_listing_id || item.id
+                  : item.livestock_id || item.id;
+              const returnTo = resumeOrderId
+                ? `/payment?order_id=${encodeURIComponent(resumeOrderId)}`
+                : "/payment";
+              const productPath = productId
+                ? `${item.item_type === "bulk" ? "/bulk-buy" : "/livestock"}/${encodeURIComponent(productId)}?from=payment&returnTo=${encodeURIComponent(returnTo)}`
+                : "";
+              const ItemContainer = productPath ? "button" : "div";
+              const product = productDetails[item.livestock_id];
+              const productLabel =
+                (item.item_type === "bulk"
+                  ? item.listing_name
+                  : item.breed) || "Product details";
+
+              return (
+                <ItemContainer
+                  key={item.key}
+                  type={productPath ? "button" : undefined}
+                  onClick={
+                    productPath
+                      ? (event) =>
+                          navigateFromProductCard(
+                            productPath,
+                            event.currentTarget,
+                            {
+                              image: paymentItemImageUrl(item, product),
+                              label: productLabel,
+                            },
+                          )
+                      : undefined
+                  }
+                  className={`flex w-full items-center justify-between gap-3 rounded-xl border border-[#E3C19F]/35 bg-[rgba(255,255,255,0.08)] p-3 text-left shadow-sm transition-all duration-200 ${productPath ? "cursor-pointer hover:border-[#F7EDE2] hover:bg-[rgba(255,255,255,0.14)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E3C19F] active:scale-[0.99]" : ""}`}
+                  aria-label={
+                    productPath
+                      ? `View ${item.item_type === "bulk" ? item.listing_name : item.breed} product details`
+                      : undefined
+                  }
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <PaymentItemImage item={item} product={product} />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-white">
+                        {item.item_type === "bulk"
+                          ? item.listing_name
+                          : item.breed}
+                      </p>
+                      <p className="truncate text-xs font-medium text-white/65">
+                        {item.farmer_name || "Unknown Farmer"}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <span className="text-gray-900 font-bold text-sm flex-shrink-0">
-                  RM {item.total.toLocaleString()}
-                </span>
-              </div>
-            ))}
+                  <div className="flex flex-none items-center gap-2">
+                    <div className="text-right">
+                      <p className="whitespace-nowrap text-sm font-extrabold text-white">
+                        RM {item.total.toLocaleString()}
+                      </p>
+                      {productPath && (
+                        <p className="text-[10px] font-semibold text-white/60">
+                          View details
+                        </p>
+                      )}
+                    </div>
+                    {productPath && (
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#F7EDE2] bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] text-[#41362D] shadow-md shadow-black/20">
+                        <ChevronRight className="h-5 w-5" strokeWidth={3} />
+                      </span>
+                    )}
+                  </div>
+                </ItemContainer>
+              );
+            })}
           </div>
         </div>
             <br></br>
@@ -684,7 +769,7 @@ export default function Payment() {
               <span className="text-black/70">
                 Delivery Fee ({farmerCount} farmer
                 {farmerCount !== 1 ? "s" : ""} × RM{" "}
-                {DUMMY_DELIVERY_FEE_PER_FARMER})
+                {DELIVERY_FEE_PER_FARMER})
               </span>
               <span className="flex-none font-semibold text-black">
                 RM {deliveryFee.toLocaleString()}

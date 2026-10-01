@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, DeepPartial, EntityManager, FindOptionsWhere, Repository } from 'typeorm';
-import { BulkListing, BulkListingStatus, UserRole } from '../entities';
+import { BulkListing, BulkListingStatus, OrderItem, UserRole } from '../entities';
 import { BaseCrudService } from '../common/base-crud.service';
 import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 
@@ -44,9 +44,19 @@ export class BulkListingsService extends BaseCrudService<BulkListing> {
 
   async findOneForViewer(id: string, viewer?: AuthenticatedUser): Promise<BulkListing> {
     const listing = await this.findOne(id);
+    const buyerOwnsOrderItem =
+      viewer?.role === UserRole.BUYER &&
+      await this.dataSource
+        .getRepository(OrderItem)
+        .createQueryBuilder('orderItem')
+        .innerJoin('orderItem.order', 'buyerOrder')
+        .where('orderItem.bulkListingId = :id', { id })
+        .andWhere('buyerOrder.buyerId = :buyerId', { buyerId: viewer.id })
+        .getExists();
     const canSeeHidden =
       viewer?.role === UserRole.ADMIN ||
-      (viewer?.role === UserRole.FARMER && listing.farmerId === viewer.id);
+      (viewer?.role === UserRole.FARMER && listing.farmerId === viewer.id) ||
+      buyerOwnsOrderItem;
     if (!canSeeHidden && listing.status !== BulkListingStatus.OPEN) {
       throw new NotFoundException(`BulkListing ${id} not found`);
     }

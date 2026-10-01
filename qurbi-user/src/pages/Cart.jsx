@@ -11,7 +11,7 @@ import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
 import { AisyahCardSkeleton } from "@/components/AisyahLoading";
 
 const isUnobtainable = (result) =>
-  result?.available === false && result?.state !== "reserved_by_you";
+  result?.state === "reserved_by_you" || result?.available === false;
 
 function CartItemImage({ item }) {
   const [imageFailed, setImageFailed] = useState(false);
@@ -108,13 +108,18 @@ export default function Cart() {
 
   useEffect(() => {
     const removed = cartItems.filter((item) =>
-      availability[item.key]?.state === "reserved",
+      ["reserved", "reserved_by_you"].includes(availability[item.key]?.state),
     );
     if (!removed.length) return;
 
     removed.forEach((item) => removeFromCart(item.key));
+    const reservedByCurrentUser = removed.some(
+      (item) => availability[item.key]?.state === "reserved_by_you",
+    );
     setAvailabilityNotice(
-      "This product is already reserved by another buyer and has been removed from your cart.",
+      reservedByCurrentUser
+        ? "This product is already reserved for you. Continue payment from My Orders. It has been removed from your cart."
+        : "This product is already reserved by another buyer and has been removed from your cart.",
     );
   }, [availability, cartItems, removeFromCart]);
 
@@ -128,18 +133,25 @@ export default function Cart() {
         (item) => isUnobtainable(latest[item.key]),
       );
       if (blocked.length) {
-        const reserved = blocked.some(
-          (item) => latest[item.key]?.state === "reserved",
+        const reserved = blocked.some((item) =>
+          ["reserved", "reserved_by_you"].includes(latest[item.key]?.state),
+        );
+        const reservedByCurrentUser = blocked.some(
+          (item) => latest[item.key]?.state === "reserved_by_you",
         );
         const expired = blocked.some(
           (item) => latest[item.key]?.state === "expired",
         );
         blocked
-          .filter((item) => latest[item.key]?.state === "reserved")
+          .filter((item) =>
+            ["reserved", "reserved_by_you"].includes(latest[item.key]?.state),
+          )
           .forEach((item) => removeFromCart(item.key));
         setAvailabilityNotice(
-          reserved
-            ? "This product is already reserved by another buyer and has been removed from your cart."
+          reservedByCurrentUser
+            ? "This product is already reserved for you. Continue payment from My Orders. It has been removed from your cart."
+            : reserved
+              ? "This product is already reserved by another buyer and has been removed from your cart."
             : expired
               ? "This product listing has expired and cannot be purchased while waiting for farmer renewal."
               : "One or more selected products are currently unobtainable. Please review your cart before payment.",
@@ -258,8 +270,6 @@ export default function Cart() {
           <div className="space-y-4 animate-content-ready">
             {cartItems.map((item, idx) => {
               const availabilityResult = availability[item.key];
-              const reservedByYou =
-                availabilityResult?.state === "reserved_by_you";
               const expired =
                 item.item_type !== "bulk" &&
                 (availabilityResult?.state === "expired" ||
@@ -324,28 +334,6 @@ export default function Cart() {
                         ? `${item.total_animals} animals · Bulk lot`
                         : item.animal}
                     </p>
-                    {unavailable && (
-                      <p
-                        className={`mt-1 inline-flex rounded-lg px-2 py-1 text-xs font-bold ${
-                          expired
-                            ? "bg-gradient-to-br from-yellow-400 to-amber-500 text-[#41362D]"
-                            : "bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white"
-                        }`}
-                      >
-                        {expired
-                          ? "Expired"
-                          : availabilityResult?.state === "reserved"
-                          ? "Reserved by another buyer"
-                          : availabilityResult?.state === "listing_expired"
-                            ? "Expired — waiting for farmer renewal"
-                            : "Unavailable / Out of Stock"}
-                      </p>
-                    )}
-                    {reservedByYou && (
-                      <p className="mt-1 inline-flex rounded-lg bg-gradient-to-br from-yellow-400 to-amber-500 px-2 py-1 text-xs font-bold text-[#41362D]">
-                        Complete Payment
-                      </p>
-                    )}
                   </div>
                 </div>
                 <div className="flex flex-none items-center gap-1">

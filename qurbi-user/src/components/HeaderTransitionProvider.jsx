@@ -61,6 +61,7 @@ export default function HeaderTransitionProvider({ children }) {
   const [productTransition, setProductTransition] = useState(null);
   const productTransitionRef = useRef(null);
   const lockedRef = useRef(false);
+  const transitionRunRef = useRef(0);
   const iconOriginRef = useRef(null);
   const timersRef = useRef(new Set());
   const locationKeyRef = useRef(location.key);
@@ -80,6 +81,13 @@ export default function HeaderTransitionProvider({ children }) {
     setPhase("idle");
     setTransitionType(null);
   }, []);
+
+  const unlockRun = useCallback(
+    (runId) => {
+      if (transitionRunRef.current === runId) unlock();
+    },
+    [unlock],
+  );
 
   const beginIconTransition = useCallback((type, element) => {
     if (!element) return;
@@ -107,6 +115,7 @@ export default function HeaderTransitionProvider({ children }) {
       const closingFromIcon = Boolean(
         currentType && iconOriginRef.current?.type === currentType,
       );
+      const runId = ++transitionRunRef.current;
 
       lockedRef.current = true;
       setTransitionType(requestedType);
@@ -119,10 +128,10 @@ export default function HeaderTransitionProvider({ children }) {
         }
         flushSync(() => navigate(destination, options.navigateOptions));
       }, closingFromIcon ? ICON_EXIT_MS : NORMAL_EXIT_MS);
-      schedule(unlock, FAILSAFE_MS);
+      schedule(() => unlockRun(runId), FAILSAFE_MS);
       return true;
     },
-    [location.pathname, navigate, schedule, unlock],
+    [location.pathname, navigate, schedule, unlockRun],
   );
 
   const navigateFromIconPage = useCallback(
@@ -133,6 +142,7 @@ export default function HeaderTransitionProvider({ children }) {
 
   const completeProductTransition = useCallback(() => {
     if (!productTransitionRef.current) return;
+    const runId = transitionRunRef.current;
     productTransitionRef.current = {
       ...productTransitionRef.current,
       stage: "revealing",
@@ -141,13 +151,14 @@ export default function HeaderTransitionProvider({ children }) {
     schedule(() => {
       productTransitionRef.current = null;
       setProductTransition(null);
-      unlock();
+      unlockRun(runId);
     }, PRODUCT_REVEAL_MS);
-  }, [schedule, unlock]);
+  }, [schedule, unlockRun]);
 
   const navigateFromProductCard = useCallback(
     (destination, element, product = {}) => {
       if (lockedRef.current || !element) return false;
+      const runId = ++transitionRunRef.current;
       const bounds = element.getBoundingClientRect();
       lockedRef.current = true;
       setTransitionType("product");
@@ -191,12 +202,12 @@ export default function HeaderTransitionProvider({ children }) {
         schedule(() => {
           productTransitionRef.current = null;
           setProductTransition(null);
-          unlock();
+          unlockRun(runId);
         }, PRODUCT_REVEAL_MS);
       }, 10000);
       return true;
     },
-    [navigate, schedule, unlock],
+    [navigate, schedule, unlockRun],
   );
 
   useLayoutEffect(() => {
@@ -208,9 +219,15 @@ export default function HeaderTransitionProvider({ children }) {
         ? scrollPositionsRef.current.get(location.key) || 0
         : 0;
     window.scrollTo(0, destinationScroll);
+    // The previous page's exit lock is no longer needed once the next route is
+    // mounted. Its entrance animation can continue while remaining interactive.
+    lockedRef.current = false;
+    const runId = transitionRunRef.current;
     setPhase("entering");
-    if (transitionType !== "product") schedule(unlock, ENTER_MS);
-  }, [location.key, navigationType, schedule, transitionType, unlock]);
+    if (transitionType !== "product") {
+      schedule(() => unlockRun(runId), ENTER_MS);
+    }
+  }, [location.key, navigationType, schedule, transitionType, unlockRun]);
 
   useEffect(() => {
     const handleLinkClick = (event) => {
