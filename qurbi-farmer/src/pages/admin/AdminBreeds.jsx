@@ -70,20 +70,12 @@ export default function AdminBreeds() {
     if (!approvalReason.trim()) return;
     setProcessing(request.id);
     try {
-      const reviewedRequest = await qurbi.entities.BreedRequest.update(request.id, {
+      await qurbi.entities.BreedRequest.update(request.id, {
         status: "Approved",
         adminReason: approvalReason.trim(),
         reviewedBy: user?.id || "",
         reviewedAt: new Date().toISOString(),
       });
-      const listings = await qurbi.entities.Livestock.filter({ breedRequestId: request.id }, "-created_date", 500);
-      await Promise.all((listings || []).map((listing) => qurbi.entities.Livestock.update(listing.id, {
-        breed: request.proposedName,
-        breedId: reviewedRequest.createdBreedId,
-        breedRequestId: "",
-        breedApprovalStatus: "Approved",
-        status: listing.originalStatus || "Available",
-      })));
       await notify(
         request,
         "Breed Approved",
@@ -111,14 +103,6 @@ export default function AdminBreeds() {
         reviewedBy: user?.id || "",
         reviewedAt: new Date().toISOString(),
       });
-      const listings = await qurbi.entities.Livestock.filter({ breedRequestId: rejecting.id }, "-created_date", 500);
-      await Promise.all((listings || []).map((listing) => qurbi.entities.Livestock.update(listing.id, {
-        breed: "Unspecified",
-        breedId: "",
-        breedRequestId: "",
-        breedApprovalStatus: "Rejected",
-        status: "Draft",
-      })));
       await notify(
         rejecting,
         "Breed Rejected",
