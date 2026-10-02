@@ -639,7 +639,9 @@ export default function Orders() {
       <div className="aisyah-page min-h-screen pb-28">
         <AppHeader title="My Orders" subtitle="Track and manage your purchases" />
         <div className="aisyah-content flex flex-col items-center justify-center gap-3 py-20 text-center">
-          <ReceiptText className="h-12 w-12 text-[#41362D]/35" />
+          <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center">
+            <ReceiptText className="w-10 h-10 text-gray-300" />
+          </div>
           <p className="text-sm text-[#41362D]/65">Sign in to view your orders.</p>
           <button
             type="button"
