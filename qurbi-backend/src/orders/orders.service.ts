@@ -121,7 +121,7 @@ export class OrdersService {
 
     const [data, total] = await this.repository.findAndCount({
       where,
-      relations: { items: true },
+      relations: { items: true, buyer: true },
       order: { createdAt: 'DESC' },
       skip,
       take,
