@@ -93,7 +93,7 @@ export class LivestockService extends BaseCrudService<Livestock> {
         )
         .andWhere('farmerProfile.verificationStatus = :verified', { verified: VerificationStatus.VERIFIED })
         .andWhere('livestock.speciesApprovalStatus = :approved', { approved: RequestStatus.APPROVED })
-        .andWhere('(livestock.breedId IS NULL OR livestock.breedApprovalStatus = :approved)', {
+        .andWhere('livestock.breedApprovalStatus = :approved', {
           approved: RequestStatus.APPROVED,
         })
         .andWhere('(livestock.marketplaceEligibleFrom IS NULL OR livestock.marketplaceEligibleFrom <= :now)', {
@@ -206,15 +206,20 @@ export class LivestockService extends BaseCrudService<Livestock> {
       throw new BadRequestException('A new listing cannot start as reserved or sold');
     }
     await this.validateReferenceData(data.speciesId, data.breedId);
+    const attributes = data.attributes ?? {};
+    const speciesPending = Boolean(attributes.speciesRequestId);
+    const breedPending = Boolean(attributes.breedRequestId);
+    const status = speciesPending || breedPending ? LivestockStatus.DRAFT : data.status;
     return this.create({
       ...data,
+      status,
       farmerId,
       marketplaceExpiresAt:
-        data.status === LivestockStatus.AVAILABLE
+        status === LivestockStatus.AVAILABLE
           ? new Date(Date.now() + LISTING_LIFETIME_MS)
           : null,
-      speciesApprovalStatus: RequestStatus.APPROVED,
-      breedApprovalStatus: RequestStatus.APPROVED,
+      speciesApprovalStatus: speciesPending ? RequestStatus.PENDING : RequestStatus.APPROVED,
+      breedApprovalStatus: breedPending ? RequestStatus.PENDING : RequestStatus.APPROVED,
     });
   }
 
@@ -227,16 +232,39 @@ export class LivestockService extends BaseCrudService<Livestock> {
     if (data.status === LivestockStatus.SOLD) {
       throw new BadRequestException('status SOLD can only be set by completing a purchase');
     }
-    if (data.status === LivestockStatus.AVAILABLE) {
-      data.marketplaceExpiresAt = new Date(Date.now() + LISTING_LIFETIME_MS);
-      data.soldAt = null;
-    }
+    let speciesApprovalStatus = listing.speciesApprovalStatus;
+    let breedApprovalStatus = listing.breedApprovalStatus;
+    const attributes = data.attributes ?? {};
     if (data.speciesId !== undefined || data.breedId !== undefined) {
       const speciesId = data.speciesId ?? listing.speciesId;
       const breedId = data.breedId === undefined ? listing.breedId : data.breedId;
       await this.validateReferenceData(speciesId, breedId);
-      data.speciesApprovalStatus = RequestStatus.APPROVED;
-      data.breedApprovalStatus = RequestStatus.APPROVED;
+      if (data.speciesId !== undefined && data.speciesId !== listing.speciesId) {
+        speciesApprovalStatus = RequestStatus.APPROVED;
+        data.speciesApprovalStatus = speciesApprovalStatus;
+      }
+      if (data.breedId && data.breedId !== listing.breedId) {
+        breedApprovalStatus = RequestStatus.APPROVED;
+        data.breedApprovalStatus = breedApprovalStatus;
+      }
+    }
+    if (attributes.speciesRequestId) {
+      speciesApprovalStatus = RequestStatus.PENDING;
+      data.speciesApprovalStatus = speciesApprovalStatus;
+    }
+    if (attributes.breedRequestId) {
+      breedApprovalStatus = RequestStatus.PENDING;
+      data.breedApprovalStatus = breedApprovalStatus;
+    }
+    if (data.status === LivestockStatus.AVAILABLE) {
+      if (speciesApprovalStatus !== RequestStatus.APPROVED) {
+        throw new ConflictException('This livestock cannot be published until its species is approved');
+      }
+      if (breedApprovalStatus !== RequestStatus.APPROVED) {
+        throw new ConflictException('This livestock cannot be published until an approved breed is selected');
+      }
+      data.marketplaceExpiresAt = new Date(Date.now() + LISTING_LIFETIME_MS);
+      data.soldAt = null;
     }
     return super.update(listing.id, data);
   }
@@ -367,10 +395,22 @@ export function computeMarketplaceVisibility(
     return { marketplaceVisible: false, marketplaceVisibilityReason: 'Farmer is not verified' };
   }
   if (listing.speciesApprovalStatus !== RequestStatus.APPROVED) {
-    return { marketplaceVisible: false, marketplaceVisibilityReason: 'Species is pending approval' };
+    return {
+      marketplaceVisible: false,
+      marketplaceVisibilityReason:
+        listing.speciesApprovalStatus === RequestStatus.REJECTED
+          ? 'Species request was rejected'
+          : 'Species is pending approval',
+    };
   }
-  if (listing.breedId && listing.breedApprovalStatus !== RequestStatus.APPROVED) {
-    return { marketplaceVisible: false, marketplaceVisibilityReason: 'Breed is pending approval' };
+  if (listing.breedApprovalStatus !== RequestStatus.APPROVED) {
+    return {
+      marketplaceVisible: false,
+      marketplaceVisibilityReason:
+        listing.breedApprovalStatus === RequestStatus.REJECTED
+          ? 'Breed request was rejected'
+          : 'Breed is pending approval',
+    };
   }
   if (listing.marketplaceEligibleFrom && listing.marketplaceEligibleFrom > new Date()) {
     return { marketplaceVisible: false, marketplaceVisibilityReason: 'Not yet eligible for marketplace' };

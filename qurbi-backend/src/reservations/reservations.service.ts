@@ -79,7 +79,7 @@ export class ReservationsService {
       !livestock.adminBlocked &&
       farmerProfile?.verificationStatus === VerificationStatus.VERIFIED &&
       livestock.speciesApprovalStatus === RequestStatus.APPROVED &&
-      (!livestock.breedId || livestock.breedApprovalStatus === RequestStatus.APPROVED) &&
+      livestock.breedApprovalStatus === RequestStatus.APPROVED &&
       (!livestock.marketplaceEligibleFrom || livestock.marketplaceEligibleFrom <= now) &&
       listingExpiresAt > now;
     if (!reservable) {

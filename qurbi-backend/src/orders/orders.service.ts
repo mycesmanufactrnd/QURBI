@@ -100,7 +100,7 @@ export class OrdersService {
   findAllForFarmer(farmerId: string): Promise<Order[]> {
     return this.repository.find({
       where: { farmerId },
-      relations: { items: true, trackingEvents: true },
+      relations: { items: true, trackingEvents: true, buyer: true },
       order: { createdAt: 'DESC' },
     });
   }
@@ -135,7 +135,7 @@ export class OrdersService {
       await this.reservationsService.expireDue(manager);
       const order = await manager.findOne(Order, {
         where: { id },
-        relations: { items: true, trackingEvents: true, reservations: true },
+        relations: { items: true, trackingEvents: true, reservations: true, buyer: true },
       });
       if (!order) throw new NotFoundException(`Order ${id} not found`);
       this.assertParty(order, actor, ['buyer', 'farmer']);
