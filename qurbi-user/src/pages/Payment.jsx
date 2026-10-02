@@ -480,10 +480,10 @@ export default function Payment() {
   if (paymentItems.length === 0) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#E3C19F] p-8">
-        <p className="text-gray-500">No items selected for payment.</p>
+        <p className="text-black">No items selected for payment.</p>
         <button
           onClick={() => navigateWithTransition(isResumingOrder ? "/orders" : "/cart")}
-          className="rounded-xl px-6 py-3 text-sm font-bold text-white transition-opacity hover:opacity-80"
+          className="justify-center item-center flex-inline bg-gradient-to-br from-[#41362D] to-[#6B594A]  text-white rounded-xl px-6 py-3 text-sm font-bold text-white transition-opacity hover:opacity-80"
         >
           {isResumingOrder ? "Back to My Orders" : "Back to Cart"}
         </button>

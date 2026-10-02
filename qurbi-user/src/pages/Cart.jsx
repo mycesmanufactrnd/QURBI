@@ -172,8 +172,8 @@ export default function Cart() {
     return (
       <div className="aisyah-page flex flex-col">
         <AppHeader title="Your Cart" subtitle="0 items" />
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8">
-          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center">
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 py-20">
+          <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center">
             <ShoppingCart className="w-10 h-10 text-gray-300" />
           </div>
           <p className="text-gray-400 text-center">Your cart is empty.</p>
