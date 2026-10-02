@@ -41,7 +41,7 @@ export default function AdminFarmerReview() {
       setFarmer(farmerRow);
       setProfile(profileRow || null);
       setVerification(verificationPage?.data?.[0] || null);
-      setLivestock(livestockPage.data || []);
+      setLivestock((livestockPage.data || []).map(normalizeAdminLivestock));
     }).catch(() => navigate("/admin/farmers", { replace: true })).finally(() => setLoading(false));
   }, [id, navigate]);
 
@@ -143,4 +143,31 @@ function Document({ label, url, emptyLabel = "Not provided" }) {
 
 function statusLabel(status) {
   return { pending: "Pending", verified: "Approved", rejected: "Rejected", unverified: "Not Submitted" }[status] || "Not Submitted";
+}
+
+function normalizeAdminLivestock(item) {
+  const attributes = item?.attributes || {};
+  return {
+    ...attributes,
+    ...item,
+    species: relationName(item?.species, attributes.species || "Unspecified"),
+    breed: relationName(item?.breed, attributes.breed || "Unspecified"),
+    status: titleCase(item?.status),
+    gender: item?.sex ? titleCase(item.sex) : attributes.gender || "—",
+    coverImage: item?.images?.[0] || attributes.coverImage || "",
+    ageValue: attributes.ageValue ?? item?.ageMonths,
+    ageUnit: attributes.ageUnit || "Months",
+    price: Number(item?.price || 0),
+  };
+}
+
+function relationName(value, fallback) {
+  if (typeof value === "string") return value;
+  return value?.name || fallback;
+}
+
+function titleCase(value) {
+  return value
+    ? String(value).split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ")
+    : "—";
 }
