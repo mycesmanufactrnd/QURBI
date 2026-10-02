@@ -30,11 +30,31 @@ import { getBreedGenderBreakdown } from "@/lib/bulk-listing";
 
 export default function BulkListingDetail() {
   const { id } = useParams();
-  const { navigateWithTransition } = useHeaderTransition();
+  const { navigateWithTransition, completeProductTransition } =
+    useHeaderTransition();
   const [searchParams] = useSearchParams();
   const openedFromCart = searchParams.get("from") === "cart";
-  const returnPath = openedFromCart ? "/cart" : "/bulk-buy";
-  const returnLabel = openedFromCart ? "Back to Cart" : "Back to Bulk Buy";
+  const openedFromOrders = ["order", "orders"].includes(searchParams.get("from"));
+  const openedFromPayment = searchParams.get("from") === "payment";
+  const requestedReturnTo = searchParams.get("returnTo");
+  const paymentReturnPath =
+    requestedReturnTo?.startsWith("/") && !requestedReturnTo.startsWith("//")
+      ? requestedReturnTo
+      : "/payment";
+  const returnPath = openedFromCart
+    ? "/cart"
+    : openedFromPayment
+      ? paymentReturnPath
+    : openedFromOrders
+      ? "/orders"
+      : "/bulk-buy";
+  const returnLabel = openedFromCart
+    ? "Back to Cart"
+    : openedFromPayment
+      ? "Back to Payment"
+      : openedFromOrders
+        ? "Back to Orders"
+        : "Back to Bulk Buy";
   const requireAuth = useRequireAuth();
   const { addToCart, buyNow, cartItems } = useCart();
   const [listing, setListing] = useState(null);
@@ -54,6 +74,10 @@ export default function BulkListingDetail() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (listing || error) completeProductTransition();
+  }, [completeProductTransition, error, listing]);
 
   useEffect(() => {
     const handleScroll = () => setDetailsRaised(window.scrollY > 36);
@@ -103,6 +127,12 @@ export default function BulkListingDetail() {
     listing_name: listing.name,
     farmer_id: listing.ownerId || "",
     farmer_name: listing.farmer_name || "Unknown Farmer",
+    farm_location:
+      listing.farm_location ||
+      listing.farmLocation ||
+      listing.farm_address ||
+      listing.state ||
+      "",
     male_count: Number(listing.maleCount || 0),
     female_count: Number(listing.femaleCount || 0),
     total_animals: total,
@@ -139,7 +169,6 @@ export default function BulkListingDetail() {
   };
 
   const detailItems = [
-    { label: "Availability", value: listing.status || "Available" },
     { label: "Total animals", value: total },
     { label: "Male count", value: Number(listing.maleCount || 0) },
     { label: "Female count", value: Number(listing.femaleCount || 0) },
@@ -172,9 +201,6 @@ export default function BulkListingDetail() {
             Bulk lot
           </div>
         )}
-        <span className="absolute right-4 top-4 rounded-xl bg-gradient-to-br from-[#41362D] to-[#6B594A] px-4 py-2 text-lg font-extrabold uppercase text-white shadow-lg shadow-black/20">
-          {listing.status || "Available"}
-        </span>
       </div>
 
       <DetailOuterSheet raised={detailsRaised}>

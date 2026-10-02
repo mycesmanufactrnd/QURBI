@@ -56,7 +56,7 @@ export default function PaymentErrorModal({ error, onClose, onViewOrders }) {
           </p>
           {error.reserved && (
             <p className="mt-3 text-sm leading-relaxed text-white">
-              Your livestock remains reserved for up to 24 hours. You can try payment again from My Orders.
+              Your product is reserved for up to 24 hours and can be viewed in My Orders. You can retry payment from there.
             </p>
           )}
           <div className={`mt-5 grid gap-3 ${error.reserved ? "grid-cols-2" : "grid-cols-1"}`}>
@@ -66,7 +66,7 @@ export default function PaymentErrorModal({ error, onClose, onViewOrders }) {
                 onClick={onViewOrders}
                 className="min-h-12 rounded-xl border border-[#E3C19F] text-sm font-bold text-white"
               >
-                My Orders
+                View Reserved Order
               </button>
             )}
             <button

@@ -34,6 +34,8 @@ import {
 function AvailabilityModal({ state, onClose, onBrowse, backLabel }) {
   if (!state) return null;
   const unavailable = state === "unavailable";
+  const reserved = ["reserved", "reserved_by_you"].includes(state);
+  const returnToOrders = state === "reserved_by_you";
   return (
     <div
       className="fixed inset-0 z-[75] flex items-center justify-center bg-black/45 p-5 backdrop-blur-sm"
@@ -46,21 +48,31 @@ function AvailabilityModal({ state, onClose, onBrowse, backLabel }) {
         onClick={(event) => event.stopPropagation()}
       >
         <h2 className="text-lg font-bold text-gray-900">
-          {unavailable
+          {reserved
+            ? "Livestock Reserved"
+            : unavailable
             ? "Livestock Unavailable"
             : "Unable to Verify Availability"}
         </h2>
         <p className="mt-2 text-sm leading-6 text-gray-500">
-          {unavailable
+          {reserved
+            ? returnToOrders
+              ? "This livestock is already reserved in your existing order. Continue payment from My Orders instead of adding it to the cart again."
+              : "This livestock is currently reserved and cannot be added to the cart. Please choose another available livestock."
+            : unavailable
             ? "This livestock is no longer available for purchase. Please browse other available livestock."
             : "We couldn't verify this livestock right now. Please try again."}
         </p>
         <button
           type="button"
-          onClick={unavailable ? onBrowse : onClose}
-          className="mt-5 min-h-11 w-full rounded-xl bg-[#F7EDE2]0 px-4 text-sm font-bold text-white"
+          onClick={reserved || unavailable ? onBrowse : onClose}
+          className="mt-5 min-h-11 w-full rounded-xl bg-gradient-to-br from-[#41362D] to-[#6B594A] px-4 text-sm font-bold text-white"
         >
-          {unavailable ? backLabel : "Close"}
+          {returnToOrders
+            ? "View My Orders"
+            : reserved || unavailable
+              ? backLabel
+              : "Close"}
         </button>
       </div>
     </div>
@@ -72,8 +84,27 @@ export default function LivestockDetail() {
   const { navigateWithTransition, completeProductTransition } = useHeaderTransition();
   const [searchParams] = useSearchParams();
   const openedFromCart = searchParams.get("from") === "cart";
-  const returnPath = openedFromCart ? "/cart" : "/browse";
-  const returnLabel = openedFromCart ? "Back to Cart" : "Back to Browse";
+  const openedFromOrders = ["order", "orders"].includes(searchParams.get("from"));
+  const openedFromPayment = searchParams.get("from") === "payment";
+  const requestedReturnTo = searchParams.get("returnTo");
+  const paymentReturnPath =
+    requestedReturnTo?.startsWith("/") && !requestedReturnTo.startsWith("//")
+      ? requestedReturnTo
+      : "/payment";
+  const returnPath = openedFromCart
+    ? "/cart"
+    : openedFromPayment
+      ? paymentReturnPath
+    : openedFromOrders
+      ? "/orders"
+      : "/browse";
+  const returnLabel = openedFromCart
+    ? "Back to Cart"
+    : openedFromPayment
+      ? "Back to Payment"
+      : openedFromOrders
+        ? "Back to Orders"
+        : "Back to Browse";
   const { addToCart, buyNow, cartItems } = useCart();
   const requireAuth = useRequireAuth();
   const { reveal } = useReveal();
@@ -121,6 +152,11 @@ export default function LivestockDetail() {
     weight_max: livestock.weight ? Number(livestock.weight) : 0,
     farmer_id: livestock.ownerId || livestock.created_by_id || "",
     farmer_name: livestock.farmer_name || "Unknown Farmer",
+    farm_location:
+      livestock.farm_location ||
+      livestock.farmLocation ||
+      livestock.farm_address ||
+      "",
     image: livestock.coverImage || livestock.images?.[0] || "",
     created_date: livestock.created_date || "",
     listingPublishedAt: livestock.listingPublishedAt || "",
@@ -138,9 +174,13 @@ export default function LivestockDetail() {
       try {
         const latest = await checkLivestockAvailability([livestock.id]);
         const result = latest[livestock.id];
-        if (!result?.available) {
+        if (result?.state !== "available") {
           setAvailabilityModal(
-            result?.state === "unavailable" ? "unavailable" : "verification",
+            ["reserved", "reserved_by_you"].includes(result?.state)
+              ? result.state
+              : result?.state === "unavailable"
+                ? "unavailable"
+                : "verification",
           );
           load();
           return;
@@ -167,9 +207,13 @@ export default function LivestockDetail() {
       try {
         const latest = await checkLivestockAvailability([livestock.id]);
         const result = latest[livestock.id];
-        if (!result?.available) {
+        if (result?.state !== "available") {
           setAvailabilityModal(
-            result?.state === "unavailable" ? "unavailable" : "verification",
+            ["reserved", "reserved_by_you"].includes(result?.state)
+              ? result.state
+              : result?.state === "unavailable"
+                ? "unavailable"
+                : "verification",
           );
           load();
           return;
@@ -217,8 +261,6 @@ export default function LivestockDetail() {
 
   if (!livestock) return null;
 
-  const statusLabel = String(livestock.status || "Unavailable").trim();
-  const isAvailableStatus = statusLabel.toLowerCase() === "available";
   const allImages = [livestock.coverImage, ...(livestock.images || [])].filter(
     Boolean,
   );
@@ -340,19 +382,10 @@ export default function LivestockDetail() {
             </h1>
           </div>
           <div className="space-y-3">
-            <div className="flex min-w-0 items-center justify-between gap-3">
-              <p className="min-w-0 text-3xl font-extrabold text-white sm:text-4xl">
+            <div>
+              <p className="text-3xl font-extrabold text-white sm:text-4xl">
                 RM {(livestock.price || 0).toLocaleString()}
               </p>
-              <span
-                className="max-w-[42%] flex-none truncate rounded-full px-3 py-1 text-xs font-bold text-white shadow-sm"
-                style={{
-                  backgroundColor: isAvailableStatus ? "#16a34a" : "#dc2626",
-                }}
-                title={statusLabel}
-              >
-                {statusLabel}
-              </span>
             </div>
             <div className="grid w-full grid-cols-2 gap-2">
               <button
@@ -475,7 +508,11 @@ export default function LivestockDetail() {
       <AvailabilityModal
         state={availabilityModal}
         onClose={() => setAvailabilityModal("")}
-        onBrowse={() => navigateWithTransition(returnPath)}
+        onBrowse={() =>
+          navigateWithTransition(
+            availabilityModal === "reserved_by_you" ? "/orders" : returnPath,
+          )
+        }
         backLabel={returnLabel}
       />
     </div>

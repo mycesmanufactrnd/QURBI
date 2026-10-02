@@ -53,6 +53,7 @@ type Actor = AuthenticatedUser;
 type Party = 'buyer' | 'farmer';
 
 const MAX_ORDER_NUMBER_ATTEMPTS = 5;
+const DELIVERY_FEE_PER_FARMER = 10;
 
 // The fulfilment track only. Refunds run in parallel on `refundStatus` and
 // never appear here — REFUNDED is reached exclusively through
@@ -84,11 +85,15 @@ export class OrdersService {
   ) {}
 
   async findAllForBuyer(buyerId: string): Promise<Order[]> {
-    await this.dataSource.transaction((manager) => this.reservationsService.expireDue(manager));
-    return this.repository.find({
-      where: { buyerId, hiddenFromBuyerHistory: false },
-      relations: { items: true, reservations: true },
-      order: { createdAt: 'DESC' },
+    return this.dataSource.transaction(async (manager) => {
+      await this.reservationsService.expireDue(manager);
+      const orders = await manager.find(Order, {
+        where: { buyerId, hiddenFromBuyerHistory: false },
+        relations: { items: true, reservations: true },
+        order: { createdAt: 'DESC' },
+      });
+      for (const order of orders) await this.ensurePendingDeliveryFee(manager, order);
+      return orders;
     });
   }
 
@@ -126,14 +131,35 @@ export class OrdersService {
   }
 
   async findOne(id: string, actor: Actor): Promise<Order> {
-    await this.dataSource.transaction((manager) => this.reservationsService.expireDue(manager));
-    const order = await this.repository.findOne({
-      where: { id },
-      relations: { items: true, trackingEvents: true, reservations: true },
+    return this.dataSource.transaction(async (manager) => {
+      await this.reservationsService.expireDue(manager);
+      const order = await manager.findOne(Order, {
+        where: { id },
+        relations: { items: true, trackingEvents: true, reservations: true },
+      });
+      if (!order) throw new NotFoundException(`Order ${id} not found`);
+      this.assertParty(order, actor, ['buyer', 'farmer']);
+      await this.ensurePendingDeliveryFee(manager, order);
+      return order;
     });
-    if (!order) throw new NotFoundException(`Order ${id} not found`);
-    this.assertParty(order, actor, ['buyer', 'farmer']);
-    return order;
+  }
+
+  private async ensurePendingDeliveryFee(manager: EntityManager, order: Order): Promise<void> {
+    if (
+      order.status !== OrderStatus.PENDING_PAYMENT ||
+      order.deliveryMethod !== DeliveryMethod.DELIVERY ||
+      Number(order.deliveryFee) > 0
+    ) {
+      return;
+    }
+
+    order.deliveryFee = DELIVERY_FEE_PER_FARMER.toFixed(2);
+    order.total = (
+      Number(order.subtotal) +
+      DELIVERY_FEE_PER_FARMER -
+      Number(order.discount || 0)
+    ).toFixed(2);
+    await manager.save(order);
   }
 
   // Buyer's cart -> one or more orders, split per farmer (an order always
@@ -191,10 +217,10 @@ export class OrdersService {
         return await this.dataSource.transaction(async (manager) => {
           await this.reservationsService.expireDue(manager);
           const existingOrder = await manager.findOne(Order, {
-            where: { checkoutKey, buyerId, status: OrderStatus.PENDING_PAYMENT },
+            where: { checkoutKey, buyerId },
             relations: { items: true },
           });
-          if (existingOrder) {
+          if (existingOrder?.status === OrderStatus.PENDING_PAYMENT) {
             const existingPayment = await manager.findOne(Payment, {
               where: { orderId: existingOrder.id },
             });
@@ -204,8 +230,19 @@ export class OrdersService {
               existingOrder.paymentStatus = PaymentStatus.UNPAID;
               await manager.save(existingOrder);
             }
+            await this.ensurePendingDeliveryFee(manager, existingOrder);
             await manager.delete(CartItem, items.map((item) => item.id));
             return existingOrder;
+          }
+
+          // checkoutKey is unique so retries can safely return the same
+          // pending order. Once that order is terminal, however, the buyer
+          // must be allowed to purchase the released listing again. Clear a
+          // legacy terminal key before inserting the new order; current
+          // cancellations clear it immediately in applyStatusChange below.
+          if (existingOrder) {
+            existingOrder.checkoutKey = null;
+            await manager.save(existingOrder);
           }
 
           let subtotal = 0;
@@ -250,6 +287,10 @@ export class OrdersService {
             }
           }
 
+          const deliveryFee =
+            input.deliveryMethod === DeliveryMethod.DELIVERY
+              ? DELIVERY_FEE_PER_FARMER
+              : 0;
           const order = await manager.save(
             manager.create(Order, {
               orderNumber: await this.generateOrderNumber(manager),
@@ -258,9 +299,9 @@ export class OrdersService {
               farmerId,
               status: OrderStatus.PENDING_PAYMENT,
               subtotal: subtotal.toFixed(2),
-              deliveryFee: '0.00',
+              deliveryFee: deliveryFee.toFixed(2),
               discount: '0.00',
-              total: subtotal.toFixed(2),
+              total: (subtotal + deliveryFee).toFixed(2),
               currency: 'MYR',
               paymentStatus: PaymentStatus.UNPAID,
               deliveryMethod: input.deliveryMethod,
@@ -361,7 +402,10 @@ export class OrdersService {
     Object.assign(order, opts.extra ?? {}, { status: toStatus });
     if (toStatus === OrderStatus.DELIVERED) order.deliveredAt = new Date();
     if (toStatus === OrderStatus.RECEIVED) order.receivedAt = new Date();
-    if (toStatus === OrderStatus.CANCELLED) order.cancelledAt = new Date();
+    if (toStatus === OrderStatus.CANCELLED) {
+      order.cancelledAt = new Date();
+      order.checkoutKey = null;
+    }
     await manager.save(order);
 
     await manager.save(

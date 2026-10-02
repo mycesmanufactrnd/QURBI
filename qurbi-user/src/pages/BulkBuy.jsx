@@ -28,6 +28,12 @@ const toCartItem = (listing) => ({
   listing_name: listing.name,
   farmer_id: listing.ownerId || "",
   farmer_name: listing.farmer_name || "Unknown Farmer",
+  farm_location:
+    listing.farm_location ||
+    listing.farmLocation ||
+    listing.farm_address ||
+    listing.state ||
+    "",
   male_count: Number(listing.maleCount || 0),
   female_count: Number(listing.femaleCount || 0),
   total_animals: lotTotal(listing),
@@ -212,15 +218,9 @@ export default function BulkBuy() {
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <h2 className="truncate font-bold text-white">
-                        {listing.name}
-                      </h2>
-
-                      <span className="rounded-full bg-[#E3C19F] px-2 py-1 text-[10px] font-bold text-black">
-                        Available
-                      </span>
-                    </div>
+                    <h2 className="truncate font-bold text-white">
+                      {listing.name}
+                    </h2>
 
                     <p className="mt-1 flex items-center gap-1 text-xs text-white/70">
                       <MapPin className="h-3 w-3" />

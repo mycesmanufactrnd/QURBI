@@ -5,7 +5,7 @@ import {
   useParams,
   useSearchParams,
 } from "react-router-dom";
-import { Camera, Check, Package } from "lucide-react";
+import { Camera, Check, ChevronRight, Package } from "lucide-react";
 import { qurbiApi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
 import { useAuthPrompt } from "@/lib/auth-prompt-context";
@@ -13,6 +13,7 @@ import { formatOrderDateTime } from "@/lib/order-date";
 import ImageLightbox from "@/components/ImageLightbox";
 import AppHeader from "@/components/AppHeader";
 import PageLoading from "@/components/PageLoading";
+import ProductImage from "@/components/ProductImage";
 
 const RECEIVABLE_STATUSES = ["in_transit", "shipped", "to_receive", "delivering", "delivered"];
 
@@ -726,27 +727,52 @@ export default function OrderDetail() {
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
           <h2 className="text-gray-900 font-bold mb-3">Items</h2>
 
-          {order.items?.map((item, index) => (
-            <div
-              key={index}
-              className="flex justify-between gap-3 py-3 border-b border-gray-50 last:border-0"
-            >
-              <div>
-                <p className="text-gray-800 font-semibold text-sm">
-                  {item.breed} × {item.quantity}
-                </p>
+          {order.items?.map((item, index) => {
+            const productPath = item.item_type === "bulk"
+              ? item.bulk_listing_id
+                ? `/bulk-buy/${encodeURIComponent(item.bulk_listing_id)}?from=order`
+                : ""
+              : item.livestock_id
+                ? `/livestock/${encodeURIComponent(item.livestock_id)}?from=order`
+                : "";
+            const ItemContainer = productPath ? Link : "div";
+            const itemName = item.breed || item.listing_name || "Order item";
 
-                <p className="text-gray-400 text-xs mt-0.5">
-                  {item.animal}
-                  {item.grade ? ` · Grade ${item.grade}` : ""}
-                </p>
-              </div>
+            return (
+              <ItemContainer
+                key={item.id || `${itemName}-${index}`}
+                {...(productPath ? { to: productPath } : {})}
+                className={`flex items-center justify-between gap-3 border-b border-gray-50 py-3 last:border-0 ${productPath ? "group rounded-xl px-2 transition-colors hover:bg-white/10 active:bg-white/15" : ""}`}
+                aria-label={productPath ? `View ${itemName} details` : undefined}
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <ProductImage
+                    src={item.image}
+                    alt={itemName}
+                    className="h-12 w-12"
+                  />
+                  <div className="min-w-0">
+                    <p className="break-words text-sm font-semibold text-gray-800">
+                      {itemName} × {item.quantity}
+                    </p>
+                    <p className="mt-0.5 text-xs text-gray-400">
+                      {item.item_type === "bulk" ? "Bulk listing" : item.animal || "Livestock"}
+                      {item.grade ? ` · Grade ${item.grade}` : ""}
+                    </p>
+                  </div>
+                </div>
 
-              <p className="text-white font-bold text-sm whitespace-nowrap">
-                RM {item.total?.toLocaleString()}
-              </p>
-            </div>
-          ))}
+                <div className="flex flex-none items-center gap-2">
+                  <p className="whitespace-nowrap text-sm font-bold text-white">
+                    RM {item.total?.toLocaleString()}
+                  </p>
+                  {productPath && (
+                    <ChevronRight className="h-4 w-4 text-white transition-transform group-hover:translate-x-0.5" />
+                  )}
+                </div>
+              </ItemContainer>
+            );
+          })}
 
           <div className="flex justify-between pt-3 mt-1 border-t border-gray-100">
             <span className="text-white font-bold">Total</span>

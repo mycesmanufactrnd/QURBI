@@ -24,6 +24,8 @@ import {
   orderTimestamp,
 } from "@/lib/order-date";
 import PageLoading from "@/components/PageLoading";
+import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
+import ProductImage from "@/components/ProductImage";
 
 const TABS = [
   {
@@ -79,7 +81,13 @@ const STATUS_LABELS = {
   refunded: "Refund Complete",
   cancelled: "Cancelled",
   out_of_stock: "Out of Stock",
+  rejected: "Rejected",
 };
+
+function displayedOrderStatus(order) {
+  if (order.refund_status?.toLowerCase() === "rejected") return "Rejected";
+  return STATUS_LABELS[order.status] || order.status || "Unknown";
+}
 
 function reservationLabel(order) {
   if (!order.reservation_expires_at || order.reservation_status !== "active")
@@ -138,9 +146,12 @@ function OrderCard({
   onSelect,
   fromTab = "",
 }) {
-  const navigate = useNavigate();
-  const totalItems =
-    order.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+  const { navigateWithTransition } = useHeaderTransition();
+  const itemRows = (order.items || []).map((item) => ({
+    name: item.breed || item.listing_name || "Order item",
+    price: Number(item.total ?? item.line_total ?? item.price_per_head ?? 0),
+    image: item.image || "",
+  }));
   const isPending = ["pending", "pending_payment", "to_pay"].includes(order.status);
   const reservedUntil = isPending ? reservationLabel(order) : "";
   const isHistory = ["cancelled", "out_of_stock"].includes(order.status);
@@ -160,15 +171,14 @@ function OrderCard({
     }
 
     if (event.target.closest("a, button")) return;
-    navigate(cardDestination);
+    navigateWithTransition(cardDestination);
   };
 
   if (compact) {
-    const item = order.items?.[0] || {};
     return (
       <div
         onClick={handleCardInteraction}
-        className={`qurbi-dark-surface flex min-w-0 flex-col gap-2 overflow-hidden rounded-xl border px-2.5 py-2 shadow-sm sm:flex-row sm:items-center sm:gap-2.5 ${isHistory ? "border-orange-100" : "border-gray-50"}`}
+        className={`qurbi-dark-surface flex min-w-0 flex-col gap-2 overflow-hidden rounded-xl border px-2.5 py-2 shadow-sm ${isHistory ? "border-orange-100" : "border-gray-50"}`}
       >
         <div className="flex min-w-0 w-full flex-1 items-center gap-2.5">
           {selecting && isHistory && (
@@ -193,44 +203,35 @@ function OrderCard({
           <GuardedOrderLink
             selecting={selecting}
             to={cardDestination}
-            className="flex min-w-0 flex-1 items-center gap-2.5"
+            className="flex min-w-0 flex-1 items-center justify-between gap-3"
             aria-label={`View order ${order.order_number}`}
           >
-            <div className="flex h-9 w-9 flex-none items-center justify-center overflow-hidden rounded-lg bg-[#F7EDE2] text-base">
-              {item.image ? (
-                <img src={item.image} alt="" className="h-full w-full object-cover" />
-              ) : (
-                "🐄"
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="whitespace-normal break-words [overflow-wrap:anywhere] text-sm font-semibold text-gray-800">
-                {item.breed || item.listing_name || "Order items"}
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-white/60">
+                Order date
               </p>
-              <p className="truncate text-[11px] text-gray-400">
-                {formatOrderDate(order.created_date, {
-                  month: "short",
-                  year: undefined,
-                })}{" "}
-                ·{" "}
-                <span className="background-grey font-bold text-white">
-                  {STATUS_LABELS[order.status] || order.status}
-                </span>
+              <p className="truncate text-sm font-bold text-white">
+                {formatOrderDate(order.created_date)}
               </p>
             </div>
-            <p className="flex-none whitespace-nowrap text-xs font-bold text-gray-900">
-              RM {order.total?.toLocaleString()}
-            </p>
+            <div className="flex-none text-right">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-white/60">
+                Total
+              </p>
+              <p className="whitespace-nowrap text-sm font-extrabold text-white">
+                RM {Number(order.total || 0).toLocaleString()}
+              </p>
+            </div>
           </GuardedOrderLink>
         </div>
-        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-          {reservedUntil && (
-            <span className="flex items-center gap-1 rounded-full border border-[#E3C19F] bg-[#F7EDE2] px-2 py-1 text-[10px] font-bold text-[#41362D]">
-              <Clock3 className="h-3 w-3" />
-              {reservedUntil}
-            </span>
-          )}
-          {isPending && (
+        {reservedUntil && (
+          <div className="flex items-center gap-1.5 border-t border-white/20 pt-2 text-[10px] font-semibold text-white/80">
+            <Clock3 className="h-3.5 w-3.5 flex-none text-[#E3C19F]" />
+            <span>{reservedUntil}</span>
+          </div>
+        )}
+        {isPending ? (
+          <div className="flex w-full flex-nowrap items-center gap-2 border-t border-white/20 pt-2">
             <button
               onClick={(event) => {
                 if (selecting) return handleCardInteraction(event);
@@ -238,29 +239,30 @@ function OrderCard({
                 onCancel(order);
               }}
               disabled={cancelling}
-              className="rounded-lg border border-[#41362D] bg-gradient-to-br from-[#EF4444] to-[#B91C1C] px-2 py-1.5 text-[11px] font-bold text-white shadow-sm shadow-red-950/25 disabled:opacity-50"
+              className="min-w-0 flex-1 rounded-lg border border-[#41362D] bg-gradient-to-br from-[#EF4444] to-[#B91C1C] px-2 py-1.5 text-[11px] font-bold text-white shadow-sm shadow-red-950/25 disabled:opacity-50"
             >
               {cancelling ? "..." : "Cancel"}
             </button>
-          )}
-          {isPending ? (
             <GuardedOrderLink
               selecting={selecting}
               to={`/payment?order_id=${encodeURIComponent(order.id)}`}
-              className="flex-inline justify-center item-center rounded-lg border border-[#41362D] bg-gradient-to-br from-green-700 via-green-500 to-green-300 px-2 py-1.5 text-[11px] font-bold text-white"
+              className="flex min-w-0 flex-1 items-center justify-center rounded-lg border border-[#41362D] bg-gradient-to-br from-green-700 via-green-500 to-green-300 px-2 py-1.5 text-center text-[11px] font-bold text-white"
             >
               Complete Payment
             </GuardedOrderLink>
-          ) : (
+          </div>
+        ) : (
+          <div className="flex justify-end border-t border-white/20 pt-2">
             <GuardedOrderLink
               selecting={selecting}
               to={detailsPath}
-              className="text-white"
+              className="flex items-center gap-1 text-[11px] font-bold text-white"
             >
+              View order
               <ChevronRight className="w-4 h-4" />
             </GuardedOrderLink>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -302,7 +304,7 @@ function OrderCard({
         <div
           className={`flex items-start justify-between gap-3 ${compact ? "" : "border-b border-gray-50 pb-3"}`}
         >
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="break-words whitespace-normal [overflow-wrap:anywhere] font-bold text-gray-900">
               {order.order_number}
             </p>
@@ -338,9 +340,7 @@ function OrderCard({
                     : "bg-red-50 text-red-700"
             }`}
           >
-            {order.refund_status?.toLowerCase() === "rejected"
-              ? "Rejected"
-              : STATUS_LABELS[order.status] || order.status}
+            {displayedOrderStatus(order)}
           </span>
         </div>
         {reservedUntil && (
@@ -352,18 +352,38 @@ function OrderCard({
         <div
           className={`flex items-center justify-between gap-3 ${compact ? "pt-1" : "py-3"}`}
         >
-          <div className="min-w-0">
-            <p className="break-words whitespace-normal [overflow-wrap:anywhere] text-sm font-semibold text-gray-800">
-              {order.items?.[0]?.breed || order.items?.[0]?.listing_name || "Order items"}
-            </p>
-            <p className="text-gray-400 text-xs mt-0.5">
-              {totalItems} head · {order.items?.length || 0} item
-              {order.items?.length === 1 ? "" : "s"}
-            </p>
+          <div className="min-w-0 flex-1">
+            <div className="space-y-1">
+              {itemRows.length ? itemRows.map((itemRow, index) => (
+                <div
+                  key={`${itemRow.name}-${index}`}
+                  className="flex min-w-0 items-start justify-between gap-3 py-0.5"
+                >
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <ProductImage
+                      src={itemRow.image}
+                      alt={itemRow.name}
+                      className="h-11 w-11"
+                    />
+                    <p className="min-w-0 break-words whitespace-normal [overflow-wrap:anywhere] text-sm font-semibold text-white">
+                      {itemRow.name}
+                    </p>
+                  </div>
+                  <p className="flex-none whitespace-nowrap text-sm font-bold text-white">
+                    RM {itemRow.price.toLocaleString()}
+                  </p>
+                </div>
+              )) : (
+                <p className="text-sm font-semibold text-gray-800">Order items</p>
+              )}
+            </div>
           </div>
-          <p className="text-gray-900 text-sm font-bold whitespace-nowrap">
-            RM {order.total?.toLocaleString()}
-          </p>
+        </div>
+        <div className="flex items-center justify-between border-t border-white/20 py-2 text-sm">
+          <span className="font-bold text-white">Total</span>
+          <span className="font-extrabold text-white">
+            RM {Number(order.total || 0).toLocaleString()}
+          </span>
         </div>
       </GuardedOrderLink>
       <div
@@ -382,18 +402,23 @@ function OrderCard({
             {cancelling ? "Cancelling..." : "Cancel Order"}
           </button>
         )}
-        <GuardedOrderLink
-          selecting={selecting}
-          to={
-            isPending
-              ? `/payment?order_id=${encodeURIComponent(order.id)}`
-              : detailsPath
-          }
-          className="flex items-center gap-1 text-white text-xs font-semibold"
-        >
-          {isPending ? "Complete Payment" : "View order"}{" "}
-          <ChevronRight className="w-4 h-4" />
-        </GuardedOrderLink>
+        {isPending ? (
+          <GuardedOrderLink
+            selecting={selecting}
+            to={`/payment?order_id=${encodeURIComponent(order.id)}`}
+            className="flex items-center justify-center rounded-lg border border-[#41362D] bg-gradient-to-br from-green-700 via-green-500 to-green-300 px-2.5 py-1.5 text-xs font-bold text-white"
+          >
+            Complete Payment
+          </GuardedOrderLink>
+        ) : (
+          <GuardedOrderLink
+            selecting={selecting}
+            to={detailsPath}
+            className="flex items-center gap-1 text-xs font-semibold text-white"
+          >
+            View order <ChevronRight className="w-4 h-4" />
+          </GuardedOrderLink>
+        )}
       </div>
     </div>
   );
@@ -465,6 +490,7 @@ export default function Orders() {
   const [historyIds, setHistoryIds] = useState([]);
   const [deletingHistory, setDeletingHistory] = useState(false);
   const [showDeleteHistory, setShowDeleteHistory] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const loadOrders = useCallback(async () => {
     if (!authChecked) return;
@@ -560,9 +586,27 @@ export default function Orders() {
   };
 
   const active = TABS.find((tab) => tab.key === activeTab);
-  const visibleOrders = useMemo(
+  const ordersInActiveTab = useMemo(
     () => orders.filter((order) => active.statuses.includes(order.status)),
     [active, orders],
+  );
+  const statusOptions = useMemo(
+    () => [...new Set(ordersInActiveTab.map(displayedOrderStatus))],
+    [ordersInActiveTab],
+  );
+  useEffect(() => {
+    if (statusFilter !== "all" && !statusOptions.includes(statusFilter)) {
+      setStatusFilter("all");
+    }
+  }, [statusFilter, statusOptions]);
+  const visibleOrders = useMemo(
+    () =>
+      statusFilter === "all"
+        ? ordersInActiveTab
+        : ordersInActiveTab.filter(
+            (order) => displayedOrderStatus(order) === statusFilter,
+          ),
+    [ordersInActiveTab, statusFilter],
   );
   const selectableHistoryIds = useMemo(
     () =>
@@ -583,7 +627,7 @@ export default function Orders() {
 
   if (!authChecked) {
     return (
-      <div className="qurbi-page">
+      <div className="aisyah-page">
         <AppHeader title="My Orders" subtitle="Track and manage your purchases" />
         <PageLoading contentOnly message="Loading orders..." />
       </div>
@@ -609,7 +653,7 @@ export default function Orders() {
     );
 
   return (
-    <div className="qurbi-page">
+    <div className="aisyah-page">
       <AppHeader
         sticky
         title="My Orders"
@@ -639,6 +683,7 @@ export default function Orders() {
                   key={tab.key}
                   onClick={() => {
                     setActiveTab(tab.key);
+                    setStatusFilter("all");
                     setSelectingHistory(false);
                     setHistoryIds([]);
                   }}
@@ -656,24 +701,55 @@ export default function Orders() {
           {successMessage}
         </div>
       )}
-      <main className="qurbi-content space-y-5">
+      <main className="aisyah-content space-y-5 touch-pan-y">
         {loading && !orders.length ? (
           <PageLoading contentOnly message="Loading orders..." />
         ) : (
           <>
-            {activeTab === "to-pay" && (
-          <div className="flex justify-end">
-            <button
-              onClick={() => {
-                setSelectingHistory(!selectingHistory);
-                setHistoryIds([]);
-              }}
-              className={`rounded-xl border px-4 py-2 text-sm font-bold shadow-sm transition-transform active:scale-[0.98] ${selectingHistory ? "border-[#41362D] bg-gradient-to-br from-[#EF4444] to-[#B91C1C] text-white shadow-red-950/25" : "border-[#F7EDE2]/60 bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white shadow-black/20"}`}
-            >
-              {selectingHistory ? "Cancel" : "Select"}
-            </button>
-          </div>
-        )}
+            {(statusOptions.length > 0 || activeTab === "to-pay") && (
+              <div className="flex min-w-0 items-center gap-2">
+                {statusOptions.length > 0 && (
+                  <div className="horizontal-filter-scroll no-scrollbar -mx-1 min-w-0 flex-1 overflow-x-auto px-1">
+                    <div className="flex min-w-max gap-2">
+                      {["all", ...statusOptions].map((status) => {
+                        const selected = statusFilter === status;
+                        return (
+                          <button
+                            key={status}
+                            type="button"
+                            onClick={() => {
+                              setStatusFilter(status);
+                              setSelectingHistory(false);
+                              setHistoryIds([]);
+                            }}
+                            aria-pressed={selected}
+                            className={`rounded-full border px-3.5 py-2 text-xs font-bold transition-colors ${
+                              selected
+                                ? "border-[#41362D] bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white"
+                                : "border-[#D5B18D] bg-[#F7EDE2] text-[#41362D]"
+                            }`}
+                          >
+                            {status === "all" ? "All statuses" : status}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {activeTab === "to-pay" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectingHistory(!selectingHistory);
+                      setHistoryIds([]);
+                    }}
+                    className={`flex-none rounded-xl border px-4 py-2 text-sm font-bold shadow-sm transition-transform active:scale-[0.98] ${selectingHistory ? "border-[#41362D] bg-gradient-to-br from-[#EF4444] to-[#B91C1C] text-white shadow-red-950/25" : "border-[#F7EDE2]/60 bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white shadow-black/20"}`}
+                  >
+                    {selectingHistory ? "Cancel" : "Select"}
+                  </button>
+                )}
+              </div>
+            )}
             {selectingHistory && (
           <div className="grid grid-cols-2 gap-2">
             <button

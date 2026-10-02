@@ -6,7 +6,9 @@ import {
   FarmerProfile,
   Livestock,
   LivestockStatus,
+  OrderItem,
   RequestStatus,
+  ReservationStatus,
   Species,
   User,
   UserRole,
@@ -81,6 +83,14 @@ export class LivestockService extends BaseCrudService<Livestock> {
         availableStatus: LivestockStatus.AVAILABLE,
       })
         .andWhere('livestock.adminBlocked = false')
+        .andWhere(
+          `NOT EXISTS (
+            SELECT 1 FROM reservations activeReservation
+            WHERE activeReservation.livestockId = livestock.id
+              AND activeReservation.status = :activeReservationStatus
+          )`,
+          { activeReservationStatus: ReservationStatus.ACTIVE },
+        )
         .andWhere('farmerProfile.verificationStatus = :verified', { verified: VerificationStatus.VERIFIED })
         .andWhere('livestock.speciesApprovalStatus = :approved', { approved: RequestStatus.APPROVED })
         .andWhere('(livestock.breedId IS NULL OR livestock.breedApprovalStatus = :approved)', {
@@ -152,9 +162,19 @@ export class LivestockService extends BaseCrudService<Livestock> {
   async findOneForViewer(id: string, viewer?: AuthenticatedUser): Promise<LivestockWithVisibility> {
     await this.dataSource.transaction((manager) => this.reservationsService.expireDue(manager, id));
     const listing = await this.findOneWithVisibility(id);
+    const buyerOwnsOrderItem =
+      viewer?.role === UserRole.BUYER &&
+      await this.dataSource
+        .getRepository(OrderItem)
+        .createQueryBuilder('orderItem')
+        .innerJoin('orderItem.order', 'buyerOrder')
+        .where('orderItem.livestockId = :id', { id })
+        .andWhere('buyerOrder.buyerId = :buyerId', { buyerId: viewer.id })
+        .getExists();
     const canSeeHidden =
       viewer?.role === UserRole.ADMIN ||
-      (viewer?.role === UserRole.FARMER && listing.farmerId === viewer.id);
+      (viewer?.role === UserRole.FARMER && listing.farmerId === viewer.id) ||
+      buyerOwnsOrderItem;
     if (!canSeeHidden && !listing.marketplaceVisible) {
       throw new NotFoundException(`Livestock ${id} not found`);
     }
