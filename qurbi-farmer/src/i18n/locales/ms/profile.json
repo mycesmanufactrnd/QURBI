@@ -1,0 +1,41 @@
+{
+  "title": "Profil",
+  "editProfile": "Sunting profil",
+  "farmerAccount": "Akaun penternak",
+  "defaultName": "Penternak",
+  "verificationStatus": "Status pengesahan",
+  "seeWhatToFix": "Lihat apa yang perlu dibaiki",
+  "viewStatus": "Lihat status",
+  "verifyNow": "Sahkan sekarang",
+  "rows": {
+    "email": "E-mel",
+    "phone": "Telefon",
+    "farmName": "Nama Ladang",
+    "farmAddress": "Alamat Ladang",
+    "state": "Negeri"
+  },
+  "switchToBuyer": "Tukar ke akaun pembeli",
+  "switchToBuyerHint": "Beli ternakan daripada penternak lain dengan log masuk yang sama.",
+  "switchFailedTitle": "Tidak dapat menukar akaun",
+  "tryAgain": "Sila cuba lagi.",
+  "logOut": "Log keluar",
+  "footer": "QURBI Farmer · Fasa 1",
+  "updatedTitle": "Profil dikemas kini",
+  "updatedDescription": "Maklumat penternak anda telah disimpan.",
+  "saveFailed": "Profil tidak dapat disimpan. Sila cuba lagi.",
+  "dialog": {
+    "title": "Sunting profil penternak",
+    "description": "Kemas kini maklumat perhubungan dan ladang yang dipaparkan dalam akaun anda.",
+    "requiredNote": "Medan wajib",
+    "fullName": "Nama Penuh",
+    "email": "E-mel",
+    "emailHint": "E-mel dipautkan kepada akaun anda dan tidak boleh diubah di sini.",
+    "phone": "Nombor Telefon",
+    "farmName": "Nama Ladang",
+    "farmAddress": "Alamat Ladang",
+    "state": "Negeri",
+    "selectState": "Pilih negeri",
+    "icLocked": "Butiran IC dikunci kerana ia sebahagian daripada pengesahan identiti. Hubungi pentadbir jika ia tidak betul.",
+    "save": "Simpan perubahan"
+  }
+}

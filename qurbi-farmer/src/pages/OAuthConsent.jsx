@@ -3,6 +3,7 @@ import { appParams } from "@/lib/app-params";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, Loader2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
+import { useTranslation } from "react-i18next";
 
 // App-side OAuth consent page for the app's MCP server. The platform redirects
 // AI clients here (see base44/mcp/config.json `consent_path`) with an opaque
@@ -12,6 +13,7 @@ import AuthLayout from "@/components/AuthLayout";
 // Do not change the fetch calls, headers, or the `ctx` handle handling — styling
 // and copy are safe to edit.
 export default function OAuthConsent() {
+  const { t } = useTranslation("verification");
   const ctx = new URLSearchParams(window.location.search).get("ctx");
   const [info, setInfo] = useState(null);
   const [checking, setChecking] = useState(true);
@@ -25,7 +27,7 @@ export default function OAuthConsent() {
       let redirecting = false;
       try {
         if (!ctx) {
-          setError("This authorization link is invalid or has expired.");
+          setError(t("oauth.invalidLink"));
           return;
         }
         // Resolve the handle first: a dead handle must never render
@@ -42,7 +44,7 @@ export default function OAuthConsent() {
           { credentials: "include", headers: infoHeaders },
         );
         if (!res.ok) {
-          setError("This authorization link is invalid or has expired.");
+          setError(t("oauth.invalidLink"));
           return;
         }
         const data = await res.json();
@@ -73,7 +75,7 @@ export default function OAuthConsent() {
         }
         setInfo(data);
       } catch (e) {
-        setError("Could not load this authorization request. Please try again.");
+        setError(t("oauth.loadFailed"));
       } finally {
         if (!redirecting) setChecking(false);
       }
@@ -114,11 +116,11 @@ export default function OAuthConsent() {
         if ([400, 403, 404, 409].includes(res.status)) {
           let detail = "";
           try { detail = (await res.json()).detail; } catch (_) { /* keep default */ }
-          setReconnect(detail || "This authorization can no longer be completed. Reconnect from your AI client to try again.");
+          setReconnect(detail || t("oauth.reconnectDefault"));
           setSubmitting(false);
           return;
         }
-        throw new Error("Could not complete authorization. Please try again.");
+        throw new Error(t("oauth.completeFailed"));
       }
       const data = await res.json();
       window.location.href = data.redirect_url;
@@ -137,24 +139,24 @@ export default function OAuthConsent() {
 
   if (checking) {
     return (
-      <AuthLayout icon={ShieldCheck} title="Authorize access">
+      <AuthLayout icon={ShieldCheck} title={t("oauth.authorizeTitle")}>
         <div className="flex items-center justify-center py-6 text-muted-foreground">
           <Loader2 className="w-5 h-5 mr-2 animate-spin" aria-hidden="true" />
-          Loading…
+          {t("oauth.loading")}
         </div>
       </AuthLayout>
     );
   }
 
-  const client = (info && info.client_name) || "An AI client";
-  const appName = (info && info.app_name) || "this app";
+  const client = (info && info.client_name) || t("oauth.aiClient");
+  const appName = (info && info.app_name) || t("oauth.thisApp");
 
   if (decided) {
     return (
       <AuthLayout
         icon={ShieldCheck}
-        title={decided === "approve" ? "Access granted" : "Access denied"}
-        subtitle={`You can return to ${client} and close this window.`}
+        title={decided === "approve" ? t("oauth.granted") : t("oauth.denied")}
+        subtitle={t("oauth.returnToClient", { client })}
       />
     );
   }
@@ -164,7 +166,7 @@ export default function OAuthConsent() {
   // no approve/deny controls.
   if (reconnect) {
     return (
-      <AuthLayout icon={ShieldCheck} title="Reconnect required">
+      <AuthLayout icon={ShieldCheck} title={t("oauth.reconnectTitle")}>
         <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
           {reconnect}
         </div>
@@ -177,7 +179,7 @@ export default function OAuthConsent() {
   // the error alone, never the approve/deny controls.
   if (error && !info) {
     return (
-      <AuthLayout icon={ShieldCheck} title="Authorize access">
+      <AuthLayout icon={ShieldCheck} title={t("oauth.authorizeTitle")}>
         <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
           {error}
         </div>
@@ -190,8 +192,8 @@ export default function OAuthConsent() {
   return (
     <AuthLayout
       icon={ShieldCheck}
-      title="Authorize access"
-      subtitle={`${client} wants to access ${appName} on your behalf`}
+      title={t("oauth.authorizeTitle")}
+      subtitle={t("oauth.wantsAccess", { client, app: appName })}
     >
       {error && (
         <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
@@ -200,7 +202,7 @@ export default function OAuthConsent() {
       )}
 
       <p className="text-sm font-medium text-foreground mb-2">
-        {tools.length ? `It will be able to use these tools in ${appName}:` : "No tools requested"}
+        {tools.length ? t("oauth.toolsIntro", { app: appName }) : t("oauth.noTools")}
       </p>
       {tools.length > 0 && (
         <ul className="space-y-2 text-sm mb-6">
@@ -224,7 +226,7 @@ export default function OAuthConsent() {
           disabled={submitting}
           onClick={() => respond("deny")}
         >
-          Deny
+          {t("oauth.deny")}
         </Button>
         <Button
           className="flex-1 h-12 font-medium"
@@ -232,7 +234,7 @@ export default function OAuthConsent() {
           onClick={() => respond("approve")}
         >
           {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-          Approve
+          {t("oauth.approve")}
         </Button>
       </div>
     </AuthLayout>

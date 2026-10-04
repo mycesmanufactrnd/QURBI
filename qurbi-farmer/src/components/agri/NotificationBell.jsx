@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 import { qurbi } from "@/api/qurbiClient";
 import { Bell, CheckCheck, CheckCircle2, ChevronRight, Loader2, PackageCheck, ShieldAlert, XCircle } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -10,14 +12,14 @@ const PREVIEW_LIMIT = 5;
 function relativeTime(value) {
   if (!value) return "";
   const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
-  if (seconds < 60) return "Just now";
+  if (seconds < 60) return i18n.t("relativeTime.justNow");
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) return i18n.t("relativeTime.minutesAgo", { count: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return i18n.t("relativeTime.hoursAgo", { count: hours });
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return new Date(value).toLocaleDateString("en-MY", { day: "numeric", month: "short" });
+  if (days < 7) return i18n.t("relativeTime.daysAgo", { count: days });
+  return new Date(value).toLocaleDateString(i18n.language === "ms" ? "ms-MY" : "en-MY", { day: "numeric", month: "short" });
 }
 
 function notificationStyle(notification) {
@@ -37,6 +39,7 @@ function notificationStyle(notification) {
 }
 
 export default function NotificationBell() {
+  const { t } = useTranslation("notifications");
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
@@ -95,7 +98,7 @@ export default function NotificationBell() {
         <button
           type="button"
           className="relative flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card text-primary shadow-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          aria-label={unreadCount ? `${unreadCount} unread notifications` : "Notifications"}
+          aria-label={unreadCount ? t("unreadAria", { count: unreadCount }) : t("title")}
         >
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
@@ -114,8 +117,8 @@ export default function NotificationBell() {
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-3.5">
           <div>
-            <h2 className="font-extrabold tracking-tight">Notifications</h2>
-            <p className="text-sm text-muted-foreground">{unreadCount ? `${unreadCount} unread update${unreadCount === 1 ? "" : "s"}` : "You're all caught up"}</p>
+            <h2 className="font-extrabold tracking-tight">{t("title")}</h2>
+            <p className="text-sm text-muted-foreground">{unreadCount ? t("unreadUpdates", { count: unreadCount }) : t("allCaughtUp")}</p>
           </div>
           <button
             type="button"
@@ -124,7 +127,7 @@ export default function NotificationBell() {
             className="flex items-center gap-1.5 min-h-10 rounded-full px-3 py-1.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 disabled:cursor-default disabled:opacity-40"
           >
             {marking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCheck className="h-3.5 w-3.5" />}
-            Mark all read
+            {t("markAllRead")}
           </button>
         </div>
 
@@ -147,7 +150,7 @@ export default function NotificationBell() {
                 <span className="min-w-0 flex-1">
                   <span className="flex items-start gap-2">
                     <span className="line-clamp-1 flex-1 text-sm font-bold text-foreground">{notification.title}</span>
-                    {notification.priority === "Important" && <span className="rounded-full bg-destructive px-2 py-0.5 text-[11px] font-extrabold tracking-wide text-destructive-foreground">IMPORTANT</span>}
+                    {notification.priority === "Important" && <span className="rounded-full bg-destructive px-2 py-0.5 text-[11px] font-extrabold tracking-wide text-destructive-foreground">{t("important")}</span>}
                     {!notification.isRead && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />}
                   </span>
                   <span className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{notification.message}</span>
@@ -159,8 +162,8 @@ export default function NotificationBell() {
           }) : (
             <div className="px-6 py-10 text-center">
               <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground"><Bell className="h-5 w-5" /></span>
-              <p className="mt-3 text-sm font-bold">No notifications yet</p>
-              <p className="mt-1 text-xs text-muted-foreground">Farmer and listing updates will appear here.</p>
+              <p className="mt-3 text-sm font-bold">{t("emptyTitle")}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t("bellEmptyDescription")}</p>
             </div>
           )}
         </div>
@@ -170,7 +173,7 @@ export default function NotificationBell() {
           onClick={() => { setOpen(false); navigate("/notifications"); }}
           className="flex w-full items-center justify-center gap-1 border-t border-border bg-muted/30 px-4 py-3 text-xs font-bold text-primary transition-colors hover:bg-muted"
         >
-          View all notifications <ChevronRight className="h-4 w-4" />
+          {t("viewAll")} <ChevronRight className="h-4 w-4" />
         </button>
       </PopoverContent>
     </Popover>

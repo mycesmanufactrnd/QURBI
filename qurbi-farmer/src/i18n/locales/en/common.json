@@ -1,0 +1,45 @@
+{
+  "language": {
+    "title": "Language",
+    "subtitle": "Choose the language used across the app.",
+    "malay": "Bahasa Melayu",
+    "english": "English"
+  },
+  "actions": {
+    "cancel": "Cancel",
+    "logOut": "Log out",
+    "retry": "Retry",
+    "goHome": "Go Home"
+  },
+  "verification": {
+    "Not Submitted": "Not Submitted",
+    "Pending": "Pending Verification",
+    "Approved": "Verified Farmer",
+    "Rejected": "Verification Rejected"
+  },
+  "relativeTime": {
+    "justNow": "Just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago"
+  },
+  "errors": {
+    "notFarmer": "This account is not registered as a farmer. Open the QURBI buyer app, go to Profile and choose Register as a farmer.",
+    "noPortalAccess": "This account does not have access to the QURBI Farmer portal.",
+    "authRequired": "Authentication required"
+  },
+  "notFound": {
+    "title": "Page Not Found",
+    "description": "The page \"{{page}}\" could not be found in this application.",
+    "adminNote": "Admin Note",
+    "adminNoteBody": "This could mean that the AI hasn't implemented this page yet. Ask it to implement it in the chat."
+  },
+  "notRegistered": {
+    "title": "Access Restricted",
+    "description": "You are not registered to use this application. Please contact the app administrator to request access.",
+    "intro": "If you believe this is an error, you can:",
+    "tip1": "Verify you are logged in with the correct account",
+    "tip2": "Contact the app administrator for access",
+    "tip3": "Try logging out and back in again"
+  }
+}

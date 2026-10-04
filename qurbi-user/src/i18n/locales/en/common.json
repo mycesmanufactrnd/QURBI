@@ -33,5 +33,9 @@
     "adminNoteTitle": "Admin Note",
     "adminNoteBody": "This could mean that the AI hasn't implemented this page yet. Ask it to implement it in the chat.",
     "goHome": "Go Home"
+  },
+  "sidebar": {
+    "notifications": "Notifications",
+    "profile": "Profile"
   }
 }

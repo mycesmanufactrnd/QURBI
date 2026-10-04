@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { qurbi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
 import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
@@ -12,6 +13,7 @@ import { MALAYSIA_STATES } from "@/lib/agri";
 
 export default function AddLivestock() {
   const navigate = useNavigate();
+  const { t } = useTranslation("livestock");
   const { user } = useAuth();
   const [initial, setInitial] = useState(null);
   const [registeredState, setRegisteredState] = useState("");
@@ -47,15 +49,16 @@ export default function AddLivestock() {
   const hint = attempted && missing.length
     ? <MissingSummary missing={missing} />
     : missing.length
-      ? `${missing.length} required item${missing.length === 1 ? "" : "s"} left · Step 1 of 2`
-      : "All required details are filled in · Step 1 of 2";
+      ? t("add.hintLeft", { count: missing.length })
+      : t("add.hintDone");
 
   return (
     <div className="mx-auto w-full max-w-6xl">
       <Header
         onBack={() => navigate("/livestock")}
-        title="Add Livestock"
-        description="Fill in the details for one animal. You'll review and sign on the next step."
+        title={t("add.title")}
+        description={t("add.description")}
+        backLabel={t("add.backAria")}
       />
       <StepIndicator current={1} className="mt-5" />
 
@@ -73,20 +76,20 @@ export default function AddLivestock() {
 
       <StickyActionBar hint={hint} hintTone={attempted && missing.length ? "danger" : missing.length ? "muted" : "success"}>
         <Button variant="outline" onClick={() => navigate("/livestock")} className="h-12 w-[34%] shrink-0 rounded-2xl">
-          Cancel
+          {t("add.cancel")}
         </Button>
         <Button onClick={() => formRef.current?.submit()} className="h-12 flex-1 rounded-2xl text-base font-semibold">
-          Next: review <ArrowRight className="ml-1.5 h-5 w-5" />
+          {t("add.next")} <ArrowRight className="ml-1.5 h-5 w-5" />
         </Button>
       </StickyActionBar>
     </div>
   );
 }
 
-function Header({ onBack, title, description }) {
+function Header({ onBack, title, description, backLabel }) {
   return (
     <div className="flex items-center gap-4">
-      <button type="button" onClick={onBack} aria-label="Back to livestock" className="soft-card flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-colors hover:bg-muted">
+      <button type="button" onClick={onBack} aria-label={backLabel} className="soft-card flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-colors hover:bg-muted">
         <ArrowLeft className="h-5 w-5" />
       </button>
       <div className="min-w-0">

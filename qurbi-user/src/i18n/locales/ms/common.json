@@ -33,5 +33,9 @@
     "adminNoteTitle": "Nota Admin",
     "adminNoteBody": "Ini mungkin bermakna AI belum melaksanakan halaman ini lagi. Minta ia melaksanakannya dalam sembang.",
     "goHome": "Kembali ke Utama"
+  },
+  "sidebar": {
+    "notifications": "Notifikasi",
+    "profile": "Profil"
   }
 }

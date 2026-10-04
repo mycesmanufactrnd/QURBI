@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { qurbi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
 import { AlertTriangle, BadgeCheck, Boxes, Camera, ChevronRight, Clock, PackageCheck, Plus, ShoppingBag, TrendingUp } from "lucide-react";
@@ -10,13 +11,14 @@ import NotificationBell from "@/components/agri/NotificationBell";
 import SectionHeader from "@/components/agri/SectionHeader";
 import StatusBadge from "@/components/agri/StatusBadge";
 import { Image } from "@/components/ui/image";
-import { displayName, farmStats, formatMYR, greeting, initials, listingExpiry, orderItemTitle, orderStatusMeta, shortName, userVal } from "@/lib/agri";
+import { displayName, farmStats, formatMYR, initials, listingExpiry, orderItemTitle, orderStatusMeta, shortName, userVal } from "@/lib/agri";
 import { reconcileOrderLivestockStatuses } from "@/lib/orderLivestockStatus";
 import CowSilhouetteIcon from "@/components/agri/CowSilhouetteIcon";
 import { refreshExpiredReservations } from "@/lib/livestockReservation";
 import { cn } from "@/lib/utils";
 
 export default function Home() {
+  const { t } = useTranslation("home");
   const navigate = useNavigate();
   const { user } = useAuth();
   const [livestock, setLivestock] = useState([]);
@@ -31,7 +33,7 @@ export default function Home() {
         // Keep order reconciliation before livestock statistics so Sold/Available remains current.
         const orderResponse = await qurbi.functions.invoke("fetchFarmerOrders", {});
         const nextOrders = orderResponse.data?.orders;
-        if (!Array.isArray(nextOrders)) throw new Error("The order service returned an invalid response.");
+        if (!Array.isArray(nextOrders)) throw new Error(t("invalidOrderResponse"));
         const storedLivestock = await refreshExpiredReservations(
           await qurbi.entities.Livestock.list("-created_date", 500),
         );
@@ -45,7 +47,7 @@ export default function Home() {
         setLoadError("");
       } catch (error) {
         console.error("Failed to refresh home data:", error);
-        if (mounted) setLoadError("We couldn't refresh your dashboard. Showing the latest information we have.");
+        if (mounted) setLoadError(t("loadError"));
       } finally {
         if (mounted) setLoading(false);
       }
@@ -56,6 +58,8 @@ export default function Home() {
   }, []);
 
   const fullName = displayName(user);
+  const hour = new Date().getHours();
+  const greetingText = t(hour < 12 ? "greeting.morning" : hour < 18 ? "greeting.afternoon" : "greeting.evening");
   const stats = farmStats(orders, livestock);
   const expiredCount = livestock.filter((item) => item.status === "Available" && listingExpiry(item).expired).length;
   const ordersToHandle = orders.filter((order) => orderStatusMeta(order.status).group === "action");
@@ -67,7 +71,7 @@ export default function Home() {
       <section className="home-brand-hero -mx-5 -mt-5 px-5 pb-10 pt-4 text-white lg:mx-0 lg:mt-0 lg:rounded-[1.75rem] lg:px-8 lg:pb-12 lg:pt-5">
         <header
           className="relative z-10 flex min-h-12 items-center justify-between"
-          aria-label="QURBI Farmer header"
+          aria-label={t("headerLabel")}
         >
           <BrandLogo
             light
@@ -78,14 +82,14 @@ export default function Home() {
             <button
               type="button"
               onClick={() => navigate("/profile")}
-              aria-label="Open farmer profile"
+              aria-label={t("openProfile")}
               className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-secondary/70 bg-secondary font-extrabold text-secondary-foreground shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
               {userVal(user, "profilePhoto") ? (
                 <Image
                   src={userVal(user, "profilePhoto")}
                   fittingType="fill"
-                  alt="Farmer profile"
+                  alt={t("profileAlt")}
                   className="h-full w-full"
                 />
               ) : (
@@ -95,19 +99,19 @@ export default function Home() {
           </div>
         </header>
         <div className="relative z-10 mt-6 min-w-0">
-          <p className="text-base font-medium text-white/80">{greeting()},</p>
+          <p className="text-base font-medium text-white/80">{greetingText},</p>
           <h1 className="truncate text-2xl font-extrabold tracking-tight lg:text-3xl" title={fullName}>{shortName(fullName) || fullName}</h1>
-          <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold text-secondary ring-1 ring-white/15 backdrop-blur"><BadgeCheck className="h-4 w-4" /> Verified Farmer</span>
+          <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold text-secondary ring-1 ring-white/15 backdrop-blur"><BadgeCheck className="h-4 w-4" /> {t("verifiedFarmer")}</span>
         </div>
       </section>
 
       <div className="relative z-20 -mx-5 -mt-6 lg:mx-0">
         <div className="rounded-t-[2rem] border-b border-border/60 bg-card px-4 pb-4 pt-5 shadow-[0_-8px_24px_rgba(65,54,45,0.08)] sm:px-6 lg:rounded-[2rem]">
           <div className="grid grid-cols-4 gap-1.5">
-            <QuickAction icon={Plus} label="Add animal" onClick={() => navigate("/livestock/add")} primary />
-            <QuickAction icon={Boxes} label="Bulk sell" onClick={() => navigate("/bulk")} />
-            <QuickAction icon={ShoppingBag} label="Orders" badge={stats.toHandle} onClick={() => navigate("/orders")} />
-            <QuickAction icon={CowSilhouetteIcon} iconClassName="h-8 w-8" label="My animals" onClick={() => navigate("/livestock")} />
+            <QuickAction icon={Plus} label={t("quick.addAnimal")} onClick={() => navigate("/livestock/add")} primary />
+            <QuickAction icon={Boxes} label={t("quick.bulkSell")} onClick={() => navigate("/bulk")} />
+            <QuickAction icon={ShoppingBag} label={t("quick.orders")} badge={stats.toHandle} onClick={() => navigate("/orders")} />
+            <QuickAction icon={CowSilhouetteIcon} iconClassName="h-8 w-8" label={t("quick.myAnimals")} onClick={() => navigate("/livestock")} />
           </div>
         </div>
       </div>
@@ -116,7 +120,7 @@ export default function Home() {
 
       {!loading && (ordersToHandle.length > 0 || expiredCount > 0) && (
         <section className="mt-6" aria-labelledby="todo-heading">
-          <SectionHeader title={<span id="todo-heading">To do</span>} />
+          <SectionHeader title={<span id="todo-heading">{t("todo.title")}</span>} />
           <div className="mt-3 space-y-2.5">
             {ordersToHandle.slice(0, 3).map((order) => {
               const meta = orderStatusMeta(order.status);
@@ -136,8 +140,8 @@ export default function Home() {
               <button type="button" onClick={() => navigate("/livestock?filter=Expired")} className="flex min-h-[72px] w-full items-center gap-3 rounded-[1.25rem] border border-destructive/25 bg-destructive/5 p-3.5 text-left transition-colors hover:bg-destructive/10">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-destructive/10 text-destructive"><AlertTriangle className="h-5 w-5" /></span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-extrabold text-foreground">{expiredCount} listing{expiredCount === 1 ? "" : "s"} expired</span>
-                  <span className="mt-0.5 block text-sm leading-snug text-muted-foreground">Buyers can&apos;t see {expiredCount === 1 ? "it" : "them"}. Check the details and renew for 14 days.</span>
+                  <span className="block text-sm font-extrabold text-foreground">{t("todo.expired", { count: expiredCount })}</span>
+                  <span className="mt-0.5 block text-sm leading-snug text-muted-foreground">{t("todo.expiredHint", { count: expiredCount })}</span>
                 </span>
                 <ChevronRight className="h-5 w-5 shrink-0 text-destructive" />
               </button>
@@ -146,30 +150,30 @@ export default function Home() {
         </section>
       )}
 
-      <SectionHeader title="Farm overview" className="mt-6" />
+      <SectionHeader title={t("overview.title")} className="mt-6" />
       <div className="soft-card mt-3 grid grid-cols-3 divide-x divide-border/70 overflow-hidden p-1">
-        <OverviewMetric icon={PackageCheck} label="For sale" value={loading ? "—" : stats.active} tone="primary" onClick={() => navigate("/livestock?filter=Available")} />
-        <OverviewMetric icon={Clock} label="Orders to handle" value={loading ? "—" : stats.toHandle} tone="warning" onClick={() => navigate("/orders?filter=action")} />
-        <OverviewMetric icon={TrendingUp} label="Sold" value={loading ? "—" : stats.sold} tone="success" onClick={() => navigate("/orders?filter=done")} />
+        <OverviewMetric icon={PackageCheck} label={t("overview.forSale")} value={loading ? "—" : stats.active} tone="primary" onClick={() => navigate("/livestock?filter=Available")} />
+        <OverviewMetric icon={Clock} label={t("overview.ordersToHandle")} value={loading ? "—" : stats.toHandle} tone="warning" onClick={() => navigate("/orders?filter=action")} />
+        <OverviewMetric icon={TrendingUp} label={t("overview.sold")} value={loading ? "—" : stats.sold} tone="success" onClick={() => navigate("/orders?filter=done")} />
       </div>
       {!loading && stats.awaitingPayment > 0 && (
-        <p className="mt-2 px-1 text-sm text-muted-foreground">{stats.awaitingPayment} more order{stats.awaitingPayment === 1 ? " is" : "s are"} waiting for the buyer to pay.</p>
+        <p className="mt-2 px-1 text-sm text-muted-foreground">{t("overview.awaitingPayment", { count: stats.awaitingPayment })}</p>
       )}
 
       <div className="mt-7">
-        <SectionHeader title="Your animals for sale" action={<button type="button" onClick={() => navigate("/livestock")} className="min-h-11 rounded-full px-3 text-sm font-bold text-primary hover:bg-secondary/60">See all</button>} />
+        <SectionHeader title={t("forSale.title")} action={<button type="button" onClick={() => navigate("/livestock")} className="min-h-11 rounded-full px-3 text-sm font-bold text-primary hover:bg-secondary/60">{t("forSale.seeAll")}</button>} />
         {loading ? (
           <div className="mt-3 aspect-[16/11] animate-pulse rounded-[1.25rem] bg-muted sm:aspect-[16/7]" />
         ) : forSale.length ? (
           <div className="mt-3"><FeaturedListingsCarousel items={forSale} onView={(item) => navigate(`/livestock/${item.id}`)} /></div>
         ) : (
-          <EmptyState className="mt-3" icon={CowSilhouetteIcon} title="Nothing for sale right now" description="Add an animal so buyers can find it on QURBI." action={<button type="button" onClick={() => navigate("/livestock/add")} className="brand-gradient min-h-11 rounded-2xl px-5 text-sm font-bold text-white">Add animal</button>} />
+          <EmptyState className="mt-3" icon={CowSilhouetteIcon} title={t("forSale.emptyTitle")} description={t("forSale.emptyDescription")} action={<button type="button" onClick={() => navigate("/livestock/add")} className="brand-gradient min-h-11 rounded-2xl px-5 text-sm font-bold text-white">{t("forSale.addAnimal")}</button>} />
         )}
       </div>
 
       {recentOrders.length > 0 && (
         <div className="mt-7">
-          <SectionHeader title="Recent orders" action={<button type="button" onClick={() => navigate("/orders")} className="min-h-11 rounded-full px-3 text-sm font-bold text-primary hover:bg-secondary/60">See all</button>} />
+          <SectionHeader title={t("recentOrders.title")} action={<button type="button" onClick={() => navigate("/orders")} className="min-h-11 rounded-full px-3 text-sm font-bold text-primary hover:bg-secondary/60">{t("recentOrders.seeAll")}</button>} />
           <div className="mt-3 space-y-2.5">
             {recentOrders.map((order) => {
               const { title } = orderItemTitle(order.items?.[0]);
@@ -204,7 +208,7 @@ function QuickAction({ icon: Icon, iconClassName = "h-5 w-5", label, onClick, pr
     <button type="button" onClick={onClick} className="group flex min-h-[88px] min-w-0 flex-col items-center gap-2 rounded-2xl px-1 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
       <span className={cn("relative flex h-14 w-14 items-center justify-center rounded-full transition-transform group-hover:-translate-y-0.5", primary ? "brand-gradient text-primary-foreground shadow-[0_5px_14px_rgba(65,54,45,0.2)]" : "bg-secondary/65 text-primary")}>
         <Icon className={iconClassName} />
-        {badge > 0 && <span className="absolute -right-1 -top-1 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-card bg-amber-500 px-1 text-[11px] font-extrabold text-white" aria-label={`${badge} to handle`}>{badge}</span>}
+        {badge > 0 && <span className="absolute -right-1 -top-1 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-card bg-amber-500 px-1 text-[11px] font-extrabold text-white" aria-label={t("quick.toHandle", { count: badge })}>{badge}</span>}
       </span>
       <span className="text-center text-xs font-bold leading-tight text-foreground sm:text-sm">{label}</span>
     </button>

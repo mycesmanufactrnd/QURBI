@@ -1,0 +1,64 @@
+{
+  "backAria": "Kembali ke butiran senarai",
+  "title": "Semak & tandatangan",
+  "subtitle": "Semak senarai anda, baca polisi penjual, kemudian tandatangan.",
+  "summary": {
+    "heading": "1. Semak senarai anda",
+    "description": "Inilah yang akan dilihat oleh pembeli. Ketik Sunting untuk mengubah sebarang butiran.",
+    "age": "Umur",
+    "gender": "Jantina",
+    "listingStatus": "Status senarai"
+  },
+  "policy": {
+    "heading": "2. Baca polisi penjual",
+    "intro": "Dengan menghantar senarai ini, saya mengesahkan dan bersetuju bagi pihak ladang saya:",
+    "items": {
+      "accurate": {
+        "title": "Maklumat ternakan yang tepat",
+        "text": "Semua butiran (spesies, baka, umur, warna, negeri, makanan, gambar dan video) adalah benar dan terkini setakat pengetahuan saya."
+      },
+      "compliance": {
+        "title": "Kesihatan haiwan & pematuhan undang-undang/permit Malaysia",
+        "text": "Haiwan mematuhi peraturan ternakan, kesihatan dan pergerakan di Malaysia, termasuk permit yang diperlukan dan piawaian veterinar."
+      },
+      "pricing": {
+        "title": "Harga, ketersediaan & tanggungjawab pesanan",
+        "text": "Saya menetapkan harga sendiri, memastikan ketersediaan sentiasa tepat, dan bertanggungjawab menunaikan pesanan yang diterima."
+      },
+      "delivery": {
+        "title": "Tanggungjawab penghantaran",
+        "text": "Saya akan melaksanakan penghantaran mengikut kaedah penghantaran yang dipilih dan memastikan serahan yang selamat kepada pembeli."
+      },
+      "privacy": {
+        "title": "Privasi pembeli, penipuan & penguatkuasaan akaun",
+        "text": "Saya akan melindungi maklumat pembeli, tidak terlibat dalam sebarang aktiviti penipuan, dan memahami bahawa QURBI boleh menggantung akaun yang melanggar polisi ini."
+      }
+    },
+    "version": "Versi polisi: {{version}}"
+  },
+  "sign": {
+    "heading": "3. Tandatangan & sahkan",
+    "fullName": "Nama penuh",
+    "fullNamePlaceholder": "Nama penuh anda",
+    "fullNameError": "Masukkan nama penuh anda.",
+    "date": "Tarikh",
+    "dateHint": "Tarikh hari ini telah diisi. Tarikh akan datang tidak dibenarkan.",
+    "signature": "Tandatangan",
+    "agree": "Saya telah membaca dan bersetuju dengan Polisi Penjual serta mengesahkan semua maklumat adalah tepat."
+  },
+  "errorKept": "Butiran dan tandatangan anda disimpan — sila cuba lagi.",
+  "submitFailed": "Penghantaran gagal. Sila cuba lagi.",
+  "hint": {
+    "ready": "Sedia untuk dihantar. Pembeli akan melihatnya setelah diterbitkan.",
+    "missing": "Untuk menghantar, sila lengkapkan: {{items}}."
+  },
+  "missing": {
+    "name": "nama penuh anda",
+    "date": "tarikh",
+    "signature": "tandatangan anda",
+    "agree": "tandakan kotak persetujuan"
+  },
+  "back": "Kembali",
+  "submitting": "Sedang menghantar...",
+  "submit": "Hantar senarai"
+}

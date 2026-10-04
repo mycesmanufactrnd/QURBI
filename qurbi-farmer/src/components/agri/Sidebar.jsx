@@ -1,5 +1,6 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/AuthContext";
 import BrandLogo from "@/components/agri/BrandLogo";
 import { Bell, Boxes, Home, ShoppingBag, User, LogOut } from "lucide-react";
@@ -7,17 +8,18 @@ import { cn } from "@/lib/utils";
 import CowSilhouetteIcon from "@/components/agri/CowSilhouetteIcon";
 
 const ITEMS = [
-  { to: "/", label: "Home", icon: Home, end: true },
-  { to: "/livestock", label: "My Livestock", icon: CowSilhouetteIcon },
-  { to: "/bulk", label: "Bulk Sell", icon: Boxes },
-  { to: "/orders", label: "Orders", icon: ShoppingBag },
-  { to: "/notifications", label: "Notifications", icon: Bell },
-  { to: "/profile", label: "Profile", icon: User },
+  { to: "/", labelKey: "home", icon: Home, end: true },
+  { to: "/livestock", labelKey: "myLivestock", icon: CowSilhouetteIcon },
+  { to: "/bulk", labelKey: "bulkSell", icon: Boxes },
+  { to: "/orders", labelKey: "orders", icon: ShoppingBag },
+  { to: "/notifications", labelKey: "notifications", icon: Bell },
+  { to: "/profile", labelKey: "profile", icon: User },
 ];
 
 export default function Sidebar() {
+  const { t } = useTranslation("nav");
   const { user, logout } = useAuth();
-  const name = user?.data?.name || user?.full_name || user?.email?.split("@")[0] || "Farmer";
+  const name = user?.data?.name || user?.full_name || user?.email?.split("@")[0] || t("defaultName");
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-[260px] flex-col border-r border-border/70 bg-card/95 shadow-[4px_0_24px_rgba(65,54,45,0.04)] lg:flex">
@@ -26,7 +28,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {ITEMS.map(({ to, label, icon: Icon, end }) => (
+        {ITEMS.map(({ to, labelKey, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
@@ -41,7 +43,7 @@ export default function Sidebar() {
             }
           >
             <Icon className="w-5 h-5" />
-            {label}
+            {t(labelKey)}
           </NavLink>
         ))}
       </nav>
@@ -57,7 +59,7 @@ export default function Sidebar() {
           onClick={() => logout()}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-destructive hover:bg-destructive/10 transition-colors"
         >
-          <LogOut className="w-5 h-5" /> Log out
+          <LogOut className="w-5 h-5" /> {t("logOut")}
         </button>
       </div>
     </aside>

@@ -3,6 +3,7 @@ import { uploadApi } from "@/api/apiClient";
 import { Image } from "@/components/ui/image";
 import { Upload, X, Loader2, FileCheck2, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 const MAX_DIMENSION = 1280;
 
@@ -45,11 +46,12 @@ export default function DocUploader({
   capture,
   aspectClassName = "aspect-[16/10]",
   fittingType = "fit",
-  uploadLabel = "Tap to upload",
-  replaceLabel = "Replace",
+  uploadLabel,
+  replaceLabel,
   error: externalError,
   id,
 }) {
+  const { t } = useTranslation("shared");
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
@@ -79,7 +81,7 @@ export default function DocUploader({
       .catch((err) => {
         if (!cancelled) {
           setPreviewUrl("");
-          setError(err?.message || "Unable to display the uploaded document.");
+          setError(err?.message || t("docUploader.loadFailed"));
         }
       });
 
@@ -87,7 +89,7 @@ export default function DocUploader({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [value]);
+  }, [value, t]);
 
   const handleFile = async (file) => {
     if (!file) return;
@@ -96,10 +98,10 @@ export default function DocUploader({
     try {
       const compressed = await compressFile(file);
       const { fileUrl } = await uploadApi.upload(compressed, "private");
-      if (!fileUrl) throw new Error("Upload returned no URL");
+      if (!fileUrl) throw new Error(t("docUploader.noUrl"));
       onChange(fileUrl);
     } catch (err) {
-      setError(err?.message || "Upload failed. Please try again.");
+      setError(err?.message || t("docUploader.uploadFailed"));
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -108,7 +110,7 @@ export default function DocUploader({
 
   return (
     <div id={id ? `field-${id}` : undefined} className="scroll-mt-24">
-      <p className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold text-foreground">{label}{required && <span className="text-destructive" aria-hidden="true">*</span>}{value && <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-label="Uploaded" />}</p>
+      <p className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold text-foreground">{label}{required && <span className="text-destructive" aria-hidden="true">*</span>}{value && <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-label={t("docUploader.uploaded")} />}</p>
       {hint && <p className="text-sm text-muted-foreground mb-2">{hint}</p>}
       {error && <p role="alert" className="text-sm text-destructive mb-2">{error}</p>}
       {!error && externalError && !value && <p role="alert" className="text-sm font-medium text-destructive mb-2">{externalError}</p>}
@@ -126,7 +128,7 @@ export default function DocUploader({
             <Image src={previewUrl} fittingType={fittingType} className="w-full h-full" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-              Loading secure preview...
+              {t("docUploader.loadingPreview")}
             </div>
           )}
           <button
@@ -134,12 +136,12 @@ export default function DocUploader({
             onClick={() => inputRef.current?.click()}
             className="absolute bottom-2 left-2 min-h-10 px-3.5 py-2 rounded-full bg-black/65 text-white text-sm font-semibold flex items-center gap-1.5"
           >
-            <FileCheck2 className="w-4 h-4" /> {replaceLabel}
+            <FileCheck2 className="w-4 h-4" /> {replaceLabel ?? t("docUploader.replace")}
           </button>
           <button
             type="button"
             onClick={() => onChange(null)}
-            aria-label="Remove this photo"
+            aria-label={t("docUploader.removePhoto")}
             className="absolute top-2 right-2 w-10 h-10 rounded-full bg-black/65 text-white flex items-center justify-center"
           >
             <X className="w-4 h-4" />
@@ -162,7 +164,7 @@ export default function DocUploader({
           ) : (
             <Upload className="w-6 h-6" />
           )}
-          <span className="text-sm font-semibold">{uploading ? "Uploading..." : uploadLabel}</span>
+          <span className="text-sm font-semibold">{uploading ? t("docUploader.uploading") : (uploadLabel ?? t("docUploader.tapToUpload"))}</span>
         </button>
       )}
     </div>

@@ -117,11 +117,13 @@ async function unwrap(request) {
 
 export const authApi = {
   register: (details) => unwrap(apiClient.post("/auth/register", details)),
-  login: (credentials) => unwrap(apiClient.post("/auth/login", credentials)),
+  login: (credentials) => unwrap(apiClient.post("/auth/login", { ...credentials, portal: "farmer" })),
   me: () => unwrap(apiClient.get("/auth/me")),
   refresh: (refreshToken) => unwrap(apiClient.post("/auth/refresh", { refreshToken })),
   logout: (refreshToken) => unwrap(apiClient.post("/auth/logout", { refreshToken })),
   firebase: (idToken) => unwrap(apiClient.post("/auth/firebase", { idToken, portal: "farmer" })),
+  // Returns a NEW session for the other portal; this portal stays signed in.
+  switchRole: (role, refreshToken) => unwrap(apiClient.post("/auth/switch-role", { role, refreshToken })),
 };
 
 export const uploadApi = {

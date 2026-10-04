@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { qurbi } from "@/api/qurbiClient";
 import { Bell, CheckCheck, CheckCircle2, ChevronRight, Loader2, PackageCheck, ShieldAlert, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { formatDateTime, formatRelative } from "@/lib/agri";
 import { cn } from "@/lib/utils";
 
 export default function Notifications() {
+  const { t } = useTranslation("notifications");
   const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,7 +21,7 @@ export default function Notifications() {
     setLoadError("");
     qurbi.entities.FarmerNotification.list("-created_date", 200)
       .then((rows) => setItems(rows || []))
-      .catch((error) => setLoadError(error?.message || "Notifications could not be loaded."))
+      .catch((error) => setLoadError(error?.message || t("loadFailed")))
       .finally(() => setLoading(false));
   };
 
@@ -58,11 +60,11 @@ export default function Notifications() {
     <div className="mx-auto max-w-3xl animate-fade-in">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl font-extrabold tracking-tight lg:text-3xl">Notifications</h1>
-          <p className="text-sm text-muted-foreground">{unreadCount ? `${unreadCount} new update${unreadCount === 1 ? "" : "s"}` : "You're all caught up"}</p>
+          <h1 className="text-2xl font-extrabold tracking-tight lg:text-3xl">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{unreadCount ? t("newUpdates", { count: unreadCount }) : t("allCaughtUp")}</p>
         </div>
         <Button variant="outline" onClick={markAllRead} disabled={!unreadCount || marking} className="h-11 shrink-0 rounded-2xl px-3">
-          {marking ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <CheckCheck className="mr-1.5 h-4 w-4" />} Mark all read
+          {marking ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <CheckCheck className="mr-1.5 h-4 w-4" />} {t("markAllRead")}
         </Button>
       </div>
 
@@ -70,7 +72,7 @@ export default function Notifications() {
         {loadError && (
           <div role="alert" className="flex items-center justify-between gap-3 rounded-2xl bg-destructive/10 p-4 text-sm text-destructive">
             <span>{loadError}</span>
-            <button type="button" onClick={load} className="min-h-11 shrink-0 rounded-xl bg-card px-3 font-bold">Retry</button>
+            <button type="button" onClick={load} className="min-h-11 shrink-0 rounded-xl bg-card px-3 font-bold">{t("retry")}</button>
           </div>
         )}
         {loading ? (
@@ -102,17 +104,17 @@ export default function Notifications() {
               <span className="min-w-0 flex-1">
                 <span className="flex flex-wrap items-center gap-2">
                   <span className={cn("text-base text-foreground", notification.isRead ? "font-semibold" : "font-extrabold")}>{notification.title}</span>
-                  {important && <span className="rounded-full bg-destructive px-2 py-0.5 text-[11px] font-extrabold tracking-wide text-destructive-foreground">IMPORTANT</span>}
-                  {!notification.isRead && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">New</span>}
+                  {important && <span className="rounded-full bg-destructive px-2 py-0.5 text-[11px] font-extrabold tracking-wide text-destructive-foreground">{t("important")}</span>}
+                  {!notification.isRead && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">{t("new")}</span>}
                 </span>
                 <span className="mt-1 block whitespace-pre-wrap text-sm leading-relaxed text-foreground/80">{notification.message}</span>
-                <span className="mt-2 block text-sm text-muted-foreground" title={formatDateTime(notification.created_date)}>{formatRelative(notification.created_date) || formatDateTime(notification.created_date)}{linked ? " · Tap to open" : ""}</span>
+                <span className="mt-2 block text-sm text-muted-foreground" title={formatDateTime(notification.created_date)}>{formatRelative(notification.created_date) || formatDateTime(notification.created_date)}{linked ? ` · ${t("tapToOpen")}` : ""}</span>
               </span>
               {linked && <ChevronRight className="mt-3 h-5 w-5 shrink-0 text-muted-foreground" />}
             </button>
           );
         }) : !loadError ? (
-          <EmptyState icon={Bell} title="No notifications yet" description="New orders, verification results and listing updates will show up here." />
+          <EmptyState icon={Bell} title={t("emptyTitle")} description={t("emptyDescription")} />
         ) : null}
       </div>
     </div>

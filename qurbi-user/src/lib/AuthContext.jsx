@@ -82,6 +82,40 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => { checkUserAuth(); }, [checkUserAuth]);
 
+  const failAuth = useCallback((error, fallback) => {
+    clearAuth();
+    setAuthError({ type: "auth_failed", message: error.response?.data?.message || error.message || fallback });
+  }, [clearAuth]);
+
+  const loginWithEmail = useCallback(async ({ email, password }) => {
+    setIsLoadingAuth(true);
+    setAuthError(null);
+    try {
+      return acceptSession(await authApi.login({ email, password }));
+    } catch (error) {
+      failAuth(error, "Sign-in failed");
+      throw error;
+    } finally {
+      setIsLoadingAuth(false);
+      setAuthChecked(true);
+    }
+  }, [acceptSession, failAuth]);
+
+  const registerWithEmail = useCallback(async ({ fullName, email, phone, password }) => {
+    setIsLoadingAuth(true);
+    setAuthError(null);
+    try {
+      await authApi.register({ fullName, email, phone: phone || undefined, password });
+      return acceptSession(await authApi.login({ email, password }));
+    } catch (error) {
+      failAuth(error, "Sign-up failed");
+      throw error;
+    } finally {
+      setIsLoadingAuth(false);
+      setAuthChecked(true);
+    }
+  }, [acceptSession, failAuth]);
+
   const loginWithGoogle = useCallback(async () => {
     setIsLoadingAuth(true);
     setAuthError(null);
@@ -132,7 +166,7 @@ export const AuthProvider = ({ children }) => {
   return (
     <AuthContext.Provider value={{
       user, isAuthenticated, isLoadingAuth, isLoadingPublicSettings: false,
-      authError, appPublicSettings: null, authChecked, loginWithGoogle, logout,
+      authError, appPublicSettings: null, authChecked, loginWithGoogle, loginWithEmail, registerWithEmail, logout,
       softLogout: () => logout(false), navigateToLogin, checkUserAuth,
       checkAppState: checkUserAuth,
     }}>

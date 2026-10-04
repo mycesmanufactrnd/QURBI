@@ -17,7 +17,7 @@ const TONES = {
 export default function StickyActionBar({ children, tone = "dark", label, className = "" }) {
   return createPortal(
     <div
-      className="qurbi-above-nav pointer-events-none fixed inset-x-0 z-40 px-3 sm:px-4"
+      className="qurbi-above-nav pointer-events-none fixed inset-x-0 z-40 px-3 sm:px-4 lg:left-[260px]"
       role="region"
       aria-label={label}
     >

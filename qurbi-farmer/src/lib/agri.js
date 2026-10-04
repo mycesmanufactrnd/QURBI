@@ -1,4 +1,10 @@
 // Shared domain constants for QURBI Farmer.
+import i18n from "@/i18n";
+
+// Display text below is resolved lazily (getters / functions) so it follows the
+// language the farmer picks without a reload. Stored values never change.
+const tr = (key, options) => i18n.t(`agri:${key}`, options);
+const dateLocale = () => (i18n.language === "ms" ? "ms-MY" : "en-MY");
 
 export const MALAYSIA_STATES = [
   "Johor",
@@ -102,8 +108,8 @@ export function newListingWindow(now = new Date()) {
 
 export function listingExpiryLabel(livestock) {
   const { expiresAt } = listingExpiry(livestock);
-  if (!expiresAt) return "Renewal date unavailable";
-  return new Intl.DateTimeFormat("en-MY", { day: "numeric", month: "short", year: "numeric" }).format(expiresAt);
+  if (!expiresAt) return tr("renewalUnavailable");
+  return new Intl.DateTimeFormat(dateLocale(), { day: "numeric", month: "short", year: "numeric" }).format(expiresAt);
 }
 
 // QURBI marketplace welfare thresholds based on post-weaning guidance.
@@ -126,9 +132,9 @@ export const ORDER_STATUSES = [
 ];
 
 export const DELIVERY_OPTIONS = [
-  { value: "Self Delivery", label: "Own delivery", description: "I will arrange delivery to the buyer." },
-  { value: "AISYAH Delivery", label: "QURBI delivery", description: "I want QURBI to arrange delivery." },
-  { value: "Both", label: "Both options", description: "Delivery method can be decided per order." },
+  { value: "Self Delivery", get label() { return tr("delivery.self.label"); }, get description() { return tr("delivery.self.description"); } },
+  { value: "AISYAH Delivery", get label() { return tr("delivery.qurbi.label"); }, get description() { return tr("delivery.qurbi.description"); } },
+  { value: "Both", get label() { return tr("delivery.both.label"); }, get description() { return tr("delivery.both.description"); } },
 ];
 
 // Immutable identifiers saved with each signature for audit purposes.
@@ -137,10 +143,10 @@ export const FARMER_POLICY_VERSION = "farmer-registration-v1.1.0-2026-08-14";
 export const SELLER_POLICY_VERSION = "seller-listing-v1.0.0-2026-08-13";
 
 export const VERIFICATION_STATUSES = {
-  "Not Submitted": { label: "Not Submitted", tone: "muted" },
-  Pending: { label: "Pending Verification", tone: "warning" },
-  Approved: { label: "Verified Farmer", tone: "success" },
-  Rejected: { label: "Verification Rejected", tone: "danger" },
+  "Not Submitted": { get label() { return tr("verification.notSubmitted"); }, tone: "muted" },
+  Pending: { get label() { return tr("verification.pending"); }, tone: "warning" },
+  Approved: { get label() { return tr("verification.approved"); }, tone: "success" },
+  Rejected: { get label() { return tr("verification.rejected"); }, tone: "danger" },
 };
 
 export function breedsFor(species, managedBreeds = []) {
@@ -178,12 +184,12 @@ export function ageInMonths(livestock, today = new Date()) {
 export function formatAge(livestock, today = new Date()) {
   const months = ageInMonths(livestock, today);
   if (months === null) return livestock.age || "—";
-  if (months < 12) return `${months} month${months === 1 ? "" : "s"}`;
+  if (months < 12) return tr("age.month", { count: months });
   const years = Math.floor(months / 12);
   const remainingMonths = months % 12;
   return remainingMonths
-    ? `${years} year${years === 1 ? "" : "s"} ${remainingMonths} month${remainingMonths === 1 ? "" : "s"}`
-    : `${years} year${years === 1 ? "" : "s"}`;
+    ? `${tr("age.year", { count: years })} ${tr("age.month", { count: remainingMonths })}`
+    : tr("age.year", { count: years });
 }
 
 export function marketplaceVisibility(livestock) {
@@ -191,23 +197,23 @@ export function marketplaceVisibility(livestock) {
     return {
       visible: false,
       reason: livestock.speciesApprovalStatus === "Pending"
-        ? "Species is waiting for superadmin approval"
-        : "Species request was rejected",
+        ? tr("visibility.speciesPending")
+        : tr("visibility.speciesRejected"),
     };
   }
   if (["Pending", "Rejected"].includes(livestock.breedApprovalStatus)) {
     return {
       visible: false,
       reason: livestock.breedApprovalStatus === "Pending"
-        ? "Breed is waiting for superadmin approval"
-        : "Breed request was rejected",
+        ? tr("visibility.breedPending")
+        : tr("visibility.breedRejected"),
     };
   }
   if (livestock.status !== "Available") {
-    return { visible: false, reason: `Status is ${livestock.status || "not available"}` };
+    return { visible: false, reason: tr("visibility.status", { status: livestock.status ? tr(`livestockStatus.${livestock.status}`, { defaultValue: livestock.status }) : tr("visibility.notAvailable") }) };
   }
   if (listingExpiry(livestock).expired) {
-    return { visible: false, reason: "Listing expired after 14 days; farmer confirmation is required" };
+    return { visible: false, reason: tr("visibility.expired") };
   }
   const months = ageInMonths(livestock);
   const minimum = MIN_MARKETPLACE_AGE_MONTHS[livestock.species];
@@ -215,8 +221,8 @@ export function marketplaceVisibility(livestock) {
     return {
       visible: false,
       reason: months === null
-        ? "Age could not be verified"
-        : `Below the ${minimum}-month marketplace threshold`,
+        ? tr("visibility.ageUnknown")
+        : tr("visibility.belowThreshold", { minimum }),
     };
   }
   return { visible: true, reason: "" };
@@ -308,22 +314,22 @@ export function shortName(fullName = "") {
 
 /** Best display name for a signed-in user: full name, then email, then "Farmer". */
 export function displayName(user) {
-  return userVal(user, "name") || user?.full_name || user?.fullName || user?.email?.split("@")[0] || "Farmer";
+  return userVal(user, "name") || user?.full_name || user?.fullName || user?.email?.split("@")[0] || tr("farmerFallback");
 }
 
-const DATE_FMT = new Intl.DateTimeFormat("en-MY", { day: "numeric", month: "short", year: "numeric" });
-const DATE_TIME_FMT = new Intl.DateTimeFormat("en-MY", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
+const dateFormat = () => new Intl.DateTimeFormat(dateLocale(), { day: "numeric", month: "short", year: "numeric" });
+const dateTimeFormat = () => new Intl.DateTimeFormat(dateLocale(), { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
 
 /** "30 Sep 2026" (or fallback). */
 export function formatDate(value, fallback = "—") {
   const time = value ? Date.parse(value) : NaN;
-  return Number.isFinite(time) ? DATE_FMT.format(new Date(time)) : fallback;
+  return Number.isFinite(time) ? dateFormat().format(new Date(time)) : fallback;
 }
 
 /** "30 Sep 2026, 1:39 am" (or fallback). */
 export function formatDateTime(value, fallback = "—") {
   const time = value ? Date.parse(value) : NaN;
-  return Number.isFinite(time) ? DATE_TIME_FMT.format(new Date(time)) : fallback;
+  return Number.isFinite(time) ? dateTimeFormat().format(new Date(time)) : fallback;
 }
 
 /** "5 min ago", "3 h ago", "Yesterday", else a friendly date. */
@@ -331,23 +337,23 @@ export function formatRelative(value, now = new Date()) {
   const time = value ? Date.parse(value) : NaN;
   if (!Number.isFinite(time)) return "";
   const minutes = Math.round((now.getTime() - time) / 60000);
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes} min ago`;
+  if (minutes < 1) return tr("relative.justNow");
+  if (minutes < 60) return tr("relative.minutesAgo", { count: minutes });
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours} h ago`;
-  if (hours < 48) return "Yesterday";
+  if (hours < 24) return tr("relative.hoursAgo", { count: hours });
+  if (hours < 48) return tr("relative.yesterday");
   return formatDate(value);
 }
 
 // Livestock (single animal) statuses as normalised by qurbiClient ("Available", ...).
 export const LIVESTOCK_STATUS_META = {
-  Available: { label: "For sale", tone: "success" },
-  Reserved: { label: "Reserved", tone: "warning" },
-  Sold: { label: "Sold", tone: "muted" },
-  Unavailable: { label: "Hidden", tone: "muted" },
-  Draft: { label: "Draft", tone: "info" },
-  Sick: { label: "Sick", tone: "danger" },
-  Expired: { label: "Expired", tone: "danger" },
+  Available: { get label() { return tr("livestockStatus.Available"); }, tone: "success" },
+  Reserved: { get label() { return tr("livestockStatus.Reserved"); }, tone: "warning" },
+  Sold: { get label() { return tr("livestockStatus.Sold"); }, tone: "muted" },
+  Unavailable: { get label() { return tr("livestockStatus.Unavailable"); }, tone: "muted" },
+  Draft: { get label() { return tr("livestockStatus.Draft"); }, tone: "info" },
+  Sick: { get label() { return tr("livestockStatus.Sick"); }, tone: "danger" },
+  Expired: { get label() { return tr("livestockStatus.Expired"); }, tone: "danger" },
 };
 
 /**
@@ -359,53 +365,50 @@ export const LIVESTOCK_STATUS_META = {
  */
 export function livestockStatusMeta(status, livestock) {
   if (livestock && status === "Available" && listingExpiry(livestock).expired) return LIVESTOCK_STATUS_META.Expired;
-  return LIVESTOCK_STATUS_META[status] || { label: humanize(status) || "Unknown", tone: "muted" };
+  return LIVESTOCK_STATUS_META[status] || { label: humanize(status) || tr("unknown"), tone: "muted" };
 }
 
 export const BULK_STATUS_META = {
-  Available: { label: "For sale", tone: "success" },
-  Open: { label: "For sale", tone: "success" },
-  Paused: { label: "Paused", tone: "warning" },
-  Draft: { label: "Draft", tone: "info" },
-  Sold: { label: "Sold", tone: "muted" },
-  Cancelled: { label: "Cancelled", tone: "muted" },
+  Available: { get label() { return tr("bulkStatus.Available"); }, tone: "success" },
+  Open: { get label() { return tr("bulkStatus.Open"); }, tone: "success" },
+  Paused: { get label() { return tr("bulkStatus.Paused"); }, tone: "warning" },
+  Draft: { get label() { return tr("bulkStatus.Draft"); }, tone: "info" },
+  Sold: { get label() { return tr("bulkStatus.Sold"); }, tone: "muted" },
+  Cancelled: { get label() { return tr("bulkStatus.Cancelled"); }, tone: "muted" },
 };
 
 /** @param {string} status @returns {{ label: string, tone: string }} */
 export function bulkStatusMeta(status) {
-  return BULK_STATUS_META[status] || { label: humanize(status) || "Unknown", tone: "muted" };
+  return BULK_STATUS_META[status] || { label: humanize(status) || tr("unknown"), tone: "muted" };
 }
 
 // Order statuses as normalised by qurbiClient (pending_payment -> "pending",
 // preparing -> "processing", in_transit -> "shipped", received -> "completed").
 // `group` drives filters and counts; `next` is the farmer's next step.
-const NEXT_BEFORE = "Buyer has paid. Prepare the animal, then upload the before-delivery photo.";
-const NEXT_DURING = "Upload the during-delivery photo once the animal is on its way.";
-const NEXT_AFTER = "Upload the arrival photo when you hand the animal to the buyer.";
 export const ORDER_STATUS_META = {
-  pending: { label: "Awaiting payment", tone: "muted", group: "payment", next: "Wait for the buyer to pay. Don't send the animal yet." },
-  pending_payment: { label: "Awaiting payment", tone: "muted", group: "payment", next: "Wait for the buyer to pay. Don't send the animal yet." },
-  paid: { label: "To prepare", tone: "info", group: "action", next: NEXT_BEFORE },
-  to_ship: { label: "To prepare", tone: "info", group: "action", next: NEXT_BEFORE },
-  processing: { label: "Preparing", tone: "primary", group: "action", next: NEXT_DURING },
-  preparing: { label: "Preparing", tone: "primary", group: "action", next: NEXT_DURING },
-  shipped: { label: "On the way", tone: "warning", group: "action", next: NEXT_AFTER },
-  in_transit: { label: "On the way", tone: "warning", group: "action", next: NEXT_AFTER },
-  to_receive: { label: "On the way", tone: "warning", group: "action", next: NEXT_AFTER },
-  delivering: { label: "On the way", tone: "warning", group: "action", next: NEXT_AFTER },
-  delivered: { label: "Delivered", tone: "success", group: "buyer", next: "Your part is done. Waiting for the buyer to confirm they received the animal." },
-  completed: { label: "Completed", tone: "success", group: "done", next: "The buyer confirmed receipt. Nothing more to do." },
-  received: { label: "Completed", tone: "success", group: "done", next: "The buyer confirmed receipt. Nothing more to do." },
-  cancelled: { label: "Cancelled", tone: "muted", group: "closed", next: "This order was cancelled." },
-  return_requested: { label: "Return requested", tone: "danger", group: "issue", next: "The buyer asked for a return. QURBI admin will review it." },
-  refund_requested: { label: "Refund requested", tone: "danger", group: "issue", next: "The buyer asked for a refund. QURBI admin will review it." },
-  return_refund: { label: "Return / refund", tone: "danger", group: "issue", next: "A return or refund is in progress. QURBI admin will contact you." },
-  refunded: { label: "Refunded", tone: "muted", group: "closed", next: "This order was refunded." },
+  pending: { get label() { return tr("orderStatus.awaitingPayment"); }, tone: "muted", group: "payment", get next() { return tr("orderStatus.nextPayment"); } },
+  pending_payment: { get label() { return tr("orderStatus.awaitingPayment"); }, tone: "muted", group: "payment", get next() { return tr("orderStatus.nextPayment"); } },
+  paid: { get label() { return tr("orderStatus.toPrepare"); }, tone: "info", group: "action", get next() { return tr("orderStatus.nextBefore"); } },
+  to_ship: { get label() { return tr("orderStatus.toPrepare"); }, tone: "info", group: "action", get next() { return tr("orderStatus.nextBefore"); } },
+  processing: { get label() { return tr("orderStatus.preparing"); }, tone: "primary", group: "action", get next() { return tr("orderStatus.nextDuring"); } },
+  preparing: { get label() { return tr("orderStatus.preparing"); }, tone: "primary", group: "action", get next() { return tr("orderStatus.nextDuring"); } },
+  shipped: { get label() { return tr("orderStatus.onTheWay"); }, tone: "warning", group: "action", get next() { return tr("orderStatus.nextAfter"); } },
+  in_transit: { get label() { return tr("orderStatus.onTheWay"); }, tone: "warning", group: "action", get next() { return tr("orderStatus.nextAfter"); } },
+  to_receive: { get label() { return tr("orderStatus.onTheWay"); }, tone: "warning", group: "action", get next() { return tr("orderStatus.nextAfter"); } },
+  delivering: { get label() { return tr("orderStatus.onTheWay"); }, tone: "warning", group: "action", get next() { return tr("orderStatus.nextAfter"); } },
+  delivered: { get label() { return tr("orderStatus.delivered"); }, tone: "success", group: "buyer", get next() { return tr("orderStatus.nextDelivered"); } },
+  completed: { get label() { return tr("orderStatus.completed"); }, tone: "success", group: "done", get next() { return tr("orderStatus.nextCompleted"); } },
+  received: { get label() { return tr("orderStatus.completed"); }, tone: "success", group: "done", get next() { return tr("orderStatus.nextCompleted"); } },
+  cancelled: { get label() { return tr("orderStatus.cancelled"); }, tone: "muted", group: "closed", get next() { return tr("orderStatus.nextCancelled"); } },
+  return_requested: { get label() { return tr("orderStatus.returnRequested"); }, tone: "danger", group: "issue", get next() { return tr("orderStatus.nextReturn"); } },
+  refund_requested: { get label() { return tr("orderStatus.refundRequested"); }, tone: "danger", group: "issue", get next() { return tr("orderStatus.nextRefundRequested"); } },
+  return_refund: { get label() { return tr("orderStatus.returnRefund"); }, tone: "danger", group: "issue", get next() { return tr("orderStatus.nextReturnRefund"); } },
+  refunded: { get label() { return tr("orderStatus.refunded"); }, tone: "muted", group: "closed", get next() { return tr("orderStatus.nextRefunded"); } },
 };
 
 /** @param {string} status @returns {{ label: string, tone: string, group: string, next: string }} */
 export function orderStatusMeta(status) {
-  return ORDER_STATUS_META[status] || { label: humanize(status) || "Unknown", tone: "muted", group: "other", next: "" };
+  return ORDER_STATUS_META[status] || { label: humanize(status) || tr("unknown"), tone: "muted", group: "other", next: "" };
 }
 
 /** Farmer photo stage expected next for this order status ("before" | "during" | "after" | ""). */
@@ -416,14 +419,21 @@ export function orderPhotoStage(status) {
   return "";
 }
 
-export const PAYMENT_STATUS_LABELS = { paid: "Paid", unpaid: "Not paid yet", pending: "Not paid yet", failed: "Payment failed", refunded: "Refunded", partially_refunded: "Partly refunded" };
+export const PAYMENT_STATUS_LABELS = {
+  get paid() { return tr("paymentStatus.paid"); },
+  get unpaid() { return tr("paymentStatus.unpaid"); },
+  get pending() { return tr("paymentStatus.unpaid"); },
+  get failed() { return tr("paymentStatus.failed"); },
+  get refunded() { return tr("paymentStatus.refunded"); },
+  get partially_refunded() { return tr("paymentStatus.partiallyRefunded"); },
+};
 export function paymentStatusLabel(status) {
   return PAYMENT_STATUS_LABELS[String(status || "").toLowerCase()] || humanize(status) || "—";
 }
 
 /** Name for an order line: listing title first, breed only when it is meaningful. */
 export function orderItemTitle(item) {
-  const title = item?.titleSnapshot || item?.species || "Livestock";
+  const title = item?.titleSnapshot || item?.species || tr("livestock");
   const breed = item?.breed && !/^unspecified/i.test(item.breed) ? item.breed : "";
   return { title, breed };
 }
@@ -433,7 +443,7 @@ export function livestockTitle(livestock) {
   const breed = livestock?.breed && livestock.breed !== "Unspecified" ? livestock.breed : "";
   const generated = [livestock?.species, breed].filter(Boolean).join(" - ");
   const title = livestock?.title && livestock.title !== generated ? livestock.title : "";
-  return title || breed || livestock?.species || "Livestock";
+  return title || breed || livestock?.species || tr("livestock");
 }
 
 /**

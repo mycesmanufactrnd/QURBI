@@ -1073,6 +1073,13 @@ html {
   bottom: var(--qurbi-nav-clearance);
 }
 
+/* Desktop has a sidebar instead of the bottom nav, so nothing needs clearing. */
+@media (min-width: 1024px) {
+  :root {
+    --qurbi-nav-clearance: 1rem;
+  }
+}
+
 .qurbi-action-bar {
   box-shadow:
     0 18px 40px -12px rgba(65, 54, 45, 0.55),

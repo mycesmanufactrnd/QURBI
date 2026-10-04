@@ -1,5 +1,7 @@
 import {
+  BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -19,6 +21,7 @@ import { jwtConstants } from './jwt.constants';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
+import { SwitchRoleDto } from './dto/switch-role.dto';
 import { FirebaseLoginDto, FirebasePortal } from './dto/firebase-login.dto';
 import { FirebaseAdminService } from './firebase-admin.service';
 
@@ -38,8 +41,12 @@ type SafeUser = Omit<User, 'passwordHash'>;
 // "farmer who hasn't onboarded yet". Re-declared (not inherited from
 // SafeUser/User, whose own `farmerProfile` relation is non-nullable) so it
 // can legally be `null` here.
+// `role` is the role this session is acting as; `accountRole` is what the
+// account actually is, and `availableRoles` is what it may switch between.
 type MeResponse = Omit<SafeUser, 'farmerProfile'> & {
   farmerProfile?: FarmerProfile | null;
+  accountRole: UserRole;
+  availableRoles: UserRole[];
 };
 
 // Precomputed once and reused for every login where the email doesn't match
@@ -54,6 +61,20 @@ function getDummyHash(): Promise<string> {
     });
   }
   return dummyHashPromise;
+}
+
+// A farmer account is also a buyer account; a buyer must register as a farmer
+// (becomeFarmer) before it gains the farmer role. Admin never switches.
+function availableRoles(role: UserRole): UserRole[] {
+  if (role === UserRole.FARMER) return [UserRole.FARMER, UserRole.BUYER];
+  return [role];
+}
+
+function roleForPortal(user: User, portal?: FirebasePortal): UserRole {
+  if (portal === FirebasePortal.BUYER && user.role === UserRole.FARMER) {
+    return UserRole.BUYER;
+  }
+  return user.role;
 }
 
 function hashToken(rawToken: string): string {
@@ -127,8 +148,9 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    const tokens = await this.issueTokenPair(user, meta);
-    return { ...tokens, user: sanitize(user) };
+    const activeRole = roleForPortal(user, dto.portal);
+    const tokens = await this.issueTokenPair(user, meta, undefined, activeRole);
+    return { ...tokens, user: { ...sanitize(user), role: activeRole } };
   }
 
   async loginWithFirebase(
@@ -181,8 +203,9 @@ export class AuthService {
     }
 
     user = await this.userRepository.save(user);
-    const tokens = await this.issueTokenPair(user, meta);
-    return { ...tokens, user: sanitize(user) };
+    const activeRole = roleForPortal(user, dto.portal);
+    const tokens = await this.issueTokenPair(user, meta, undefined, activeRole);
+    return { ...tokens, user: { ...sanitize(user), role: activeRole } };
   }
 
   async refresh(dto: RefreshDto, meta: RequestMeta): Promise<TokenPair> {
@@ -222,6 +245,78 @@ export class AuthService {
     return this.issueTokenPair(user, meta, existing);
   }
 
+  // Issues a NEW session acting as another role the account has, for the
+  // other portal to take over. The caller's own session is left untouched, so
+  // it stays signed in on this portal. The caller must prove it holds a live
+  // session by presenting its refresh token.
+  async switchRole(
+    userId: string,
+    dto: SwitchRoleDto,
+    meta: RequestMeta,
+  ): Promise<TokenPair & { user: MeResponse }> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user || user.status !== UserStatus.ACTIVE) {
+      throw new UnauthorizedException('Account is not active');
+    }
+    if (!availableRoles(user.role).includes(dto.role)) {
+      throw new ForbiddenException(
+        dto.role === UserRole.FARMER
+          ? 'Register as a farmer before switching to the farmer account'
+          : 'This account cannot switch to that role',
+      );
+    }
+    await this.findLiveSession(userId, dto.refreshToken);
+    const tokens = await this.issueTokenPair(user, meta, undefined, dto.role);
+    return { ...tokens, user: await this.me(userId, dto.role) };
+  }
+
+  // A buyer registering as a farmer. The account's role is upgraded, after
+  // which it holds both roles; returns a new farmer session for the farmer
+  // portal and leaves the caller's own session untouched.
+  async becomeFarmer(
+    userId: string,
+    dto: RefreshDto,
+    meta: RequestMeta,
+  ): Promise<TokenPair & { user: MeResponse }> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user || user.status !== UserStatus.ACTIVE) {
+      throw new UnauthorizedException('Account is not active');
+    }
+    if (user.role === UserRole.ADMIN) {
+      throw new BadRequestException('Admin accounts cannot become farmers');
+    }
+    await this.findLiveSession(userId, dto.refreshToken);
+    if (user.role !== UserRole.FARMER) {
+      user.role = UserRole.FARMER;
+      await this.userRepository.save(user);
+    }
+    const tokens = await this.issueTokenPair(
+      user,
+      meta,
+      undefined,
+      UserRole.FARMER,
+    );
+    return { ...tokens, user: await this.me(userId, UserRole.FARMER) };
+  }
+
+  private async findLiveSession(
+    userId: string,
+    rawRefreshToken: string,
+  ): Promise<RefreshToken> {
+    const session = await this.refreshTokenRepository.findOne({
+      where: { tokenHash: hashToken(rawRefreshToken) },
+    });
+    if (
+      !session ||
+      session.userId !== userId ||
+      session.revokedAt ||
+      session.expiresAt.getTime() < Date.now()
+    ) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+    return session;
+  }
+
   async logout(dto: RefreshDto): Promise<void> {
     const tokenHash = hashToken(dto.refreshToken);
     const existing = await this.refreshTokenRepository.findOne({
@@ -234,12 +329,20 @@ export class AuthService {
     }
   }
 
-  async me(userId: string): Promise<MeResponse> {
+  async me(userId: string, activeRole?: UserRole): Promise<MeResponse> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
-    const safe = sanitize(user);
+    const roles = availableRoles(user.role);
+    const role =
+      activeRole && roles.includes(activeRole) ? activeRole : user.role;
+    const safe = {
+      ...sanitize(user),
+      role,
+      accountRole: user.role,
+      availableRoles: roles,
+    };
 
     // verificationStatus lives on FarmerProfile, not User (one source of
     // truth) — the frontend needs it off the user object, so attach the
@@ -259,10 +362,14 @@ export class AuthService {
     user: User,
     meta: RequestMeta,
     rotatedFrom?: RefreshToken,
+    requestedRole?: UserRole,
   ): Promise<TokenPair> {
+    const roles = availableRoles(user.role);
+    const candidate = requestedRole ?? rotatedFrom?.activeRole ?? user.role;
+    const activeRole = roles.includes(candidate) ? candidate : user.role;
     const accessToken = await this.jwtService.signAsync({
       sub: user.id,
-      role: user.role,
+      role: activeRole,
     });
 
     const rawRefreshToken = randomBytes(64).toString('hex');
@@ -270,6 +377,7 @@ export class AuthService {
       this.refreshTokenRepository.create({
         userId: user.id,
         tokenHash: hashToken(rawRefreshToken),
+        activeRole,
         expiresAt: new Date(Date.now() + jwtConstants.refreshTtlMs),
         userAgent: meta.userAgent ?? null,
         ipAddress: meta.ipAddress ?? null,

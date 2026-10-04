@@ -1,5 +1,6 @@
 import React from "react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 import { VERIFICATION_STATUSES, bulkStatusMeta, livestockStatusMeta, orderStatusMeta } from "@/lib/agri";
 
 const TONES = {
@@ -36,7 +37,11 @@ function metaFor(kind, status, item) {
  * @param {{ tone?: string, dot?: boolean, children?: React.ReactNode, className?: string, kind?: "livestock" | "order" | "bulk" | "verification", status?: string, item?: any, icon?: React.ElementType }} props
  */
 export default function StatusBadge({ tone, dot = false, children, className, kind, status, item, icon: Icon }) {
+  const { t } = useTranslation("shared");
   const meta = kind ? metaFor(kind, status, item) : null;
+  const metaLabel = kind === "verification" && meta
+    ? t(`status.verification.${status || "Unknown"}`, { defaultValue: meta.label })
+    : meta?.label;
   const resolvedTone = tone || meta?.tone || "muted";
   return (
     <span
@@ -48,7 +53,7 @@ export default function StatusBadge({ tone, dot = false, children, className, ki
     >
       {dot && <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", DOTS[resolvedTone] || DOTS.muted)} aria-hidden="true" />}
       {Icon && <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
-      {children ?? meta?.label}
+      {children ?? metaLabel}
     </span>
   );
 }

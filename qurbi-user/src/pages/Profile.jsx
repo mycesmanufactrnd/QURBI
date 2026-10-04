@@ -13,6 +13,8 @@ import {
   FileText,
   LifeBuoy,
   Languages,
+  Tractor,
+  ArrowLeftRight,
 } from "lucide-react";
 import { useUserProfile } from "@/lib/user-profile-context";
 import { useReveal } from "@/hooks/useReveal";
@@ -25,11 +27,12 @@ import { useAuth } from "@/lib/AuthContext";
 import AuthRequiredState from "@/components/AuthRequiredState";
 import { SettingsGroup, SettingsRow } from "@/components/account/SettingsGroup";
 import { primaryBtn } from "@/components/account/buttons";
+import { registerAsFarmer, switchToFarmerPortal } from "@/lib/portalSwitch";
 
 export default function Profile() {
   const { navigateFromIconPage } = useHeaderTransition();
   const requireAuth = useRequireAuth();
-  const { authChecked, isAuthenticated } = useAuth();
+  const { authChecked, isAuthenticated, user } = useAuth();
   const { profile, profileLoading, updateProfile } = useUserProfile();
   const { reveal } = useReveal();
   const { t, i18n } = useTranslation("profile");
@@ -40,6 +43,29 @@ export default function Profile() {
   const [saveError, setSaveError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({ name: "", phone: "" });
   const [showEdit, setShowEdit] = useState(false);
+  const [switchError, setSwitchError] = useState("");
+  const [switching, setSwitching] = useState(false);
+  const isFarmerAccount = user?.availableRoles?.includes("farmer");
+
+  const goToFarmerSide = async () => {
+    if (switching) return;
+    if (
+      !isFarmerAccount &&
+      !window.confirm(
+        ta("profile.farmer.confirm", "Register this account as a farmer? You will continue in the QURBI Farmer app to submit your farm details for verification. You can still buy as before."),
+      )
+    ) {
+      return;
+    }
+    setSwitching(true);
+    setSwitchError("");
+    try {
+      await (isFarmerAccount ? switchToFarmerPortal() : registerAsFarmer());
+    } catch (error) {
+      setSwitching(false);
+      setSwitchError(error.message || ta("profile.farmer.error", "Could not switch account. Please try again."));
+    }
+  };
 
   const inputCls =
     "mt-1.5 w-full min-h-12 rounded-xl border-2 border-[#E3C19F] bg-[#FFFFFF] px-4 py-3 text-base text-[#41362D] placeholder:text-[#6B594A]/60 outline-none focus:border-[#6B594A]";
@@ -316,6 +342,33 @@ export default function Profile() {
             subtitle={t("profile.orderHistoryCard.subtitle")}
             onClick={() => requireAuth(() => navigateFromIconPage("/history"))}
           />
+        </SettingsGroup>
+
+        {/* Farmer account */}
+        <SettingsGroup
+          title={ta("profile.groups.farmer", "Selling")}
+          className={reveal()}
+          style={{ animationDelay: "170ms" }}
+        >
+          <SettingsRow
+            icon={isFarmerAccount ? ArrowLeftRight : Tractor}
+            title={
+              isFarmerAccount
+                ? ta("profile.farmer.switchTitle", "Switch to farmer account")
+                : ta("profile.farmer.registerTitle", "Register as a farmer")
+            }
+            subtitle={
+              switching
+                ? ta("profile.farmer.opening", "Opening the farmer app...")
+                : isFarmerAccount
+                  ? ta("profile.farmer.switchSubtitle", "Manage your livestock and orders")
+                  : ta("profile.farmer.registerSubtitle", "Sell your livestock on QURBI")
+            }
+            onClick={goToFarmerSide}
+          />
+          {switchError && (
+            <p role="alert" className="px-4 py-2 text-sm font-semibold text-[#FBE4E1]">{switchError}</p>
+          )}
         </SettingsGroup>
 
         {/* Language */}

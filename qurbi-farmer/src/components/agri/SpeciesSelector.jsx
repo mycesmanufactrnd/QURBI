@@ -1,11 +1,13 @@
 import React from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SPECIES } from "@/lib/agri";
+import { useLivestockDisplay } from "@/lib/livestockDisplay";
 
 /**
  * @param {{ value?: string, onChange: (selection: { species: string, speciesRequestId: string, speciesApprovalStatus: string }) => void }} props
  */
 export default function SpeciesSelector({ value, onChange }) {
+  const { t, species: speciesLabel } = useLivestockDisplay();
   const supportedValue = SPECIES.includes(value) ? value : "";
 
   return (
@@ -18,14 +20,14 @@ export default function SpeciesSelector({ value, onChange }) {
           speciesApprovalStatus: "Approved",
         })}
       >
-        <SelectTrigger className="h-12"><SelectValue placeholder="Select species" /></SelectTrigger>
+        <SelectTrigger className="h-12"><SelectValue placeholder={t("speciesSelector.placeholder")} /></SelectTrigger>
         <SelectContent>
-          {SPECIES.map((species) => <SelectItem key={species} value={species}>{species}</SelectItem>)}
+          {SPECIES.map((species) => <SelectItem key={species} value={species}>{speciesLabel(species)}</SelectItem>)}
         </SelectContent>
       </Select>
-      <p className="text-xs text-muted-foreground">QURBI currently supports Cow and Goat listings only.</p>
+      <p className="text-xs text-muted-foreground">{t("speciesSelector.supportedNote")}</p>
       {value && !supportedValue && (
-        <p className="text-xs font-medium text-destructive">This legacy species is no longer supported. Select Cow or Goat to continue.</p>
+        <p className="text-xs font-medium text-destructive">{t("speciesSelector.legacyNote")}</p>
       )}
     </div>
   );

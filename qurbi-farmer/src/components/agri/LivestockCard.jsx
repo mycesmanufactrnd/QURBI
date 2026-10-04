@@ -3,22 +3,23 @@ import { useNavigate } from "react-router-dom";
 import { Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { Image } from "@/components/ui/image";
 import StatusBadge from "@/components/agri/StatusBadge";
-import { formatMYR, listingExpiry, listingExpiryLabel, livestockStatusMeta, livestockTitle } from "@/lib/agri";
+import { formatMYR, listingExpiry } from "@/lib/agri";
+import { useLivestockDisplay } from "@/lib/livestockDisplay";
 import { cn } from "@/lib/utils";
 import { hasActivePaymentReservation, reservationExpiryLabel } from "@/lib/livestockReservation";
 
 /** One plain sentence telling the farmer where this listing stands. */
-function statusNote(livestock, { paymentReserved, listingExpired, daysRemaining }) {
-  if (paymentReserved) return { text: `A buyer is paying for this animal. Locked until ${reservationExpiryLabel(livestock)}.`, tone: "text-amber-800" };
-  if (listingExpired) return { text: `Expired ${listingExpiryLabel(livestock)}. Buyers can't see it — check the details and renew.`, tone: "text-destructive" };
+function statusNote(livestock, { paymentReserved, listingExpired, daysRemaining }, { t, expiryLabel }) {
+  if (paymentReserved) return { text: t("card.notePaymentReserved", { time: reservationExpiryLabel(livestock) }), tone: "text-amber-800" };
+  if (listingExpired) return { text: t("card.noteExpired", { date: expiryLabel(livestock) }), tone: "text-destructive" };
   switch (livestock.status) {
     case "Available":
-      if (daysRemaining === null) return { text: "Buyers will see it for 14 days once published.", tone: "text-muted-foreground" };
-      return { text: `Buyers can see it · ${daysRemaining} day${daysRemaining === 1 ? "" : "s"} left before renewal`, tone: daysRemaining <= 2 ? "text-amber-800" : "text-muted-foreground" };
-    case "Draft": return { text: "Draft — not visible to buyers yet. Edit it and choose “For sale”.", tone: "text-sky-800" };
-    case "Unavailable": return { text: "Hidden from buyers. Edit to put it back on sale.", tone: "text-muted-foreground" };
-    case "Reserved": return { text: "Reserved by a buyer. Check your orders.", tone: "text-amber-800" };
-    case "Sold": return { text: "Sold. No action needed.", tone: "text-muted-foreground" };
+      if (daysRemaining === null) return { text: t("card.noteAvailableNoDate"), tone: "text-muted-foreground" };
+      return { text: t("card.noteAvailable", { count: daysRemaining }), tone: daysRemaining <= 2 ? "text-amber-800" : "text-muted-foreground" };
+    case "Draft": return { text: t("card.noteDraft"), tone: "text-sky-800" };
+    case "Unavailable": return { text: t("card.noteUnavailable"), tone: "text-muted-foreground" };
+    case "Reserved": return { text: t("card.noteReserved"), tone: "text-amber-800" };
+    case "Sold": return { text: t("card.noteSold"), tone: "text-muted-foreground" };
     default: return null;
   }
 }
@@ -28,14 +29,16 @@ function statusNote(livestock, { paymentReserved, listingExpired, daysRemaining 
  */
 export default function LivestockCard({ livestock, onEdit, onDelete, onView, footerActions, actions = true, compact = false, statusPlacement = "image" }) {
   const navigate = useNavigate();
+  const display = useLivestockDisplay();
+  const { t } = display;
   const paymentReserved = hasActivePaymentReservation(livestock);
   const expiry = listingExpiry(livestock);
   const listingExpired = livestock.status === "Available" && expiry.expired;
   const cover = livestock.coverImage || livestock.images?.[0];
-  const title = livestockTitle(livestock);
-  const subtitle = [livestock.species, livestock.breed && livestock.breed !== "Unspecified" && livestock.breed !== title ? livestock.breed : ""].filter(Boolean).join(" · ");
-  const status = livestockStatusMeta(livestock.status, livestock);
-  const note = statusNote(livestock, { paymentReserved, listingExpired, daysRemaining: expiry.daysRemaining });
+  const title = display.title(livestock);
+  const subtitle = display.subtitle(livestock);
+  const status = display.status(livestock.status, livestock);
+  const note = statusNote(livestock, { paymentReserved, listingExpired, daysRemaining: expiry.daysRemaining }, display);
   const go = () => {
     if (onView) onView(livestock);
     else navigate(`/livestock/${livestock.id}`);
@@ -54,21 +57,21 @@ export default function LivestockCard({ livestock, onEdit, onDelete, onView, foo
       <button type="button" onClick={go} className="block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring">
         <div className={cn("relative bg-muted", compact ? "aspect-[16/10]" : "aspect-[16/9]")}>
           {cover ? (
-            <Image src={cover} fittingType="fill" alt={`${title} photo`} className="h-full w-full" />
+            <Image src={cover} fittingType="fill" alt={t("card.photoAlt", { title })} className="h-full w-full" />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-sm font-medium text-muted-foreground">No photo yet</div>
+            <div className="flex h-full w-full items-center justify-center text-sm font-medium text-muted-foreground">{t("card.noPhoto")}</div>
           )}
           <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/30 to-transparent" aria-hidden="true" />
           {statusPlacement === "image" && <StatusBadge className="absolute left-3 top-3 shadow-sm" tone={status.tone} dot>{status.label}</StatusBadge>}
-          {statusPlacement === "image" && livestock.disabled && <StatusBadge className="absolute right-3 top-3 shadow-sm" tone="danger">Disabled by admin</StatusBadge>}
+          {statusPlacement === "image" && livestock.disabled && <StatusBadge className="absolute right-3 top-3 shadow-sm" tone="danger">{t("card.disabledByAdmin")}</StatusBadge>}
         </div>
 
         <div className="p-4">
           {statusPlacement === "content" && (
             <div className="mb-2.5 flex flex-wrap items-center gap-2">
               <StatusBadge tone={status.tone} dot>{status.label}</StatusBadge>
-              {paymentReserved && <StatusBadge tone="warning">Payment in progress</StatusBadge>}
-              {livestock.disabled && <StatusBadge tone="danger">Disabled by admin</StatusBadge>}
+              {paymentReserved && <StatusBadge tone="warning">{t("card.paymentInProgress")}</StatusBadge>}
+              {livestock.disabled && <StatusBadge tone="danger">{t("card.disabledByAdmin")}</StatusBadge>}
             </div>
           )}
           <div className="flex items-start justify-between gap-4">
@@ -86,12 +89,12 @@ export default function LivestockCard({ livestock, onEdit, onDelete, onView, foo
         <div className="flex gap-2 border-t border-border/65 bg-muted/20 p-3">
           {actions && <>
             {primaryIsRenew ? (
-              <button type="button" onClick={edit} className="brand-gradient flex min-h-11 flex-1 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-bold text-white shadow-[0_4px_12px_rgba(65,54,45,0.14)]"><RefreshCw className="h-4 w-4" />Review &amp; renew</button>
+              <button type="button" onClick={edit} className="brand-gradient flex min-h-11 flex-1 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-bold text-white shadow-[0_4px_12px_rgba(65,54,45,0.14)]"><RefreshCw className="h-4 w-4" />{t("card.reviewRenew")}</button>
             ) : (
-              <button type="button" onClick={go} className="brand-gradient flex min-h-11 flex-1 items-center justify-center rounded-2xl px-4 text-sm font-bold text-white shadow-[0_4px_12px_rgba(65,54,45,0.14)]">View details</button>
+              <button type="button" onClick={go} className="brand-gradient flex min-h-11 flex-1 items-center justify-center rounded-2xl px-4 text-sm font-bold text-white shadow-[0_4px_12px_rgba(65,54,45,0.14)]">{t("card.viewDetails")}</button>
             )}
-            {!paymentReserved && !primaryIsRenew && <button type="button" onClick={edit} aria-label={`Edit ${title}`} title="Edit" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-secondary/65 text-primary transition-colors hover:bg-secondary"><Pencil className="h-[18px] w-[18px]" /></button>}
-            {onDelete && !paymentReserved && <button type="button" onClick={() => onDelete(livestock)} aria-label={`Delete ${title}`} title="Delete" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-card text-destructive ring-1 ring-destructive/25 transition-colors hover:bg-destructive/10"><Trash2 className="h-[18px] w-[18px]" /></button>}
+            {!paymentReserved && !primaryIsRenew && <button type="button" onClick={edit} aria-label={t("card.editAria", { title })} title={t("card.edit")} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-secondary/65 text-primary transition-colors hover:bg-secondary"><Pencil className="h-[18px] w-[18px]" /></button>}
+            {onDelete && !paymentReserved && <button type="button" onClick={() => onDelete(livestock)} aria-label={t("card.deleteAria", { title })} title={t("card.delete")} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-card text-destructive ring-1 ring-destructive/25 transition-colors hover:bg-destructive/10"><Trash2 className="h-[18px] w-[18px]" /></button>}
           </>}
           {footerActions}
         </div>

@@ -10,6 +10,7 @@ import AppLayout from "@/components/AppLayout";
 import StandaloneLayout from "@/components/StandaloneLayout";
 import Authentication from "@/pages/Authentication";
 import SignupDetails from "@/pages/SignupDetails";
+import SwitchSession from "@/pages/SwitchSession";
 import UserAgreement from "@/pages/UserAgreement";
 import Home from "@/pages/Home";
 import Browse from "@/pages/Browse";
@@ -84,6 +85,7 @@ function App() {
                       <Route path="/auth" element={<Authentication />} />
                       <Route path="/login" element={<LegacyAuthRedirect mode="login" />} />
                       <Route path="/register" element={<LegacyAuthRedirect mode="register" />} />
+                      <Route path="/switch-session" element={<SwitchSession />} />
                       <Route path="/signup-details" element={<SignupDetails />} />
                       <Route path="/user-agreement" element={<UserAgreement />} />
                       <Route path="/address-book" element={<AddressBook />} />

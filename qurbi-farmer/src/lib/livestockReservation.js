@@ -1,4 +1,5 @@
 import { qurbi } from "@/api/qurbiClient";
+import i18n from "@/i18n";
 
 export function hasActivePaymentReservation(livestock, now = new Date()) {
   const expiresAt = Date.parse(livestock?.reservationExpiresAt || "");
@@ -10,7 +11,7 @@ export function hasActivePaymentReservation(livestock, now = new Date()) {
 
 export function reservationExpiryLabel(livestock) {
   if (!hasActivePaymentReservation(livestock)) return "";
-  return new Intl.DateTimeFormat("en-MY", {
+  return new Intl.DateTimeFormat(i18n.language?.startsWith("ms") ? "ms-MY" : "en-MY", {
     dateStyle: "medium",
     timeStyle: "short",
     timeZone: "Asia/Kuala_Lumpur",

@@ -10,6 +10,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 // Page imports
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
+import SwitchSession from "@/pages/SwitchSession";
 import FarmerVerification from "@/pages/FarmerVerification";
 import FarmerRegistrationPolicy from "@/pages/FarmerRegistrationPolicy";
 import VerificationPending from "@/pages/VerificationPending";
@@ -64,6 +65,7 @@ const AuthenticatedApp = () => {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/switch-session" element={<SwitchSession />} />
 
       {/* Authenticated area */}
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>

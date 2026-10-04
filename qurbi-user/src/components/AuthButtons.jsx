@@ -11,7 +11,7 @@ import { useAuthPrompt } from "@/lib/auth-prompt-context";
  *   branded full-page splash plays the logout transition (no reload flash).
  * - Unauthenticated: shows Sign In and Sign Up buttons.
  */
-export default function AuthButtons({ returnTo = null }) {
+export default function AuthButtons({ returnTo = null, onDark = false }) {
   const { t } = useTranslation("auth");
   const navigate = useNavigate();
   const { isAuthenticated, isLoadingAuth, authChecked, softLogout } = useAuth();
@@ -36,7 +36,7 @@ export default function AuthButtons({ returnTo = null }) {
     return (
       <button
         onClick={handleLogout}
-        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border-2 border-[#6B594A] bg-transparent py-3 text-[15px] font-bold text-[#41362D] transition-colors duration-200 ease-out hover:bg-[#41362D]/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A9825F]"
+        className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border-2 bg-transparent py-3 text-[15px] font-bold transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A9825F] ${onDark ? "border-white/40 text-white hover:bg-white/10" : "border-[#6B594A] text-[#41362D] hover:bg-[#41362D]/5"}`}
       >
         <LogOut className="w-4 h-4" /> {t("authButtons.logOut")}
       </button>
@@ -55,7 +55,7 @@ export default function AuthButtons({ returnTo = null }) {
         onClick={() =>
           navigate(`/auth?mode=register&returnTo=${encodeURIComponent(target)}`)
         }
-        className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-[#41362D] to-[#6B594A] py-3 text-[15px] font-bold text-white shadow-md shadow-black/20 transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98]"
+        className={`flex min-h-12 items-center justify-center gap-2 rounded-2xl py-3 text-[15px] font-bold text-white transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] ${onDark ? "border-2 border-white/40 bg-transparent" : "bg-gradient-to-br from-[#41362D] to-[#6B594A] shadow-md shadow-black/20"}`}
       >
         <UserPlus className="w-4 h-4" /> {t("authButtons.signUp")}
       </button>

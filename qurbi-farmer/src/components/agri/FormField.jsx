@@ -2,6 +2,7 @@ import React from "react";
 import { AlertCircle } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 /**
  * Labelled form field with optional helper text and an inline error shown
@@ -9,12 +10,13 @@ import { cn } from "@/lib/utils";
  * @param {{ id?: string, label: React.ReactNode, required?: boolean, optional?: boolean, hint?: React.ReactNode, error?: React.ReactNode, className?: string, children?: React.ReactNode }} props
  */
 export default function FormField({ id, label, required = false, optional = false, hint, error, className, children }) {
+  const { t } = useTranslation("shared");
   return (
     <div id={id ? `field-${id}` : undefined} className={cn("scroll-mt-24 space-y-1.5", className)}>
       <Label htmlFor={id} className="text-sm font-semibold">
         {label}
         {required && <span className="text-destructive" aria-hidden="true"> *</span>}
-        {optional && <span className="font-normal text-muted-foreground"> (optional)</span>}
+        {optional && <span className="font-normal text-muted-foreground"> {t("formField.optional")}</span>}
       </Label>
       {children}
       {error ? (

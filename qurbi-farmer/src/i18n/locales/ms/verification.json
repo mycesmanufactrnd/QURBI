@@ -1,0 +1,209 @@
+{
+  "form": {
+    "goBack": "Kembali",
+    "title": "Pengesahan penternak",
+    "resubmitTitle": "Baiki & hantar semula",
+    "subtitle": "Mengambil masa kira-kira 5 minit. Sediakan kad pengenalan (IC) anda.",
+    "steps": {
+      "farmDetails": "Butiran Ladang",
+      "policyTerms": "Polisi & Terma"
+    },
+    "whatToFix": "Perkara yang perlu dibaiki",
+    "previousFilled": "Butiran terdahulu anda telah diisi di bawah. Ubah apa yang perlu, kemudian teruskan.",
+    "requiredNote": "Wajib",
+    "loadError": "Butiran terdahulu anda tidak dapat dimuatkan. Anda masih boleh mengisi borang ini.",
+    "sections": {
+      "aboutYou": "1. Tentang anda",
+      "yourFarm": "2. Ladang anda",
+      "identityDocs": "3. Dokumen pengenalan diri",
+      "identityDocsDesc": "Hanya pentadbir QURBI yang dapat melihatnya. Dokumen ini digunakan untuk mengesahkan anda seorang penternak sebenar."
+    },
+    "fields": {
+      "name": "Nama penuh (seperti dalam IC)",
+      "namePlaceholder": "Ahmad bin Ali",
+      "phone": "Nombor telefon",
+      "phonePlaceholder": "012-345 6789",
+      "icNumber": "Nombor kad pengenalan (IC)",
+      "icHint": "12 digit, cth. 900312-11-5087",
+      "icPlaceholder": "XXXXXX-XX-XXXX",
+      "farmName": "Nama ladang",
+      "farmNamePlaceholder": "cth. Ladang Ternakan Ali",
+      "address": "Alamat ladang",
+      "addressPlaceholder": "Lot 12, Jalan...",
+      "city": "Bandar",
+      "cityPlaceholder": "Kuantan",
+      "postcode": "Poskod",
+      "postcodePlaceholder": "25000",
+      "state": "Negeri",
+      "statePlaceholder": "Pilih negeri",
+      "delivery": "Bagaimana anda akan menghantar kepada pembeli?",
+      "deliveryHint": "Anda boleh menukarnya kemudian dalam profil anda."
+    },
+    "docs": {
+      "tipsTitle": "Untuk foto IC yang jelas",
+      "tips": {
+        "corners": "Keempat-empat penjuru kad kelihatan dalam foto",
+        "readable": "Nama dan nombor IC jelas dan boleh dibaca",
+        "noGlare": "Tiada silau, pantulan flash atau jari yang menutupinya"
+      },
+      "icFront": "Bahagian depan IC",
+      "icFrontUpload": "Ketik untuk ambil foto bahagian depan",
+      "icBack": "Bahagian belakang IC",
+      "icBackUpload": "Ketik untuk ambil foto bahagian belakang",
+      "selfie": "Swafoto",
+      "selfieUpload": "Ambil swafoto",
+      "selfieRetake": "Ambil semula",
+      "selfieHint": "Foto wajah anda yang jelas dan terkini. Pentadbir akan membandingkannya dengan foto IC anda.",
+      "selfieTips": {
+        "light": "Menghadap kamera di tempat yang cukup cahaya.",
+        "remove": "Tanggalkan cermin mata hitam, pelitup muka atau apa-apa yang menutupi wajah anda.",
+        "alone": "Hanya anda dalam foto."
+      },
+      "certificate": "Sijil ladang (pilihan)",
+      "certificateHint": "Tidak semua penternak memilikinya. Anda boleh teruskan tanpanya."
+    },
+    "missing": {
+      "name": "Masukkan nama penuh anda seperti yang tertera pada IC.",
+      "phone": "Masukkan nombor telefon yang boleh dihubungi oleh pembeli dan QURBI.",
+      "icNumber": "Masukkan nombor IC anda, cth. 900312-11-5087.",
+      "farmName": "Masukkan nama ladang anda.",
+      "address": "Masukkan alamat ladang.",
+      "city": "Masukkan bandar atau pekan.",
+      "postcode": "Masukkan poskod.",
+      "state": "Pilih negeri.",
+      "delivery": "Pilih cara anda akan menghantar kepada pembeli.",
+      "icFront": "Muat naik foto bahagian depan IC anda.",
+      "icBack": "Muat naik foto bahagian belakang IC anda.",
+      "selfie": "Ambil swafoto supaya kami dapat memadankannya dengan IC anda."
+    },
+    "labels": {
+      "name": "Nama penuh",
+      "phone": "Nombor telefon",
+      "icNumber": "Nombor IC",
+      "farmName": "Nama ladang",
+      "address": "Alamat ladang",
+      "city": "Bandar",
+      "postcode": "Poskod",
+      "state": "Negeri",
+      "delivery": "Kaedah penghantaran",
+      "icFront": "Bahagian depan IC",
+      "icBack": "Bahagian belakang IC",
+      "selfie": "Swafoto"
+    },
+    "hint": {
+      "ready": "Semua lengkap. Seterusnya, baca dan tandatangani polisi penternak.",
+      "stillNeeded": "Masih diperlukan: {{items}}.",
+      "remaining_one": "{{count}} item wajib lagi",
+      "remaining_other": "{{count}} item wajib lagi"
+    },
+    "next": "Seterusnya: polisi & tandatangan"
+  },
+  "policy": {
+    "backToDetails": "Kembali ke butiran ladang",
+    "title": "Polisi & terma",
+    "subtitle": "Langkah terakhir sebelum kami menyemak akaun anda.",
+    "readAndTick": "1. Baca dan tandakan setiap perkara",
+    "progress": "{{done}} daripada {{total}}",
+    "version": "Versi polisi: {{version}}",
+    "points": {
+      "identityStorage": {
+        "title": "Penyimpanan IC, swafoto dan dokumen",
+        "text": "Saya memberi persetujuan kepada QURBI untuk menyimpan IC, swafoto dan dokumen yang saya hantar dengan selamat bagi tujuan pengesahan identiti secara manual dan pentadbiran akaun."
+      },
+      "platformMarkup": {
+        "title": "Kenaikan harga platform 20%",
+        "text": "Saya faham bahawa QURBI boleh menambah kenaikan harga sebanyak 20% di atas harga yang saya tetapkan bagi ternakan yang dipaparkan kepada pembeli."
+      },
+      "accurateInformation": {
+        "title": "Maklumat yang tepat",
+        "text": "Saya mengesahkan bahawa maklumat peribadi, ladang, ternakan dan harga saya adalah benar, lengkap dan sentiasa dikemas kini."
+      },
+      "animalCompliance": {
+        "title": "Kesihatan haiwan dan pematuhan undang-undang",
+        "text": "Saya bertanggungjawab ke atas kebajikan haiwan dan pematuhan keperluan ternakan, kesihatan, permit dan pergerakan yang terpakai di Malaysia."
+      },
+      "deliveryResponsibility": {
+        "title": "Tanggungjawab penghantaran",
+        "text": "Saya akan memenuhi pesanan mengikut kaedah penghantaran yang saya pilih dan memberikan kerjasama kepada QURBI apabila penghantaran platform dipilih."
+      },
+      "privacyEnforcement": {
+        "title": "Privasi dan penguatkuasaan platform",
+        "text": "Saya akan melindungi maklumat pembeli dan menerima bahawa QURBI boleh menyemak, menolak atau menggantung akaun yang melanggar terma ini."
+      }
+    },
+    "sign": "2. Tandatangan",
+    "fullName": "Nama penuh",
+    "nameError": "Masukkan nama penuh anda.",
+    "date": "Tarikh",
+    "signature": "Tandatangan",
+    "nextTitle": "Apa yang berlaku seterusnya?",
+    "nextText": "Pentadbir QURBI akan menyemak IC, swafoto dan butiran ladang anda — biasanya dalam masa 1–2 hari bekerja. Anda boleh menyenaraikan ternakan setelah diluluskan.",
+    "signatureUploadFailed": "Muat naik tandatangan gagal.",
+    "submitFailed": "Penghantaran gagal. Butiran anda disimpan pada peranti ini; sila cuba lagi.",
+    "missing": {
+      "tickAll": "tandakan semua {{total}} perkara ({{done}} siap)",
+      "name": "nama anda",
+      "date": "tarikh",
+      "signature": "tandatangan anda"
+    },
+    "hint": {
+      "ready": "Sedia dihantar untuk semakan.",
+      "toSubmit": "Untuk menghantar: {{items}}."
+    },
+    "back": "Kembali",
+    "sending": "Sedang menghantar...",
+    "submit": "Hantar untuk semakan"
+  },
+  "pending": {
+    "title": "Kami sedang menyemak permohonan anda",
+    "thanks": "Terima kasih! Tiada tindakan lanjut diperlukan daripada anda buat masa ini.",
+    "status": "Status",
+    "steps": {
+      "sent": { "title": "Permohonan dihantar", "text": "Kami telah menerima butiran, IC dan swafoto anda." },
+      "review": { "title": "Semakan pentadbir", "text": "Pentadbir QURBI menyemak dokumen anda. Biasanya 1–2 hari bekerja." },
+      "start": { "title": "Mula berjual", "text": "Setelah diluluskan, anda boleh menyenaraikan ternakan dan menerima pesanan." }
+    },
+    "linkedTo": "Permohonan dipautkan kepada",
+    "yourEmail": "e-mel log masuk anda",
+    "checkNow": "Semak status sekarang",
+    "stillReview": "Masih dalam semakan (disemak pada {{time}}).",
+    "logout": "Log keluar"
+  },
+  "rejected": {
+    "title": "Permohonan anda perlu dibaiki",
+    "intro": "Kami belum dapat meluluskannya. Baiki perkara di bawah dan hantar semula — ia hanya mengambil masa beberapa minit.",
+    "status": "Status",
+    "notApproved": "Tidak diluluskan",
+    "adminNote": "Catatan pentadbir",
+    "loadingNote": "Memuatkan catatan pentadbir...",
+    "noReason": "Tiada sebab diberikan. Sila hubungi sokongan QURBI sebelum menghantar semula.",
+    "howToFix": "Cara membaikinya",
+    "fixSteps": {
+      "read": "Baca catatan pentadbir di atas.",
+      "tap": "Ketik “Baiki dan hantar semula”. Butiran terdahulu anda telah diisi untuk anda.",
+      "change": "Ubah apa yang diminta oleh pentadbir — contohnya ambil semula foto IC yang kabur.",
+      "sign": "Tandatangani polisi sekali lagi dan hantar. Kami akan menyemaknya semula dalam masa 1–2 hari bekerja."
+    },
+    "resubmit": "Baiki dan hantar semula",
+    "logout": "Log keluar"
+  },
+  "oauth": {
+    "authorizeTitle": "Beri kebenaran akses",
+    "loading": "Memuatkan…",
+    "aiClient": "Klien AI",
+    "thisApp": "aplikasi ini",
+    "granted": "Akses dibenarkan",
+    "denied": "Akses dinafikan",
+    "returnToClient": "Anda boleh kembali ke {{client}} dan menutup tetingkap ini.",
+    "reconnectTitle": "Sambungan semula diperlukan",
+    "reconnectDefault": "Kebenaran ini tidak dapat diselesaikan lagi. Sambung semula daripada klien AI anda untuk mencuba lagi.",
+    "invalidLink": "Pautan kebenaran ini tidak sah atau telah tamat tempoh.",
+    "loadFailed": "Tidak dapat memuatkan permintaan kebenaran ini. Sila cuba lagi.",
+    "completeFailed": "Tidak dapat melengkapkan kebenaran. Sila cuba lagi.",
+    "wantsAccess": "{{client}} ingin mengakses {{app}} bagi pihak anda",
+    "toolsIntro": "Ia akan dapat menggunakan alat berikut dalam {{app}}:",
+    "noTools": "Tiada alat diminta",
+    "deny": "Tolak",
+    "approve": "Luluskan"
+  }
+}

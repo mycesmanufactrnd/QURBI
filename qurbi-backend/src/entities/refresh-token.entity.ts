@@ -1,6 +1,7 @@
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { User } from './user.entity';
+import { UserRole } from './enums';
 
 // One row per issued refresh token, so a session can be revoked server-side
 // (unlike the stateless access token). Rotated on every /auth/refresh call:
@@ -20,6 +21,12 @@ export class RefreshToken extends BaseEntity {
   // alone can't be replayed as a valid session.
   @Column({ type: 'varchar', length: 255, unique: true })
   tokenHash: string;
+
+  // The role this session is currently acting as. A farmer account can also
+  // buy, so the session (not the account) remembers which side it is on and
+  // keeps it across refreshes. Null = fall back to the account's own role.
+  @Column({ type: 'enum', enum: UserRole, nullable: true })
+  activeRole: UserRole | null;
 
   @Column({ type: 'datetime', precision: 6 })
   expiresAt: Date;

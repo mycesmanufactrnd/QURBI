@@ -413,9 +413,10 @@ export class OrdersService {
       // the farmer portal. Keep this notification in the same transaction as
       // the order transition so the farmer cannot see one without the other.
       if (opts.userId && opts.userId !== order.farmerId) {
-        const releaseMessage = previousStatus === OrderStatus.PENDING_PAYMENT
-          ? 'The reservation was released. Eligible listings are available to buyers again.'
-          : 'Open the order to review the cancellation and listing status.';
+        const releaseMessage =
+          previousStatus === OrderStatus.PENDING_PAYMENT
+            ? 'The reservation was released. Eligible listings are available to buyers again.'
+            : 'Open the order to review the cancellation and listing status.';
         await manager.save(
           manager.create(Notification, {
             userId: order.farmerId,

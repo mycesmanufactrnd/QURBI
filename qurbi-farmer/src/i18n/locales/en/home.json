@@ -1,0 +1,53 @@
+{
+  "headerLabel": "QURBI Farmer header",
+  "openProfile": "Open farmer profile",
+  "profileAlt": "Farmer profile",
+  "greeting": {
+    "morning": "Good Morning",
+    "afternoon": "Good Afternoon",
+    "evening": "Good Evening"
+  },
+  "verifiedFarmer": "Verified Farmer",
+  "loadError": "We couldn't refresh your dashboard. Showing the latest information we have.",
+  "invalidOrderResponse": "The order service returned an invalid response.",
+  "quick": {
+    "addAnimal": "Add animal",
+    "bulkSell": "Bulk sell",
+    "orders": "Orders",
+    "myAnimals": "My animals",
+    "toHandle": "{{count}} to handle"
+  },
+  "todo": {
+    "title": "To do",
+    "expired_one": "{{count}} listing expired",
+    "expired_other": "{{count}} listings expired",
+    "expiredHint_one": "Buyers can't see it. Check the details and renew for 14 days.",
+    "expiredHint_other": "Buyers can't see them. Check the details and renew for 14 days."
+  },
+  "overview": {
+    "title": "Farm overview",
+    "forSale": "For sale",
+    "ordersToHandle": "Orders to handle",
+    "sold": "Sold",
+    "awaitingPayment_one": "{{count}} more order is waiting for the buyer to pay.",
+    "awaitingPayment_other": "{{count}} more orders are waiting for the buyer to pay."
+  },
+  "forSale": {
+    "title": "Your animals for sale",
+    "seeAll": "See all",
+    "emptyTitle": "Nothing for sale right now",
+    "emptyDescription": "Add an animal so buyers can find it on QURBI.",
+    "addAnimal": "Add animal"
+  },
+  "recentOrders": {
+    "title": "Recent orders",
+    "seeAll": "See all"
+  },
+  "carousel": {
+    "viewListing": "View {{title}} listing",
+    "listingAlt": "{{species}} listing",
+    "livestock": "Livestock",
+    "slideOf": "Slide {{current}} of {{total}}",
+    "showListing": "Show listing {{index}}"
+  }
+}

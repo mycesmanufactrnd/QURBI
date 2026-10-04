@@ -5,15 +5,12 @@ import { qurbi } from "@/api/qurbiClient";
 import BrandLogo from "@/components/agri/BrandLogo";
 import StatusBadge from "@/components/agri/StatusBadge";
 import { AlertCircle, ArrowRight, LogOut, Loader2, XCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
-const FIX_STEPS = [
-  "Read the admin's note above.",
-  "Tap “Fix and resubmit”. Your previous details are filled in for you.",
-  "Change what the admin asked for — for example retake a blurry IC photo.",
-  "Sign the policy again and submit. We'll review it again in 1–2 working days.",
-];
+const FIX_STEPS = ["read", "tap", "change", "sign"];
 
 export default function VerificationRejected() {
+  const { t } = useTranslation("verification");
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const status = user?.data?.verificationStatus || user?.verificationStatus;
@@ -48,29 +45,29 @@ export default function VerificationRejected() {
             <div className="mb-5 inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-red-100 text-red-600">
               <XCircle className="h-10 w-10" />
             </div>
-            <h1 className="text-2xl font-extrabold tracking-tight">Your application needs a fix</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight">{t("rejected.title")}</h1>
             <p className="mt-2 text-base leading-relaxed text-muted-foreground">
-              We couldn&apos;t approve it yet. Fix the item below and send it again — it only takes a few minutes.
+              {t("rejected.intro")}
             </p>
           </div>
 
           <div className="mt-6 rounded-2xl border border-border bg-card p-5 shadow-sm">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-sm font-semibold text-muted-foreground">Status</span>
-              <StatusBadge kind="verification" status="Rejected" dot>Not approved</StatusBadge>
+              <span className="text-sm font-semibold text-muted-foreground">{t("rejected.status")}</span>
+              <StatusBadge kind="verification" status="Rejected" dot>{t("rejected.notApproved")}</StatusBadge>
             </div>
             <div className="mt-4 rounded-xl border border-destructive/25 bg-destructive/5 p-4">
-              <p className="flex items-center gap-2 text-sm font-bold text-destructive"><AlertCircle className="h-4 w-4" />Admin&apos;s note</p>
+              <p className="flex items-center gap-2 text-sm font-bold text-destructive"><AlertCircle className="h-4 w-4" />{t("rejected.adminNote")}</p>
               <p className="mt-1.5 text-base leading-relaxed text-foreground">
-                {reasonLoading ? "Loading the admin's note..." : reason || "No reason was given. Please contact QURBI support before resubmitting."}
+                {reasonLoading ? t("rejected.loadingNote") : reason || t("rejected.noReason")}
               </p>
             </div>
-            <p className="mt-5 text-sm font-bold">How to fix it</p>
+            <p className="mt-5 text-sm font-bold">{t("rejected.howToFix")}</p>
             <ol className="mt-2 space-y-2">
               {FIX_STEPS.map((step, index) => (
                 <li key={step} className="flex gap-3 text-sm leading-snug text-muted-foreground">
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-foreground">{index + 1}</span>
-                  <span className="pt-0.5">{step}</span>
+                  <span className="pt-0.5">{t(`rejected.fixSteps.${step}`)}</span>
                 </li>
               ))}
             </ol>
@@ -83,7 +80,7 @@ export default function VerificationRejected() {
             className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-70"
           >
             {reapplying ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
-            Fix and resubmit <ArrowRight className="h-5 w-5" />
+            {t("rejected.resubmit")} <ArrowRight className="h-5 w-5" />
           </button>
 
           <button
@@ -91,7 +88,7 @@ export default function VerificationRejected() {
             onClick={() => logout()}
             className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card font-semibold text-foreground hover:bg-muted"
           >
-            <LogOut className="h-5 w-5" /> Log out
+            <LogOut className="h-5 w-5" /> {t("rejected.logout")}
           </button>
         </div>
       </div>

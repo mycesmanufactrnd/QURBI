@@ -7,6 +7,7 @@ import {
   setSessionTokens,
 } from "@/api/apiClient";
 import { signInWithPopup, signOut } from "firebase/auth";
+import i18n from "@/i18n";
 import { firebaseAuth, googleProvider } from "@/lib/firebase";
 
 const AuthContext = createContext(null);
@@ -44,7 +45,7 @@ export const AuthProvider = ({ children }) => {
   const acceptSession = useCallback((session) => {
     if (!session?.accessToken || !ALLOWED_ROLES.has(session.user?.role)) {
       clearAuth();
-      throw new Error("This account does not have access to the QURBI Farmer portal.");
+      throw new Error(i18n.t("errors.notFarmer"));
     }
     setSessionTokens(session);
     setUser(normalizeUser(session.user));
@@ -68,7 +69,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const currentUser = await authApi.me();
       if (!ALLOWED_ROLES.has(currentUser?.role)) {
-        throw new Error("This account does not have access to the QURBI Farmer portal.");
+        throw new Error(i18n.t("errors.noPortalAccess"));
       }
       setUser(normalizeUser(currentUser));
       setIsAuthenticated(true);
@@ -76,7 +77,7 @@ export const AuthProvider = ({ children }) => {
       return currentUser;
     } catch (error) {
       clearAuth();
-      setAuthError({ type: "auth_required", message: error.message || "Authentication required" });
+      setAuthError({ type: "auth_required", message: error.message || i18n.t("errors.authRequired") });
       return null;
     } finally {
       setIsLoadingAuth(false);

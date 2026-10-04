@@ -1,0 +1,41 @@
+{
+  "title": "Profile",
+  "editProfile": "Edit profile",
+  "farmerAccount": "Farmer account",
+  "defaultName": "Farmer",
+  "verificationStatus": "Verification status",
+  "seeWhatToFix": "See what to fix",
+  "viewStatus": "View status",
+  "verifyNow": "Verify now",
+  "rows": {
+    "email": "Email",
+    "phone": "Phone",
+    "farmName": "Farm Name",
+    "farmAddress": "Farm Address",
+    "state": "State"
+  },
+  "switchToBuyer": "Switch to buyer account",
+  "switchToBuyerHint": "Buy livestock from other farmers with this same login.",
+  "switchFailedTitle": "Could not switch account",
+  "tryAgain": "Please try again.",
+  "logOut": "Log out",
+  "footer": "QURBI Farmer · Phase 1",
+  "updatedTitle": "Profile updated",
+  "updatedDescription": "Your farmer information has been saved.",
+  "saveFailed": "Profile could not be saved. Please try again.",
+  "dialog": {
+    "title": "Edit farmer profile",
+    "description": "Update the contact and farm information shown in your account.",
+    "requiredNote": "Required field",
+    "fullName": "Full Name",
+    "email": "Email",
+    "emailHint": "Email is linked to your account and cannot be changed here.",
+    "phone": "Phone Number",
+    "farmName": "Farm Name",
+    "farmAddress": "Farm Address",
+    "state": "State",
+    "selectState": "Select state",
+    "icLocked": "IC details remain locked because they are part of identity verification. Contact an administrator if they are incorrect.",
+    "save": "Save changes"
+  }
+}

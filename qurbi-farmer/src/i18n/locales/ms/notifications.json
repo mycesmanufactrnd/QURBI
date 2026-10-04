@@ -1,0 +1,20 @@
+{
+  "title": "Notifikasi",
+  "newUpdates_one": "{{count}} kemas kini baharu",
+  "newUpdates_other": "{{count}} kemas kini baharu",
+  "unreadUpdates_one": "{{count}} kemas kini belum dibaca",
+  "unreadUpdates_other": "{{count}} kemas kini belum dibaca",
+  "allCaughtUp": "Tiada notifikasi tertunggak",
+  "unreadAria_one": "{{count}} notifikasi belum dibaca",
+  "unreadAria_other": "{{count}} notifikasi belum dibaca",
+  "markAllRead": "Tandakan semua dibaca",
+  "retry": "Cuba lagi",
+  "loadFailed": "Notifikasi tidak dapat dimuatkan.",
+  "important": "PENTING",
+  "new": "Baharu",
+  "tapToOpen": "Ketik untuk buka",
+  "emptyTitle": "Belum ada notifikasi",
+  "emptyDescription": "Pesanan baharu, keputusan pengesahan dan kemas kini senarai akan dipaparkan di sini.",
+  "bellEmptyDescription": "Kemas kini penternak dan senarai akan dipaparkan di sini.",
+  "viewAll": "Lihat semua notifikasi"
+}
