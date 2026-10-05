@@ -61,7 +61,11 @@ function ScrollingFarmName({ children, className = "" }) {
       <span
         ref={textRef}
         className={`inline-block whitespace-nowrap ${scrollDistance > 2 ? "product-name-scroll" : ""}`}
-        style={scrollDistance > 2 ? { "--scroll-distance": `-${scrollDistance}px` } : undefined}
+        style={
+          scrollDistance > 2
+            ? /** @type {React.CSSProperties} */ ({ "--scroll-distance": `-${scrollDistance}px` })
+            : undefined
+        }
       >
         {children}
       </span>

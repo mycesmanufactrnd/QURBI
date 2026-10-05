@@ -61,7 +61,7 @@ export function groupedOrderQuery(order) {
   return `order_ids=${encodeURIComponent(ids.join(","))}`;
 }
 
-export function groupItemsByFarm(items = [], resolveProduct = () => null) {
+export function groupItemsByFarm(items = [], resolveProduct = (_item) => null) {
   const grouped = new Map();
   items.forEach((item, index) => {
     const product = resolveProduct(item);

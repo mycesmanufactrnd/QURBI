@@ -212,7 +212,6 @@ export default function LivestockDetail() {
       livestock.farm_state ||
       "",
     farm_state: livestock.farm_state || livestock.state || "",
-    state: livestock.state || livestock.farm_state || "",
     image: livestock.coverImage || livestock.images?.[0] || "",
     created_date: livestock.created_date || "",
     listingPublishedAt: livestock.listingPublishedAt || "",

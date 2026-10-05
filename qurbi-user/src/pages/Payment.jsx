@@ -1072,6 +1072,7 @@ export default function Payment() {
       />
       <PaymentErrorModal
         error={checkoutError}
+        viewOrderLabel="View Order"
         onClose={() => setCheckoutError(null)}
         onViewOrders={() => {
           setCheckoutError(null);
