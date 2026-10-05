@@ -356,36 +356,52 @@ const functionHandlers = {
   async markPurchasedLivestock({ orderId }) {
     return wrap({ order: orderForUser(await request({ method: "get", url: `/orders/${orderId}` })) });
   },
-  async createCheckout({ items = [], fulfillmentMethod = "delivery", deliveryAddress = {}, checkoutGroupId = "" }) {
-    await Promise.all(items.map((item) => request({
-      method: "post",
-      url: "/cart-items",
-      data: {
-        itemType: item.item_type === "bulk" ? "bulk_listing" : "livestock",
-        livestockId: item.item_type === "bulk" ? undefined : item.livestock_id || item.id,
-        bulkListingId: item.item_type === "bulk" ? item.bulk_listing_id || item.id : undefined,
-        quantity: item.quantity || 1,
-      },
-    })));
-    const orders = await request({
-      method: "post",
-      url: "/orders/checkout",
-      data: {
-        deliveryMethod: fulfillmentMethod === "pickup" ? "self_pickup" : "delivery",
-        deliveryAddress,
-        buyerNotes: checkoutGroupNote(checkoutGroupId),
-      },
-    });
+  async createCheckout({ orderIds = [], items = [], fulfillmentMethod = "delivery", deliveryAddress = {}, checkoutGroupId = "" }) {
+    let orders = [];
+    if (orderIds.length) {
+      orders = await Promise.all(orderIds.map((orderId) => request({ method: "get", url: `/orders/${orderId}` })));
+    } else {
+      await Promise.all(items.map((item) => request({
+        method: "post",
+        url: "/cart-items",
+        data: {
+          itemType: item.item_type === "bulk" ? "bulk_listing" : "livestock",
+          livestockId: item.item_type === "bulk" ? undefined : item.livestock_id || item.id,
+          bulkListingId: item.item_type === "bulk" ? item.bulk_listing_id || item.id : undefined,
+          quantity: item.quantity || 1,
+        },
+      })));
+      orders = await request({
+        method: "post",
+        url: "/orders/checkout",
+        data: {
+          deliveryMethod: fulfillmentMethod === "pickup" ? "self_pickup" : "delivery",
+          deliveryAddress,
+          buyerNotes: checkoutGroupNote(checkoutGroupId),
+        },
+      });
+    }
     const mappedOrders = orders.map(orderForUser);
     const firstOrder = mappedOrders[0];
     const ids = mappedOrders.map((order) => order.id).filter(Boolean);
-    const groupQuery = ids.length > 1
-      ? `?group_ids=${encodeURIComponent(ids.join(","))}`
-      : "";
+    const payment = await request({
+      method: "post",
+      url: "/payments/chip/checkout",
+      data: { orderIds: ids },
+    });
     return wrap({
       orders: mappedOrders,
       order: firstOrder,
-      url: firstOrder ? `/orders/${firstOrder.id}${groupQuery}` : "/orders",
+      paymentSessionId: payment.paymentSessionId,
+      url: payment.checkoutUrl,
+    });
+  },
+  async fetchChipPaymentSession({ paymentSessionId }) {
+    return wrap({
+      payment: await request({
+        method: "get",
+        url: `/payments/chip/sessions/${paymentSessionId}`,
+      }),
     });
   },
   async saveMyReceivedOrderProof() {

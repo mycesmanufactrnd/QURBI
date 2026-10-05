@@ -19,6 +19,7 @@ import BulkListingDetail from "@/pages/BulkListingDetail";
 import Cart from "@/pages/Cart";
 import Payment from "@/pages/Payment";
 import Receipt from "@/pages/Receipt";
+import ChipPaymentReturn from "@/pages/ChipPaymentReturn";
 import History from "@/pages/History";
 import Orders from "@/pages/Orders";
 import OrderDetail from "@/pages/OrderDetail";
@@ -87,6 +88,7 @@ function App() {
                       <Route path="/admin/breeds" element={<AdminBreeds />} />
                       <Route path="/admin/test" element={<AdminTest />} />
                       <Route path="/receipt" element={<Receipt />} />
+                      <Route path="/payment/chip/:result" element={<ChipPaymentReturn />} />
                       <Route path="*" element={<PageNotFound />} />
                     </Route>
                   </Routes>
