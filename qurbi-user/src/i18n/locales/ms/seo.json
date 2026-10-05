@@ -1,0 +1,41 @@
+{
+  "default": {
+    "title": "QURBI | Pasaran Ternakan Korban",
+    "description": "QURBI ialah pasaran dalam talian untuk membeli lembu dan kambing korban daripada penternak di Malaysia.",
+    "imageAlt": "QURBI - pasaran lembu dan kambing korban dalam talian"
+  },
+  "organization": {
+    "description": "QURBI ialah pasaran dalam talian yang menghubungkan pembeli dengan penternak lembu dan kambing korban di Malaysia."
+  },
+  "home": {
+    "title": "QURBI | Beli Lembu & Kambing Korban Dalam Talian",
+    "description": "Beli lembu dan kambing korban daripada penternak ladang yang disahkan di Malaysia. Lihat harga, butiran ternakan dan buat pesanan dengan mudah di QURBI.",
+    "breadcrumb": "Utama",
+    "tagline": "Beli lembu & kambing korban dalam talian"
+  },
+  "browse": {
+    "title": "Senarai Lembu & Kambing Korban | QURBI",
+    "description": "Layari lembu dan kambing korban yang tersedia daripada penternak berdaftar. Lihat harga, baka, berat dan butiran setiap ternakan sebelum membuat pesanan.",
+    "breadcrumb": "Lihat Ternakan"
+  },
+  "bulkBuy": {
+    "title": "Beli Ternakan Secara Pukal | QURBI",
+    "description": "Beli ternakan dalam kuantiti pukal terus daripada penternak di QURBI. Semak harga, kuantiti dan butiran setiap senarai pukal.",
+    "breadcrumb": "Beli Pukal"
+  },
+  "privacy": {
+    "title": "Dasar Privasi | QURBI",
+    "description": "Ketahui bagaimana QURBI mengumpul, menggunakan dan melindungi maklumat peribadi anda semasa anda membeli ternakan korban.",
+    "breadcrumb": "Dasar Privasi"
+  },
+  "terms": {
+    "title": "Terma & Syarat | QURBI",
+    "description": "Baca terma dan syarat penggunaan QURBI untuk pembeli ternakan korban, termasuk pesanan, pembayaran dan penghantaran.",
+    "breadcrumb": "Terma & Syarat"
+  },
+  "support": {
+    "title": "Bantuan & Sokongan Pelanggan | QURBI",
+    "description": "Perlukan bantuan dengan pesanan atau akaun QURBI anda? Hubungi pasukan sokongan pelanggan kami.",
+    "breadcrumb": "Sokongan Pelanggan"
+  }
+}

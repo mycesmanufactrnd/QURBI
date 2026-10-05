@@ -1,19 +1,23 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { qurbi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import LivestockForm from "@/components/agri/LivestockForm";
+import LivestockForm, { MissingSummary } from "@/components/agri/LivestockForm";
 import StepIndicator from "@/components/agri/StepIndicator";
+import StickyActionBar from "@/components/agri/StickyActionBar";
 import { getDraft, setDraft } from "@/lib/livestockDraft";
 import { MALAYSIA_STATES } from "@/lib/agri";
 
 export default function AddLivestock() {
   const navigate = useNavigate();
+  const { t } = useTranslation("livestock");
   const { user } = useAuth();
   const [initial, setInitial] = useState(null);
   const [registeredState, setRegisteredState] = useState("");
+  const [validation, setValidation] = useState({ missing: [], attempted: false });
   const formRef = useRef(null);
 
   useEffect(() => {
@@ -41,14 +45,22 @@ export default function AddLivestock() {
     return <div className="flex justify-center py-20"><Loader2 className="w-7 h-7 animate-spin text-primary" /></div>;
   }
 
+  const { missing, attempted } = validation;
+  const hint = attempted && missing.length
+    ? <MissingSummary missing={missing} />
+    : missing.length
+      ? t("add.hintLeft", { count: missing.length })
+      : t("add.hintDone");
+
   return (
     <div className="mx-auto w-full max-w-6xl">
       <Header
         onBack={() => navigate("/livestock")}
-        title="Add Livestock"
-        description="Create a clear, buyer-friendly listing for one animal."
+        title={t("add.title")}
+        description={t("add.description")}
+        backLabel={t("add.backAria")}
       />
-      <StepIndicator current={1} className="mt-6" />
+      <StepIndicator current={1} className="mt-5" />
 
       <div className="mt-4">
         <LivestockForm
@@ -58,30 +70,29 @@ export default function AddLivestock() {
           onSubmit={handleNext}
           submitting={false}
           hideActions
+          onValidationChange={setValidation}
         />
       </div>
 
-      <div className="mt-6 pb-2">
-        <div className="soft-card flex gap-3 rounded-2xl p-3">
-          <Button variant="outline" onClick={() => navigate("/livestock")} className="flex-1 h-12 rounded-2xl">
-            Back
-          </Button>
-          <Button onClick={() => formRef.current?.submit()} className="flex-1 h-12 rounded-2xl text-base font-semibold">
-            Next
-          </Button>
-        </div>
-      </div>
+      <StickyActionBar hint={hint} hintTone={attempted && missing.length ? "danger" : missing.length ? "muted" : "success"}>
+        <Button variant="outline" onClick={() => navigate("/livestock")} className="h-12 w-[34%] shrink-0 rounded-2xl">
+          {t("add.cancel")}
+        </Button>
+        <Button onClick={() => formRef.current?.submit()} className="h-12 flex-1 rounded-2xl text-base font-semibold">
+          {t("add.next")} <ArrowRight className="ml-1.5 h-5 w-5" />
+        </Button>
+      </StickyActionBar>
     </div>
   );
 }
 
-function Header({ onBack, title, description }) {
+function Header({ onBack, title, description, backLabel }) {
   return (
     <div className="flex items-center gap-4">
-      <button type="button" onClick={onBack} aria-label="Back to livestock" className="soft-card flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-colors hover:bg-muted">
+      <button type="button" onClick={onBack} aria-label={backLabel} className="soft-card flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-colors hover:bg-muted">
         <ArrowLeft className="h-5 w-5" />
       </button>
-      <div>
+      <div className="min-w-0">
         <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{title}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{description}</p>
       </div>

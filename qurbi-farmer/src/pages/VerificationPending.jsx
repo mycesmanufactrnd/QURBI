@@ -1,56 +1,103 @@
-import React from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import React, { useState } from "react";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
+import { authApi } from "@/api/apiClient";
 import BrandLogo from "@/components/agri/BrandLogo";
 import StatusBadge from "@/components/agri/StatusBadge";
-import { Clock, LogOut, ShieldCheck } from "lucide-react";
+import { Check, Clock, Loader2, LogOut, RefreshCw } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
+
+const STEPS = [
+  { key: "sent", state: "done" },
+  { key: "review", state: "current" },
+  { key: "start", state: "next" },
+];
 
 export default function VerificationPending() {
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { t, i18n } = useTranslation("verification");
+  const { user, logout, checkUserAuth } = useAuth();
   const status = user?.data?.verificationStatus || user?.verificationStatus;
+  const [checking, setChecking] = useState(false);
+  const [checkedAt, setCheckedAt] = useState(null);
 
   if (status === "Approved") return <Navigate to="/" replace />;
   if (status === "Not Submitted") return <Navigate to="/verify" replace />;
   if (status === "Rejected") return <Navigate to="/rejected" replace />;
 
+  const checkStatus = async () => {
+    setChecking(true);
+    try {
+      const me = await authApi.me();
+      // Only reload the session (which re-routes) when the review result is in.
+      if (me?.farmerProfile?.verificationStatus !== "pending") {
+        await checkUserAuth?.();
+        return;
+      }
+      setCheckedAt(new Date());
+    } catch {
+      setCheckedAt(new Date());
+    } finally {
+      setChecking(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-accent to-background flex flex-col">
-      <div className="max-w-md mx-auto w-full flex-1 flex flex-col px-6 py-10">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 py-8">
         <div className="flex justify-center"><BrandLogo /></div>
 
-        <div className="flex-1 flex flex-col justify-center animate-fade-in">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-amber-100 text-amber-600 mb-6">
-              <Clock className="w-10 h-10" />
+        <div className="flex flex-1 flex-col justify-center animate-fade-in">
+          <div className="mt-6 text-center">
+            <div className="mb-5 inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-amber-100 text-amber-700">
+              <Clock className="h-10 w-10" />
             </div>
-            <h1 className="text-2xl font-extrabold tracking-tight">Verification Submitted</h1>
-            <p className="text-muted-foreground mt-3 leading-relaxed text-sm">
-              Your verification documents have been submitted successfully.
-              Our admin team will review your account within 1–2 working days.
-              Please wait until your account has been approved.
+            <h1 className="text-2xl font-extrabold tracking-tight">{t("pending.title")}</h1>
+            <p className="mt-2 text-base leading-relaxed text-muted-foreground">
+              {t("pending.thanks")}
             </p>
           </div>
 
-          <div className="mt-8 rounded-2xl bg-card border border-border p-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-muted-foreground">Status</span>
-              <StatusBadge tone="warning" dot>Pending Verification</StatusBadge>
+          <div className="mt-6 rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-semibold text-muted-foreground">{t("pending.status")}</span>
+              <StatusBadge kind="verification" status="Pending" dot />
             </div>
-            <div className="mt-4 flex items-start gap-3 rounded-xl bg-amber-50 p-3.5">
-              <ShieldCheck className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-800 leading-relaxed">
-                You cannot access the app until an admin approves your account. You'll be able to list livestock once approved.
-              </p>
-            </div>
-            <p className="mt-3 text-center text-[11px] text-muted-foreground">Application linked to {user?.email || "your signed-in email"}</p>
+            <ol className="mt-5 space-y-4">
+              {STEPS.map((step, index) => (
+                <li key={step.key} className="flex gap-3">
+                  <span className={cn(
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold",
+                    step.state === "done" ? "bg-emerald-600 text-white" : step.state === "current" ? "bg-amber-100 text-amber-800 ring-2 ring-amber-300" : "bg-muted text-muted-foreground"
+                  )}>
+                    {step.state === "done" ? <Check className="h-4 w-4" /> : index + 1}
+                  </span>
+                  <div className="min-w-0 pt-0.5">
+                    <p className="text-base font-bold">{t(`pending.steps.${step.key}.title`)}</p>
+                    <p className="text-sm leading-snug text-muted-foreground">{t(`pending.steps.${step.key}.text`)}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+            <p className="mt-5 break-words border-t border-border pt-3 text-center text-sm text-muted-foreground">{t("pending.linkedTo")} <span className="font-semibold text-foreground">{user?.email || t("pending.yourEmail")}</span></p>
           </div>
 
           <button
-            onClick={() => logout()}
-            className="mt-8 w-full h-12 rounded-2xl border border-border bg-card font-semibold text-foreground flex items-center justify-center gap-2 hover:bg-muted"
+            type="button"
+            onClick={checkStatus}
+            disabled={checking}
+            className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-70"
           >
-            <LogOut className="w-5 h-5" /> Log out
+            {checking ? <Loader2 className="h-5 w-5 animate-spin" /> : <RefreshCw className="h-5 w-5" />} {t("pending.checkNow")}
+          </button>
+          {checkedAt && !checking && <p role="status" className="mt-2 text-center text-sm text-muted-foreground">{t("pending.stillReview", { time: checkedAt.toLocaleTimeString(i18n.language === "ms" ? "ms-MY" : "en-MY", { hour: "numeric", minute: "2-digit" }) })}</p>}
+
+          <button
+            type="button"
+            onClick={() => logout()}
+            className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card font-semibold text-foreground hover:bg-muted"
+          >
+            <LogOut className="h-5 w-5" /> {t("pending.logout")}
           </button>
         </div>
       </div>

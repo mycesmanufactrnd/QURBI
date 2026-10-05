@@ -1,7 +1,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClientInstance } from "@/lib/query-client";
-import { BrowserRouter as Router, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import PageNotFound from "./lib/PageNotFound";
 import { AuthProvider } from "@/lib/AuthContext";
 import { CartProvider } from "@/lib/cart-context";
@@ -10,6 +10,7 @@ import AppLayout from "@/components/AppLayout";
 import StandaloneLayout from "@/components/StandaloneLayout";
 import Authentication from "@/pages/Authentication";
 import SignupDetails from "@/pages/SignupDetails";
+import SwitchSession from "@/pages/SwitchSession";
 import UserAgreement from "@/pages/UserAgreement";
 import Home from "@/pages/Home";
 import Browse from "@/pages/Browse";
@@ -25,6 +26,9 @@ import Orders from "@/pages/Orders";
 import OrderDetail from "@/pages/OrderDetail";
 import Profile from "@/pages/Profile";
 import AddressBook from "@/pages/AddressBook";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import TermsConditions from "@/pages/TermsConditions";
+import CustomerSupport from "@/pages/CustomerSupport";
 import AdminBreeds from "@/pages/AdminBreeds";
 import HeaderTransitionProvider from "@/components/HeaderTransitionProvider";
 import { NotificationProvider } from "@/lib/notification-context";
@@ -32,6 +36,7 @@ import Notifications from "@/pages/Notifications";
 import AdminTest from "@/pages/AdminTest";
 import { AuthPromptProvider } from "@/lib/auth-prompt-context";
 import AppErrorBoundary from "@/components/AppErrorBoundary";
+import RouteSeo from "@/components/RouteSeo";
 
 function LegacyAuthRedirect({ mode }) {
   const location = useLocation();
@@ -40,13 +45,16 @@ function LegacyAuthRedirect({ mode }) {
   return <Navigate to={`/auth?${params.toString()}`} replace />;
 }
 
-function App() {
+// `Router`/`routerProps` let the build-time prerenderer supply a StaticRouter;
+// in the browser it is always the normal BrowserRouter.
+function App({ Router = BrowserRouter, routerProps = {} }) {
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         <UserProfileProvider>
           <CartProvider>
-            <Router>
+            <Router {...routerProps}>
+              <RouteSeo />
               <AuthPromptProvider>
                 <NotificationProvider>
                   <HeaderTransitionProvider>
@@ -82,9 +90,13 @@ function App() {
                       <Route path="/auth" element={<Authentication />} />
                       <Route path="/login" element={<LegacyAuthRedirect mode="login" />} />
                       <Route path="/register" element={<LegacyAuthRedirect mode="register" />} />
+                      <Route path="/switch-session" element={<SwitchSession />} />
                       <Route path="/signup-details" element={<SignupDetails />} />
                       <Route path="/user-agreement" element={<UserAgreement />} />
                       <Route path="/address-book" element={<AddressBook />} />
+                      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                      <Route path="/terms-conditions" element={<TermsConditions />} />
+                      <Route path="/support" element={<CustomerSupport />} />
                       <Route path="/admin/breeds" element={<AdminBreeds />} />
                       <Route path="/admin/test" element={<AdminTest />} />
                       <Route path="/receipt" element={<Receipt />} />

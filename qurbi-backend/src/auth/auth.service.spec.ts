@@ -35,7 +35,7 @@ describe('AuthService Firebase portal roles', () => {
     email_verified: true,
     name: 'QURBI Person',
     picture: 'https://example.com/avatar.jpg',
-  } as DecodedIdToken;
+  } as unknown as DecodedIdToken;
 
   function setup(existingUser: User | null = null) {
     const findOne = jest
@@ -103,12 +103,16 @@ describe('AuthService Firebase portal roles', () => {
     },
   );
 
+  // The account's own role is never changed by the portal. A farmer account
+  // (which can also buy) acts as a buyer in the buyer portal; a buyer account
+  // keeps acting as a buyer even from the farmer portal.
   it.each([
-    [UserRole.FARMER, FirebasePortal.BUYER],
-    [UserRole.BUYER, FirebasePortal.FARMER],
+    [UserRole.FARMER, FirebasePortal.BUYER, UserRole.BUYER],
+    [UserRole.BUYER, FirebasePortal.FARMER, UserRole.BUYER],
+    [UserRole.FARMER, FirebasePortal.FARMER, UserRole.FARMER],
   ])(
-    'preserves an existing %s role when login comes from the %s portal',
-    async (role, portal) => {
+    'preserves an existing %s account when login comes from the %s portal (session acts as %s)',
+    async (role, portal, activeRole) => {
       const existingUser = {
         id: 'existing-user',
         email: identity.email,
@@ -130,7 +134,7 @@ describe('AuthService Firebase portal roles', () => {
 
       expect(create).not.toHaveBeenCalled();
       expect(save).toHaveBeenCalledWith(expect.objectContaining({ role }));
-      expect(result.user.role).toBe(role);
+      expect(result.user.role).toBe(activeRole);
     },
   );
 });

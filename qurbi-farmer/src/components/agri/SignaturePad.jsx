@@ -2,10 +2,19 @@ import React, { useRef, useState, useEffect, useImperativeHandle, forwardRef } f
 import { Button } from "@/components/ui/button";
 import { Eraser, CheckCircle2, PenLine, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 // Mouse, stylus and touch drawing via Pointer Events.
 // Exposes clear(), isEmpty(), toDataURL() through its ref.
-const SignaturePad = forwardRef(function SignaturePad({ onInk, className }, ref) {
+/** @typedef {{ clear: () => void, isEmpty: () => boolean, toDataURL: () => string }} SignaturePadHandle */
+
+const SignaturePad = forwardRef(
+  /**
+   * @param {{ onInk?: (hasInk: boolean) => void, className?: string, showError?: boolean }} props
+   * @param {React.ForwardedRef<SignaturePadHandle>} ref
+   */
+  function SignaturePad({ onInk, className, showError = false }, ref) {
+  const { t } = useTranslation("shared");
   const canvasRef = useRef(null);
   const drawing = useRef(false);
   const inked = useRef(false);
@@ -17,15 +26,17 @@ const SignaturePad = forwardRef(function SignaturePad({ onInk, className }, ref)
     onInk?.(value);
   };
 
+  const clear = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const context = canvas.getContext("2d");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    markInk(false);
+  };
+
   useImperativeHandle(ref, () => ({
-    clear: () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const context = canvas.getContext("2d");
-      context.fillStyle = "#ffffff";
-      context.fillRect(0, 0, canvas.width, canvas.height);
-      markInk(false);
-    },
+    clear,
     isEmpty: () => !inked.current,
     toDataURL: () => (canvasRef.current ? canvasRef.current.toDataURL("image/png") : ""),
   }));
@@ -85,35 +96,37 @@ const SignaturePad = forwardRef(function SignaturePad({ onInk, className }, ref)
         {!hasInk && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 pointer-events-none select-none">
             <PenLine className="w-5 h-5 text-muted-foreground/50" />
-            <span className="text-sm font-semibold text-muted-foreground/70">Sign here</span>
+            <span className="text-base font-semibold text-muted-foreground">{t("signaturePad.signHere")}</span>
           </div>
         )}
         <canvas
           ref={canvasRef}
           className="block w-full touch-none cursor-crosshair"
           style={{ height: 180 }}
-          aria-label="Digital signature area"
+          aria-label={t("signaturePad.areaLabel")}
         />
       </div>
 
       <div className="flex items-center justify-between gap-3">
         {hasInk ? (
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary">
-            <CheckCircle2 className="w-4 h-4" /> Signature captured
+          <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700">
+            <CheckCircle2 className="w-4 h-4" /> {t("signaturePad.captured")}
+          </span>
+        ) : showError ? (
+          <span role="alert" className="inline-flex items-center gap-1.5 text-sm font-medium text-destructive">
+            <AlertCircle className="w-4 h-4" /> {t("signaturePad.pleaseSign")}
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-destructive">
-            <AlertCircle className="w-3.5 h-3.5" /> Signature is required
-          </span>
+          <span className="text-sm text-muted-foreground">{t("signaturePad.requiredHint")}</span>
         )}
         <Button
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => ref.current?.clear()}
-          className="h-8"
+          onClick={clear}
+          className="h-11 px-4"
         >
-          <Eraser className="w-3.5 h-3.5 mr-1.5" /> Clear
+          <Eraser className="w-4 h-4 mr-1.5" /> {t("signaturePad.clear")}
         </Button>
       </div>
     </div>

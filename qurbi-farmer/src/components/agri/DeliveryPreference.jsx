@@ -3,9 +3,11 @@ import { qurbi } from "@/api/qurbiClient";
 import { Button } from "@/components/ui/button";
 import { Truck, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { useTranslation } from "react-i18next";
 import DeliveryMethodCards from "@/components/agri/DeliveryMethodCards";
 
 export default function DeliveryPreference({ profile }) {
+  const { t } = useTranslation("bulk");
   const { toast } = useToast();
   const profileValue = profile?.deliveryPreference || "";
   const [savedValue, setSavedValue] = useState(profileValue);
@@ -36,12 +38,12 @@ export default function DeliveryPreference({ profile }) {
       const fresh = refetched?.[0];
       if (fresh?.deliveryPreference === value) {
         setSavedValue(fresh.deliveryPreference);
-        toast({ title: "Delivery method updated", description: "Your preference has been saved to your farmer profile." });
+        toast({ title: t("delivery.updatedTitle"), description: t("delivery.updatedDescription") });
       } else {
-        setError("Could not confirm the save. Please try again.");
+        setError(t("delivery.confirmFailed"));
       }
     } catch (err) {
-      setError(err.message || "Save failed.");
+      setError(err.message || t("delivery.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -54,8 +56,8 @@ export default function DeliveryPreference({ profile }) {
           <Truck className="w-4 h-4 text-primary" />
         </span>
         <div>
-          <p className="text-sm font-semibold">Delivery Method</p>
-          <p className="text-[11px] text-muted-foreground">How you deliver livestock to buyers</p>
+          <p className="text-base font-semibold">{t("delivery.title")}</p>
+          <p className="text-sm text-muted-foreground">{t("delivery.subtitle")}</p>
         </div>
       </div>
       <DeliveryMethodCards
@@ -67,13 +69,13 @@ export default function DeliveryPreference({ profile }) {
       />
       <div className="flex items-center justify-between mt-3 min-h-[20px]">
         {error ? (
-          <span className="text-xs text-destructive">{error}</span>
+          <span role="alert" className="text-sm text-destructive">{error}</span>
         ) : (
-          <span className="text-xs text-muted-foreground">{dirty ? "Unsaved changes" : "\u00A0"}</span>
+          <span className="text-sm text-muted-foreground">{dirty ? t("delivery.unsaved") : "\u00A0"}</span>
         )}
-        <Button onClick={save} disabled={!dirty || saving} size="sm" className="h-9">
+        <Button onClick={save} disabled={!dirty || saving} className="h-11 rounded-xl px-5">
           {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
-          Save
+          {t("delivery.save")}
         </Button>
       </div>
     </div>

@@ -1,0 +1,97 @@
+{
+  "renewalUnavailable": "Tarikh pembaharuan tidak tersedia",
+  "farmerFallback": "Penternak",
+  "unknown": "Tidak diketahui",
+  "livestock": "Ternakan",
+  "delivery": {
+    "self": {
+      "label": "Penghantaran sendiri",
+      "description": "Saya akan mengatur penghantaran kepada pembeli."
+    },
+    "qurbi": {
+      "label": "Penghantaran QURBI",
+      "description": "Saya mahu QURBI mengatur penghantaran."
+    },
+    "both": {
+      "label": "Kedua-dua pilihan",
+      "description": "Kaedah penghantaran boleh ditentukan bagi setiap pesanan."
+    }
+  },
+  "verification": {
+    "notSubmitted": "Belum Dihantar",
+    "pending": "Menunggu Pengesahan",
+    "approved": "Penternak Disahkan",
+    "rejected": "Pengesahan Ditolak"
+  },
+  "age": {
+    "month_one": "{{count}} bulan",
+    "month_other": "{{count}} bulan",
+    "year_one": "{{count}} tahun",
+    "year_other": "{{count}} tahun"
+  },
+  "visibility": {
+    "speciesPending": "Spesies menunggu kelulusan pentadbir utama",
+    "speciesRejected": "Permohonan spesies telah ditolak",
+    "breedPending": "Baka menunggu kelulusan pentadbir utama",
+    "breedRejected": "Permohonan baka telah ditolak",
+    "status": "Status ialah {{status}}",
+    "notAvailable": "tidak tersedia",
+    "expired": "Senarai tamat tempoh selepas 14 hari; pengesahan penternak diperlukan",
+    "ageUnknown": "Umur tidak dapat disahkan",
+    "belowThreshold": "Di bawah had pasaran {{minimum}} bulan"
+  },
+  "relative": {
+    "justNow": "Baru sahaja",
+    "minutesAgo": "{{count}} min lalu",
+    "hoursAgo": "{{count}} j lalu",
+    "yesterday": "Semalam"
+  },
+  "livestockStatus": {
+    "Available": "Dijual",
+    "Reserved": "Ditempah",
+    "Sold": "Terjual",
+    "Unavailable": "Disembunyikan",
+    "Draft": "Draf",
+    "Sick": "Sakit",
+    "Expired": "Tamat tempoh"
+  },
+  "bulkStatus": {
+    "Available": "Dijual",
+    "Open": "Dijual",
+    "Paused": "Dijeda",
+    "Draft": "Draf",
+    "Sold": "Terjual",
+    "Cancelled": "Dibatalkan"
+  },
+  "paymentStatus": {
+    "paid": "Telah dibayar",
+    "unpaid": "Belum dibayar",
+    "failed": "Pembayaran gagal",
+    "refunded": "Dibayar balik",
+    "partiallyRefunded": "Dibayar balik sebahagian"
+  },
+  "orderStatus": {
+    "awaitingPayment": "Menunggu pembayaran",
+    "toPrepare": "Perlu disediakan",
+    "preparing": "Sedang disediakan",
+    "onTheWay": "Dalam perjalanan",
+    "delivered": "Telah dihantar",
+    "completed": "Selesai",
+    "cancelled": "Dibatalkan",
+    "returnRequested": "Pemulangan diminta",
+    "refundRequested": "Bayaran balik diminta",
+    "returnRefund": "Pemulangan / bayaran balik",
+    "refunded": "Dibayar balik",
+    "nextPayment": "Tunggu pembeli membuat pembayaran. Jangan hantar haiwan lagi.",
+    "nextBefore": "Pembeli telah membayar. Sediakan haiwan, kemudian muat naik gambar sebelum penghantaran.",
+    "nextDuring": "Muat naik gambar semasa penghantaran apabila haiwan dalam perjalanan.",
+    "nextAfter": "Muat naik gambar ketibaan apabila anda menyerahkan haiwan kepada pembeli.",
+    "nextDelivered": "Bahagian anda sudah selesai. Menunggu pembeli mengesahkan penerimaan haiwan.",
+    "nextCompleted": "Pembeli telah mengesahkan penerimaan. Tiada tindakan lagi.",
+    "nextCancelled": "Pesanan ini telah dibatalkan.",
+    "nextReturn": "Pembeli meminta pemulangan. Pentadbir QURBI akan menyemaknya.",
+    "nextRefundRequested": "Pembeli meminta bayaran balik. Pentadbir QURBI akan menyemaknya.",
+    "nextReturnRefund": "Pemulangan atau bayaran balik sedang diproses. Pentadbir QURBI akan menghubungi anda.",
+    "nextRefunded": "Pesanan ini telah dibayar balik."
+  }
+}

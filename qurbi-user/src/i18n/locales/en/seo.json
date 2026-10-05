@@ -1,0 +1,41 @@
+{
+  "default": {
+    "title": "QURBI | Qurban Livestock Marketplace",
+    "description": "QURBI is an online marketplace for buying qurban cows and goats from farmers in Malaysia.",
+    "imageAlt": "QURBI - online qurban cow and goat marketplace"
+  },
+  "organization": {
+    "description": "QURBI is an online marketplace that connects buyers with qurban cow and goat farmers in Malaysia."
+  },
+  "home": {
+    "title": "QURBI | Buy Qurban Cows & Goats Online",
+    "description": "Buy qurban cows and goats from verified farms in Malaysia. See prices, livestock details and place your order easily on QURBI.",
+    "breadcrumb": "Home",
+    "tagline": "Buy qurban cows & goats online"
+  },
+  "browse": {
+    "title": "Qurban Cows & Goats For Sale | QURBI",
+    "description": "Browse available qurban cows and goats from registered farmers. See the price, breed, weight and details of each animal before you order.",
+    "breadcrumb": "Browse Livestock"
+  },
+  "bulkBuy": {
+    "title": "Buy Livestock in Bulk | QURBI",
+    "description": "Buy livestock in bulk directly from farmers on QURBI. Check the price, quantity and details of each bulk listing.",
+    "breadcrumb": "Bulk Buy"
+  },
+  "privacy": {
+    "title": "Privacy Policy | QURBI",
+    "description": "Learn how QURBI collects, uses and protects your personal information when you buy qurban livestock.",
+    "breadcrumb": "Privacy Policy"
+  },
+  "terms": {
+    "title": "Terms & Conditions | QURBI",
+    "description": "Read the QURBI terms and conditions for qurban livestock buyers, including orders, payment and delivery.",
+    "breadcrumb": "Terms & Conditions"
+  },
+  "support": {
+    "title": "Help & Customer Support | QURBI",
+    "description": "Need help with your QURBI order or account? Contact our customer support team.",
+    "breadcrumb": "Customer Support"
+  }
+}

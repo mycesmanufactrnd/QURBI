@@ -9,20 +9,24 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Loader2, ShieldCheck } from "lucide-react";
 import SignaturePad from "@/components/agri/SignaturePad";
 import StepIndicator from "@/components/agri/StepIndicator";
+import StickyActionBar from "@/components/agri/StickyActionBar";
+import { cn } from "@/lib/utils";
 import { FARMER_POLICY_VERSION, userVal } from "@/lib/agri";
 import { clearFarmerVerificationDraft, getFarmerVerificationDraft } from "@/lib/farmerVerificationDraft";
+import { useTranslation } from "react-i18next";
 
-const STEPS = [{ n: 1, label: "Farm Details" }, { n: 2, label: "Policy & Terms" }];
 const POLICY_POINTS = [
-  { id: "identity-storage", title: "IC, selfie and document storage", text: "I consent to QURBI securely storing my IC, selfie and submitted documents for manual identity verification and account administration." },
-  { id: "platform-markup", title: "20% platform markup", text: "I understand QURBI may add a 20% markup on top of the price I set for livestock displayed to buyers." },
-  { id: "accurate-information", title: "Accurate information", text: "I confirm my personal, farm, livestock and pricing information is truthful, complete and kept up to date." },
-  { id: "animal-compliance", title: "Animal health and legal compliance", text: "I am responsible for animal welfare and compliance with applicable Malaysian livestock, health, permit and movement requirements." },
-  { id: "delivery-responsibility", title: "Delivery responsibility", text: "I will fulfil orders according to my selected delivery method and cooperate with QURBI where platform delivery is selected." },
-  { id: "privacy-enforcement", title: "Privacy and platform enforcement", text: "I will protect buyer information and accept that QURBI may review, reject or suspend accounts that breach these terms." },
+  { id: "identity-storage", key: "identityStorage" },
+  { id: "platform-markup", key: "platformMarkup" },
+  { id: "accurate-information", key: "accurateInformation" },
+  { id: "animal-compliance", key: "animalCompliance" },
+  { id: "delivery-responsibility", key: "deliveryResponsibility" },
+  { id: "privacy-enforcement", key: "privacyEnforcement" },
 ];
 
 export default function FarmerRegistrationPolicy() {
+  const { t } = useTranslation("verification");
+  const STEPS = [{ n: 1, label: t("form.steps.farmDetails") }, { n: 2, label: t("form.steps.policyTerms") }];
   const navigate = useNavigate();
   const { user, checkUserAuth } = useAuth();
   const draft = getFarmerVerificationDraft();
@@ -34,6 +38,7 @@ export default function FarmerRegistrationPolicy() {
   const [signatureUrl, setSignatureUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [attempted, setAttempted] = useState(false);
   const signatureRef = useRef(null);
   const submittingRef = useRef(false);
   const status = userVal(user, "verificationStatus");
@@ -50,7 +55,8 @@ export default function FarmerRegistrationPolicy() {
 
   if (status === "Approved") return <Navigate to="/" replace />;
   if (status === "Pending") return <Navigate to="/pending" replace />;
-  if (status === "Rejected") return <Navigate to="/rejected" replace />;
+  // A rejected farmer who filled the form again (draft saved) may resubmit.
+  if (status === "Rejected" && !draftReady) return <Navigate to="/rejected" replace />;
   if (!draftReady) return null;
 
   const allAccepted = POLICY_POINTS.every((point) => accepted.includes(point.id));
@@ -72,7 +78,7 @@ export default function FarmerRegistrationPolicy() {
           "private",
         );
         uploadedSignature = upload.fileUrl;
-        if (!uploadedSignature) throw new Error("Signature upload failed.");
+        if (!uploadedSignature) throw new Error(t("policy.signatureUploadFailed"));
         setSignatureUrl(uploadedSignature);
       }
 
@@ -112,54 +118,87 @@ export default function FarmerRegistrationPolicy() {
       await checkUserAuth();
       navigate("/pending", { replace: true });
     } catch (submissionError) {
-      setError(submissionError.response?.data?.error || submissionError.message || "Submission failed. Your details are saved on this device; please try again.");
+      setError(submissionError.response?.data?.error || submissionError.message || t("policy.submitFailed"));
       setSubmitting(false);
     } finally {
       submittingRef.current = false;
     }
   };
 
+  const acceptedCount = POLICY_POINTS.filter((point) => accepted.includes(point.id)).length;
+  const missing = [
+    !allAccepted && t("policy.missing.tickAll", { total: POLICY_POINTS.length, done: acceptedCount }),
+    !name.trim() && t("policy.missing.name"),
+    !date && t("policy.missing.date"),
+    !hasSignature && t("policy.missing.signature"),
+  ].filter(Boolean);
+  const trySubmit = () => {
+    if (!valid) { setAttempted(true); return; }
+    submit();
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-md mx-auto px-4 py-5">
+      <div className="mx-auto max-w-md px-4 pb-6 pt-5">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/verify")} className="w-10 h-10 rounded-full bg-muted flex items-center justify-center"><ArrowLeft className="w-5 h-5" /></button>
-          <h1 className="text-xl font-extrabold tracking-tight">Policy &amp; Terms</h1>
-        </div>
-        <StepIndicator current={2} steps={STEPS} className="mt-4" />
-
-        <div className="mt-6 rounded-2xl bg-accent border border-accent-foreground/20 p-3 flex items-start gap-2">
-          <ShieldCheck className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-          <div>
-            <p className="text-xs text-accent-foreground leading-relaxed">Please read and accept each policy point before signing your farmer registration.</p>
-            <p className="mt-1 text-[11px] font-semibold text-muted-foreground">Policy version: {FARMER_POLICY_VERSION}</p>
+          <button type="button" onClick={() => navigate("/verify")} aria-label={t("policy.backToDetails")} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted"><ArrowLeft className="h-5 w-5" /></button>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-extrabold tracking-tight">{t("policy.title")}</h1>
+            <p className="text-sm text-muted-foreground">{t("policy.subtitle")}</p>
           </div>
         </div>
+        <StepIndicator current={2} steps={STEPS} className="mt-5" />
 
-        <div className="mt-4 space-y-3">
-          {POLICY_POINTS.map((point, index) => (
-            <label key={point.id} className="flex items-start gap-3 rounded-2xl bg-card border border-border p-4 cursor-pointer">
-              <Checkbox checked={accepted.includes(point.id)} onCheckedChange={(checked) => toggle(point.id, checked === true)} className="mt-0.5" />
-              <span className="text-sm leading-relaxed"><strong>{index + 1}. {point.title}</strong><span className="block text-xs text-muted-foreground mt-1">{point.text}</span></span>
-            </label>
-          ))}
+        <section className="mt-5">
+          <div className="flex items-end justify-between gap-3">
+            <h2 className="text-lg font-extrabold">{t("policy.readAndTick")}</h2>
+            <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-xs font-bold", allAccepted ? "bg-emerald-100 text-emerald-800" : "bg-muted text-muted-foreground")}>{t("policy.progress", { done: acceptedCount, total: POLICY_POINTS.length })}</span>
+          </div>
+          <div className="mt-3 space-y-3">
+            {POLICY_POINTS.map((point, index) => {
+              const checked = accepted.includes(point.id);
+              return (
+                <label key={point.id} className={cn("flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-colors", checked ? "border-primary/40 bg-primary/5" : attempted ? "border-destructive/40 bg-card" : "border-border bg-card")}>
+                  <Checkbox checked={checked} onCheckedChange={(value) => toggle(point.id, value === true)} className="mt-0.5 h-5 w-5" />
+                  <span className="text-base leading-relaxed"><strong>{index + 1}. {t(`policy.points.${point.key}.title`)}</strong><span className="mt-1 block text-sm text-muted-foreground">{t(`policy.points.${point.key}.text`)}</span></span>
+                </label>
+              );
+            })}
+          </div>
+          <p className="mt-3 flex items-center gap-2 text-xs font-semibold text-muted-foreground"><ShieldCheck className="h-4 w-4 text-primary" />{t("policy.version", { version: FARMER_POLICY_VERSION })}</p>
+        </section>
+
+        <section className="mt-5 space-y-4 rounded-2xl border border-border bg-card p-5">
+          <h2 className="text-lg font-extrabold">{t("policy.sign")}</h2>
+          <div className="space-y-1.5">
+            <Label htmlFor="policy-name">{t("policy.fullName")} <span className="text-destructive" aria-hidden="true">*</span></Label>
+            <Input id="policy-name" value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" className="h-12 text-base" />
+            {attempted && !name.trim() && <p role="alert" className="text-sm font-medium text-destructive">{t("policy.nameError")}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="policy-date">{t("policy.date")} <span className="text-destructive" aria-hidden="true">*</span></Label>
+            <Input id="policy-date" type="date" value={date} max={today} onChange={(event) => setDate(event.target.value)} className="h-12" />
+          </div>
+          <div className="space-y-1.5"><Label>{t("policy.signature")} <span className="text-destructive" aria-hidden="true">*</span></Label><SignaturePad ref={signatureRef} onInk={setHasSignature} showError={attempted && !hasSignature} /></div>
+        </section>
+
+        <div className="mt-5 rounded-2xl bg-muted/60 p-4 text-sm leading-relaxed text-muted-foreground">
+          <p className="font-bold text-foreground">{t("policy.nextTitle")}</p>
+          <p className="mt-1">{t("policy.nextText")}</p>
         </div>
 
-        <div className="mt-4 rounded-2xl bg-card border border-border p-5 space-y-4">
-          <h2 className="text-sm font-extrabold">Digital acknowledgement</h2>
-          <div className="space-y-1.5"><Label>Full Name</Label><Input value={name} onChange={(event) => setName(event.target.value)} className="h-12" /></div>
-          <div className="space-y-1.5"><Label>Date</Label><Input type="date" value={date} max={today} onChange={(event) => setDate(event.target.value)} className="h-12" /></div>
-          <div className="space-y-1.5"><Label>Signature</Label><SignaturePad ref={signatureRef} onInk={setHasSignature} /></div>
-        </div>
+        {error && <p role="alert" className="mt-4 rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">{error}</p>}
 
-        {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
-        <div className="flex gap-3 mt-5 pb-6">
-          <Button variant="outline" onClick={() => navigate("/verify")} disabled={submitting} className="h-12 rounded-2xl flex-1">Back</Button>
-          <Button onClick={submit} disabled={!valid || submitting} className="h-12 rounded-2xl flex-1">
-            {submitting && <Loader2 className="w-5 h-5 animate-spin mr-2" />} Submit Request
+        <StickyActionBar
+          standalone
+          hint={valid ? t("policy.hint.ready") : t("policy.hint.toSubmit", { items: missing.join(", ") })}
+          hintTone={valid ? "success" : attempted ? "danger" : "muted"}
+        >
+          <Button variant="outline" onClick={() => navigate("/verify")} disabled={submitting} className="h-12 w-[34%] shrink-0 rounded-2xl">{t("policy.back")}</Button>
+          <Button onClick={trySubmit} disabled={submitting} className="h-12 flex-1 rounded-2xl text-base font-semibold">
+            {submitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />} {submitting ? t("policy.sending") : t("policy.submit")}
           </Button>
-        </div>
-        {!valid && <p className="-mt-3 pb-6 text-center text-xs text-muted-foreground">Accept every policy point, enter your name and date, then sign to submit.</p>}
+        </StickyActionBar>
       </div>
     </div>
   );

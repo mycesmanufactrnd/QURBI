@@ -1,4 +1,12 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { AuthService, RequestMeta } from './auth.service';
@@ -8,6 +16,7 @@ import type { AuthenticatedUser } from './decorators/current-user.decorator';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
+import { SwitchRoleDto } from './dto/switch-role.dto';
 import { FirebaseLoginDto } from './dto/firebase-login.dto';
 
 // Roughly 5 attempts/minute on the credential-guessing endpoints, tighter
@@ -60,7 +69,27 @@ export class AuthController {
 
   @Get('me')
   me(@CurrentUser() user: AuthenticatedUser) {
-    return this.authService.me(user.id);
+    return this.authService.me(user.id, user.role);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('switch-role')
+  switchRole(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: SwitchRoleDto,
+    @Req() req: Request,
+  ) {
+    return this.authService.switchRole(user.id, dto, extractMeta(req));
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('become-farmer')
+  becomeFarmer(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: RefreshDto,
+    @Req() req: Request,
+  ) {
+    return this.authService.becomeFarmer(user.id, dto, extractMeta(req));
   }
 }
 

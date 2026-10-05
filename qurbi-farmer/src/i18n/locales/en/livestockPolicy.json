@@ -1,0 +1,64 @@
+{
+  "backAria": "Back to listing details",
+  "title": "Review & sign",
+  "subtitle": "Check your listing, read the seller policy, then sign.",
+  "summary": {
+    "heading": "1. Check your listing",
+    "description": "This is what buyers will see. Tap Edit to change anything.",
+    "age": "Age",
+    "gender": "Gender",
+    "listingStatus": "Listing status"
+  },
+  "policy": {
+    "heading": "2. Read the seller policy",
+    "intro": "By submitting this listing, I confirm and agree on behalf of my farm:",
+    "items": {
+      "accurate": {
+        "title": "Accurate livestock information",
+        "text": "All details (species, breed, age, colour, state, feed, photos and videos) are truthful and current to the best of my knowledge."
+      },
+      "compliance": {
+        "title": "Animal health & Malaysian legal/permit compliance",
+        "text": "Animals comply with Malaysian livestock, health, and movement regulations, including required permits and veterinary standards."
+      },
+      "pricing": {
+        "title": "Pricing, availability & order responsibility",
+        "text": "I set my own prices, keep availability accurate, and am responsible for honouring accepted orders."
+      },
+      "delivery": {
+        "title": "Delivery responsibility",
+        "text": "I will fulfil delivery per my selected delivery method and ensure safe handover to the buyer."
+      },
+      "privacy": {
+        "title": "Buyer privacy, fraud & account enforcement",
+        "text": "I will protect buyer information, not engage in fraudulent activity, and understand QURBI may suspend accounts that breach this policy."
+      }
+    },
+    "version": "Policy version: {{version}}"
+  },
+  "sign": {
+    "heading": "3. Sign & confirm",
+    "fullName": "Full name",
+    "fullNamePlaceholder": "Your full name",
+    "fullNameError": "Enter your full name.",
+    "date": "Date",
+    "dateHint": "Today's date is filled in. Future dates are not allowed.",
+    "signature": "Signature",
+    "agree": "I have read and agree to the Seller Policy and confirm all information is accurate."
+  },
+  "errorKept": "Your details and signature are kept — just try again.",
+  "submitFailed": "Submission failed. Please try again.",
+  "hint": {
+    "ready": "Ready to submit. Buyers will see it once it's published.",
+    "missing": "To submit, add: {{items}}."
+  },
+  "missing": {
+    "name": "your full name",
+    "date": "the date",
+    "signature": "your signature",
+    "agree": "tick the agreement box"
+  },
+  "back": "Back",
+  "submitting": "Submitting...",
+  "submit": "Submit listing"
+}

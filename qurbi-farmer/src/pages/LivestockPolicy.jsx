@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { qurbi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -10,11 +11,16 @@ import { ArrowLeft, Loader2, ShieldCheck } from "lucide-react";
 import SignaturePad from "@/components/agri/SignaturePad";
 import StepIndicator from "@/components/agri/StepIndicator";
 import ReviewSummary from "@/components/agri/ReviewSummary";
-import { marketplaceVisibility, newListingWindow, SELLER_POLICY_VERSION, userVal } from "@/lib/agri";
+import StickyActionBar from "@/components/agri/StickyActionBar";
+import { cn } from "@/lib/utils";
+import { DELIVERY_OPTIONS, marketplaceVisibility, newListingWindow, SELLER_POLICY_VERSION, userVal } from "@/lib/agri";
+import { useLivestockDisplay } from "@/lib/livestockDisplay";
 import { getDraft, clearDraft } from "@/lib/livestockDraft";
 
 export default function LivestockPolicy() {
   const navigate = useNavigate();
+  const { t } = useTranslation("livestockPolicy");
+  const display = useLivestockDisplay();
   const { user } = useAuth();
   const draft = getDraft();
 
@@ -32,6 +38,7 @@ export default function LivestockPolicy() {
   const [error, setError] = useState("");
   const [savedSignatureUrl, setSavedSignatureUrl] = useState(null);
   const [deliveryMethod, setDeliveryMethod] = useState("");
+  const [attempted, setAttempted] = useState(false);
   const sigRef = useRef(null);
   // Hard guard against duplicate submission (double-click / retry races).
   const submittingRef = useRef(false);
@@ -130,7 +137,7 @@ export default function LivestockPolicy() {
       navigate("/livestock", { replace: true });
     } catch (err) {
       // Keep all entered data + the signature so the farmer can retry.
-      setError(err.message || "Submission failed. Please try again.");
+      setError(err.message || t("submitFailed"));
       setSubmitting(false);
     } finally {
       submittingRef.current = false;
@@ -139,98 +146,121 @@ export default function LivestockPolicy() {
 
   if (!draft) return null;
 
+  const missing = [
+    !name.trim() && t("missing.name"),
+    !date && t("missing.date"),
+    !hasSig && t("missing.signature"),
+    !agreed && t("missing.agree"),
+  ].filter(Boolean);
+  const trySubmit = () => {
+    if (!valid) { setAttempted(true); return; }
+    submit();
+  };
+  const deliveryOption = DELIVERY_OPTIONS.find((option) => option.value === deliveryMethod);
+  const deliveryLabel = deliveryOption ? display.delivery(deliveryOption.value, deliveryOption.label) : deliveryMethod;
+  const statusLabel = draft.status ? display.status(draft.status).label : draft.status;
+
   return (
-    <div>
+    <div className="mx-auto w-full max-w-3xl">
       {/* Header */}
       <div className="flex items-center gap-3">
         <button
+          type="button"
           onClick={() => navigate("/livestock/add")}
-          className="w-10 h-10 rounded-full bg-muted flex items-center justify-center"
+          aria-label={t("backAria")}
+          className="soft-card flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-colors hover:bg-muted"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-xl font-extrabold tracking-tight">Seller Policy</h1>
+        <div className="min-w-0">
+          <h1 className="text-2xl font-extrabold tracking-tight">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+        </div>
       </div>
 
-      <StepIndicator current={2} className="mt-4" />
+      <StepIndicator current={2} className="mt-5" />
 
-      <div className="mt-6 rounded-2xl bg-accent border border-accent-foreground/20 p-3 flex items-start gap-2">
-        <ShieldCheck className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+      {/* 1. Listing summary first, so the farmer checks what is being submitted */}
+      <div className="mt-5">
+        <ReviewSummary
+          heading={t("summary.heading")}
+          description={t("summary.description")}
+          onEdit={() => navigate("/livestock/add")}
+          title={display.title(draft)}
+          image={draft.coverImage || draft.images?.[0]}
+          species={display.species(draft?.species)}
+          breed={display.breed(draft?.breed)}
+          price={draft?.price}
+          rows={[[t("summary.age"), draft.age ? display.age(draft) : "—"], [t("summary.gender"), draft.gender ? display.gender(draft.gender) : "—"], [t("summary.listingStatus"), statusLabel]]}
+          farmLocation={draft?.state || draft?.farmLocation}
+          deliveryMethod={deliveryLabel}
+          signerName={name}
+          signedDate={date}
+        />
+      </div>
+
+      {/* 2. Policy body */}
+      <section className="mt-4 rounded-2xl bg-card border border-border p-5 space-y-4">
         <div>
-          <p className="text-xs text-accent-foreground leading-relaxed">Please review this policy before signing and submitting your livestock listing.</p>
-          <p className="mt-1 text-[11px] font-semibold text-muted-foreground">Policy version: {SELLER_POLICY_VERSION}</p>
+          <h2 className="text-lg font-extrabold tracking-tight">{t("policy.heading")}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t("policy.intro")}</p>
         </div>
-      </div>
-
-      {/* Policy body */}
-      <div className="mt-4 rounded-2xl bg-card border border-border p-5 space-y-4">
-        <h2 className="text-sm font-extrabold tracking-tight">Seller Policy</h2>
-        <p className="text-xs text-muted-foreground">By submitting this listing, I confirm and agree on behalf of my farm:</p>
-        <ol className="space-y-3 text-sm leading-relaxed text-foreground list-decimal pl-4">
-          <li><span className="font-semibold">Accurate livestock information</span> — All details (species, breed, age, colour, state, feed, photos and videos) are truthful and current to the best of my knowledge.</li>
-          <li><span className="font-semibold">Animal health &amp; Malaysian legal/permit compliance</span> — Animals comply with Malaysian livestock, health, and movement regulations, including required permits and veterinary standards.</li>
-          <li><span className="font-semibold">Pricing, availability &amp; order responsibility</span> — I set my own prices, keep availability accurate, and am responsible for honouring accepted orders.</li>
-          <li><span className="font-semibold">Delivery responsibility</span> — I will fulfil delivery per my selected delivery method and ensure safe handover to the buyer.</li>
-          <li><span className="font-semibold">Buyer privacy, fraud &amp; account enforcement</span> — I will protect buyer information, not engage in fraudulent activity, and understand QURBI may suspend accounts that breach this policy.</li>
+        <ol className="space-y-3 text-base leading-relaxed text-foreground list-decimal pl-5">
+          <li><span className="font-semibold">{t("policy.items.accurate.title")}</span> — {t("policy.items.accurate.text")}</li>
+          <li><span className="font-semibold">{t("policy.items.compliance.title")}</span> — {t("policy.items.compliance.text")}</li>
+          <li><span className="font-semibold">{t("policy.items.pricing.title")}</span> — {t("policy.items.pricing.text")}</li>
+          <li><span className="font-semibold">{t("policy.items.delivery.title")}</span> — {t("policy.items.delivery.text")}</li>
+          <li><span className="font-semibold">{t("policy.items.privacy.title")}</span> — {t("policy.items.privacy.text")}</li>
         </ol>
-      </div>
+        <p className="flex items-center gap-2 text-xs font-semibold text-muted-foreground"><ShieldCheck className="h-4 w-4 text-primary" />{t("policy.version", { version: SELLER_POLICY_VERSION })}</p>
+      </section>
 
-      {/* Signer details */}
-      <div className="mt-4 rounded-2xl bg-card border border-border p-5 space-y-4">
-        <h2 className="text-sm font-extrabold tracking-tight">Sign &amp; confirm</h2>
+      {/* 3. Signer details */}
+      <section className="mt-4 rounded-2xl bg-card border border-border p-5 space-y-4">
+        <h2 className="text-lg font-extrabold tracking-tight">{t("sign.heading")}</h2>
         <div className="space-y-1.5">
-          <Label className="text-sm font-semibold">Full Name</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your full name" className="h-12" />
+          <Label htmlFor="signer-name" className="text-sm font-semibold">{t("sign.fullName")} <span className="text-destructive" aria-hidden="true">*</span></Label>
+          <Input id="signer-name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("sign.fullNamePlaceholder")} autoComplete="name" className="h-12 text-base" aria-invalid={attempted && !name.trim()} />
+          {attempted && !name.trim() && <p role="alert" className="text-sm font-medium text-destructive">{t("sign.fullNameError")}</p>}
         </div>
         <div className="space-y-1.5">
-          <Label className="text-sm font-semibold">Date</Label>
+          <Label htmlFor="signer-date" className="text-sm font-semibold">{t("sign.date")} <span className="text-destructive" aria-hidden="true">*</span></Label>
           <Input
+            id="signer-date"
             type="date"
             value={date}
             max={today}
             onChange={(e) => setDate(e.target.value)}
             className="h-12"
           />
-          <p className="text-[11px] text-muted-foreground">Future dates are not allowed.</p>
+          <p className="text-sm text-muted-foreground">{t("sign.dateHint")}</p>
         </div>
         <div className="space-y-1.5">
-          <Label className="text-sm font-semibold">Signature</Label>
-          <SignaturePad ref={sigRef} onInk={setHasSig} />
+          <Label className="text-sm font-semibold">{t("sign.signature")} <span className="text-destructive" aria-hidden="true">*</span></Label>
+          <SignaturePad ref={sigRef} onInk={setHasSig} showError={attempted && !hasSig} />
         </div>
-        <label className="flex items-start gap-3 rounded-xl bg-accent p-3 cursor-pointer">
-          <Checkbox checked={agreed} onCheckedChange={setAgreed} className="mt-0.5" />
-          <span className="text-xs text-accent-foreground leading-relaxed">
-            I have read and agree to the Seller Policy and confirm all information is accurate.
+        <label className={cn("flex min-h-12 cursor-pointer items-start gap-3 rounded-xl p-3.5", attempted && !agreed ? "bg-destructive/10 ring-1 ring-destructive/40" : "bg-accent")}>
+          <Checkbox checked={agreed} onCheckedChange={(checked) => setAgreed(checked === true)} className="mt-0.5 h-5 w-5" />
+          <span className="text-sm leading-relaxed text-accent-foreground">
+            {t("sign.agree")}
           </span>
         </label>
-      </div>
+      </section>
 
-      {/* Review summary (no sensitive documents) */}
-      <div className="mt-4">
-        <ReviewSummary
-          species={draft?.species}
-          breed={draft?.breed}
-          price={draft?.price}
-          farmLocation={draft?.state || draft?.farmLocation}
-          deliveryMethod={deliveryMethod}
-          signerName={name}
-          signedDate={date}
-        />
-      </div>
+      {error && <p role="alert" className="mt-4 rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">{error} {t("errorKept")}</p>}
 
-      {error && <p className="text-sm text-destructive mt-3">{error}</p>}
-
-      <div className="mt-6 pb-2">
-        <div className="soft-card flex gap-3 rounded-2xl p-3">
-          <Button variant="outline" onClick={() => navigate("/livestock/add")} className="h-12 rounded-2xl flex-1" disabled={submitting}>
-            Back
-          </Button>
-          <Button onClick={submit} disabled={!valid || submitting} className="h-12 rounded-2xl text-base font-semibold flex-1">
-            {submitting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
-            Submit Listing
-          </Button>
-        </div>
-      </div>
+      <StickyActionBar
+        hint={valid ? t("hint.ready") : t("hint.missing", { items: missing.join(", ") })}
+        hintTone={valid ? "success" : attempted ? "danger" : "muted"}
+      >
+        <Button variant="outline" onClick={() => navigate("/livestock/add")} className="h-12 w-[34%] shrink-0 rounded-2xl" disabled={submitting}>
+          {t("back")}
+        </Button>
+        <Button onClick={trySubmit} disabled={submitting} className="h-12 flex-1 rounded-2xl text-base font-semibold">
+          {submitting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
+          {submitting ? t("submitting") : t("submit")}
+        </Button>
+      </StickyActionBar>
     </div>
   );
 }

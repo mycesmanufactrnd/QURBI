@@ -11,21 +11,37 @@ import { qurbiApi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
 import { useAuthPrompt } from "@/lib/auth-prompt-context";
 import { formatOrderDateTime } from "@/lib/order-date";
+import { formatRM } from "@/lib/format";
+import { extractState } from "@/lib/livestock-data";
+import { combineOrders, groupedOrderQuery } from "@/lib/order-groups";
 import ImageLightbox from "@/components/ImageLightbox";
 import AppHeader from "@/components/AppHeader";
 import PageLoading from "@/components/PageLoading";
-import ProductImage from "@/components/ProductImage";
 import PaymentErrorModal from "@/components/PaymentErrorModal";
-import { extractState } from "@/lib/livestock-data";
-import { combineOrders, groupedOrderQuery } from "@/lib/order-groups";
 
 const RECEIVABLE_STATUSES = ["in_transit", "shipped", "to_receive", "delivering", "delivered"];
 
 const TRACKING_STAGES = [
-  { key: "before", label: "Before", owner: "Farmer" },
-  { key: "during", label: "During", owner: "Farmer" },
-  { key: "after", label: "After", owner: "Farmer" },
-  { key: "received", label: "Received", owner: "You" },
+  {
+    key: "before",
+    labelKey: "orderDetail.stages.before",
+    ownerKey: "orderDetail.stages.ownerFarmer",
+  },
+  {
+    key: "during",
+    labelKey: "orderDetail.stages.during",
+    ownerKey: "orderDetail.stages.ownerFarmer",
+  },
+  {
+    key: "after",
+    labelKey: "orderDetail.stages.after",
+    ownerKey: "orderDetail.stages.ownerFarmer",
+  },
+  {
+    key: "received",
+    labelKey: "orderDetail.stages.received",
+    ownerKey: "orderDetail.stages.ownerYou",
+  },
 ];
 
 const TAB_FOR_STATUS = {
@@ -42,8 +58,8 @@ const TAB_FOR_STATUS = {
   shipped: "to-receive",
   to_receive: "to-receive",
   delivering: "to-receive",
+  delivered: "to-receive",
   completed: "completed",
-  delivered: "completed",
   received: "completed",
   return_requested: "return-refund",
   refund_requested: "return-refund",
@@ -59,22 +75,37 @@ function LegacyOrderTracking({ order, onPreview }) {
       <h2 className="text-gray-900 font-bold">Order tracking</h2>
 
       <p className="mt-1 text-xs text-gray-400">
-        Before → During → After → Received
+        {t("orderDetail.legacyTracking.stagesLine")}
       </p>
 
       <div className="mt-4 space-y-3">
-        {TRACKING_STAGES.map((stage, index) => {
-          const proof = tracking[stage.key];
+        {TRACKING_STAGES.map(
+          (stage, index) => {
+            const proof =
+              tracking[stage.key];
 
-          const priorComplete = TRACKING_STAGES.slice(0, index).every(
-            (prior) => tracking[prior.key]?.image_url,
-          );
+            const priorComplete =
+              TRACKING_STAGES.slice(
+                0,
+                index,
+              ).every(
+                (prior) =>
+                  tracking[
+                    prior.key
+                  ]?.image_url,
+              );
 
-          const awaitingBuyer =
-            stage.key === "received" &&
-            !TRACKING_STAGES.slice(0, 3).every(
-              (farmerStage) => tracking[farmerStage.key]?.image_url,
-            );
+            const awaitingBuyer =
+              stage.key === "received" &&
+              !TRACKING_STAGES.slice(
+                0,
+                3,
+              ).every(
+                (farmerStage) =>
+                  tracking[
+                    farmerStage.key
+                  ]?.image_url,
+              );
 
           const waitingFor = proof?.image_url
             ? "Complete"
@@ -84,17 +115,24 @@ function LegacyOrderTracking({ order, onPreview }) {
                 ? `Waiting for ${stage.owner}`
                 : "Locked";
 
-          return (
-            <div key={stage.key} className="flex gap-3">
+            return (
               <div
-                className={`mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full ${
-                  proof?.image_url
-                    ? "bg-[#F7EDE2]0 text-white"
-                    : "bg-gray-100 text-gray-400"
-                }`}
+                key={stage.key}
+                className="flex gap-3"
               >
-                {proof?.image_url ? <Check className="h-4 w-4" /> : index + 1}
-              </div>
+                <div
+                  className={`mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full ${
+                    proof?.image_url
+                      ? "bg-[#F7EDE2]0 text-white"
+                      : "bg-gray-100 text-gray-400"
+                  }`}
+                >
+                  {proof?.image_url ? (
+                    <Check className="h-4 w-4" />
+                  ) : (
+                    index + 1
+                  )}
+                </div>
 
               <div className="min-w-0 flex-1 border-b border-gray-50 pb-3 last:border-0">
                 <div className="flex items-start justify-between gap-2">
@@ -108,14 +146,16 @@ function LegacyOrderTracking({ order, onPreview }) {
                     </p>
                   </div>
 
-                  <span
-                    className={`text-[11px] font-semibold text-right ${
-                      proof?.image_url ? "text-[#5A493C]" : "text-gray-400"
-                    }`}
-                  >
-                    {waitingFor}
-                  </span>
-                </div>
+                    <span
+                      className={`text-[11px] font-semibold text-right ${
+                        proof?.image_url
+                          ? "text-[#5A493C]"
+                          : "text-gray-400"
+                      }`}
+                    >
+                      {waitingFor}
+                    </span>
+                  </div>
 
                 {proof?.image_url && (
                   <button
@@ -149,16 +189,33 @@ function OrderTracking({ order, onPreview }) {
     image: tracking[stage.key]?.image_url,
   })).filter((proof) => proof.image);
 
-  const [selectedKey, setSelectedKey] = useState(() => proofs[0]?.key || "");
+  const [selectedKey, setSelectedKey] =
+    useState(
+      () => proofs[0]?.key || "",
+    );
 
   const selected =
-    proofs.find((proof) => proof.key === selectedKey) || proofs[0];
+    proofs.find(
+      (proof) =>
+        proof.key === selectedKey,
+    ) || proofs[0];
 
   useEffect(() => {
-    if (!proofs.some((proof) => proof.key === selectedKey)) {
-      setSelectedKey(proofs[0]?.key || "");
+    if (
+      !proofs.some(
+        (proof) =>
+          proof.key === selectedKey,
+      )
+    ) {
+      setSelectedKey(
+        proofs[0]?.key || "",
+      );
     }
-  }, [order.id, selectedKey, proofs]);
+  }, [
+    order.id,
+    selectedKey,
+    proofs,
+  ]);
 
   return (
     <section className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
@@ -175,11 +232,12 @@ function OrderTracking({ order, onPreview }) {
             onClick={() =>
               onPreview(selected.image, `${selected.label} order proof`)
             }
-            className="mt-4 flex h-64 w-full items-center justify-center overflow-hidden rounded-2xl bg-gray-50"
+            aria-label={ta("orderDetail.proof.open", { stage: t(selected.labelKey) })}
+            className="mt-4 flex h-56 w-full items-center justify-center overflow-hidden rounded-2xl bg-black/20"
           >
             <img
               src={selected.image}
-              alt={`${selected.label} order proof`}
+              alt={t("orderDetail.proofAlt", { stage: t(selected.labelKey) })}
               className="h-full w-full object-contain"
             />
           </button>
@@ -219,6 +277,10 @@ function OrderTracking({ order, onPreview }) {
   );
 }
 
+/* =========================================================
+   STATUS
+========================================================= */
+
 function statusLabel(order) {
   if (order.status === "out_of_stock") return "Out of Stock";
 
@@ -242,6 +304,10 @@ function statusLabel(order) {
   return order.status?.replaceAll("_", " ");
 }
 
+/* =========================================================
+   REFUND SHEET
+========================================================= */
+
 function RefundRequestSheet({ order, loading, error, onClose, onSubmit }) {
   const [reason, setReason] = useState("");
   const [evidenceFiles, setEvidenceFiles] = useState([]);
@@ -249,9 +315,13 @@ function RefundRequestSheet({ order, loading, error, onClose, onSubmit }) {
   useEffect(() => {
     setReason("");
     setEvidenceFiles([]);
+    setTouched(false);
   }, [order?.id]);
 
   if (!order) return null;
+
+  const reasonMissing = touched && !reason.trim();
+  const photosMissing = touched && !evidenceFiles.length;
 
   return (
     <div
@@ -264,7 +334,7 @@ function RefundRequestSheet({ order, loading, error, onClose, onSubmit }) {
         className="w-full max-w-md rounded-t-3xl bg-white p-5 pb-7 shadow-xl sm:rounded-3xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-gray-200 sm:hidden" />
+        <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-[#E3C19F] sm:hidden" />
 
         <h2 className="text-lg font-bold text-gray-900">Request a refund</h2>
 
@@ -272,9 +342,15 @@ function RefundRequestSheet({ order, loading, error, onClose, onSubmit }) {
           Tell us why you are requesting a refund for {order.order_number}.
         </p>
 
+        <label htmlFor="refund-reason" className="mt-4 block text-sm font-bold text-[#41362D]">
+          {ta("orderDetail.refund.reasonLabel")} <span className="text-[#9A2E0C]">*</span>
+        </label>
         <textarea
+          id="refund-reason"
           value={reason}
-          onChange={(event) => setReason(event.target.value)}
+          onChange={(event) =>
+            setReason(event.target.value)
+          }
           disabled={loading}
           rows={4}
           placeholder="Enter your reason"
@@ -289,7 +365,6 @@ function RefundRequestSheet({ order, loading, error, onClose, onSubmit }) {
           <span className="mt-0.5 text-[11px] font-medium text-[#5A493C]">
             At least one photo is required (up to 5)
           </span>
-
           <input
             type="file"
             accept="image/*"
@@ -297,7 +372,12 @@ function RefundRequestSheet({ order, loading, error, onClose, onSubmit }) {
             className="sr-only"
             disabled={loading}
             onChange={(event) =>
-              setEvidenceFiles(Array.from(event.target.files || []).slice(0, 5))
+              setEvidenceFiles(
+                Array.from(
+                  event.target.files ||
+                    [],
+                ).slice(0, 5),
+              )
             }
           />
         </label>
@@ -323,9 +403,9 @@ function RefundRequestSheet({ order, loading, error, onClose, onSubmit }) {
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="min-h-11 rounded-xl border border-gray-200 px-4 text-sm font-bold text-gray-600 disabled:opacity-50"
+            className={secondaryBtn}
           >
-            Keep Order
+            {t("orderDetail.refundSheet.keep")}
           </button>
 
           <button
@@ -343,6 +423,8 @@ function RefundRequestSheet({ order, loading, error, onClose, onSubmit }) {
 }
 
 export default function OrderDetail() {
+  const { t } = useTranslation("orders");
+  const { t: ta } = useTranslation("account");
   const { orderId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -350,33 +432,64 @@ export default function OrderDetail() {
   const groupOrderParam = searchParams.get("group_ids") || orderId || "";
   const detailOrderIds = groupOrderParam.split(",").map((id) => id.trim()).filter(Boolean);
 
-  const { user, isAuthenticated, authChecked } = useAuth();
-  const { requestSignIn } = useAuthPrompt();
+  const {
+    user,
+    isAuthenticated,
+    authChecked,
+  } = useAuth();
 
-  const [order, setOrder] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
-  const [actionLoading, setActionLoading] = useState(false);
-  const [refundSheetOpen, setRefundSheetOpen] = useState(false);
-  const [actionError, setActionError] = useState("");
-  const [message, setMessage] = useState("");
-  const [receivedFile, setReceivedFile] = useState(null);
-  const [previewImage, setPreviewImage] = useState(null);
-  const [paymentError, setPaymentError] = useState(
-    () => location.state?.paymentError || null,
-  );
+  const { requestSignIn } =
+    useAuthPrompt();
 
-  const loadOrder = useCallback(async () => {
-    if (!authChecked) return;
+  const [order, setOrder] =
+    useState(null);
 
-    if (!isAuthenticated || !user?.id) {
-      setOrder(null);
-      setLoading(false);
-      return;
-    }
+  const [loading, setLoading] =
+    useState(true);
 
-    setLoading(true);
-    setLoadError("");
+  const [loadError, setLoadError] =
+    useState("");
+
+  const [actionLoading, setActionLoading] =
+    useState(false);
+
+  const [refundSheetOpen, setRefundSheetOpen] =
+    useState(false);
+
+  const [actionError, setActionError] =
+    useState("");
+
+  const [message, setMessage] =
+    useState("");
+
+  const [receivedFile, setReceivedFile] =
+    useState(null);
+
+  const [previewImage, setPreviewImage] =
+    useState(null);
+
+  const [paymentError, setPaymentError] =
+    useState(
+      () =>
+        location.state?.paymentError ||
+        null,
+    );
+
+  const loadOrder = useCallback(
+    async () => {
+      if (!authChecked) return;
+
+      if (
+        !isAuthenticated ||
+        !user?.id
+      ) {
+        setOrder(null);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setLoadError("");
 
     try {
       const responses = await Promise.all(
@@ -400,8 +513,31 @@ export default function OrderDetail() {
     loadOrder();
   }, [loadOrder]);
 
-  const confirmReceipt = async () => {
-    if (!order || actionLoading) return;
+  useEffect(() => {
+    if (!message) return undefined;
+    const timer = window.setTimeout(() => setMessage(""), 3500);
+    return () => window.clearTimeout(timer);
+  }, [message]);
+
+  // Local preview of the photo the buyer picked but has not saved yet.
+  const selectedPreview = useMemo(
+    () => (receivedFile ? URL.createObjectURL(receivedFile) : ""),
+    [receivedFile],
+  );
+  useEffect(
+    () => () => {
+      if (selectedPreview) URL.revokeObjectURL(selectedPreview);
+    },
+    [selectedPreview],
+  );
+
+  const confirmReceipt =
+    async () => {
+      if (
+        !order ||
+        actionLoading
+      )
+        return;
 
     if (!order.tracking_photos?.received?.image_url) {
       setActionError(
@@ -410,20 +546,24 @@ export default function OrderDetail() {
       return;
     }
 
-    setActionLoading(true);
-    setActionError("");
+      setActionLoading(true);
+      setActionError("");
 
-    try {
-      const response = await qurbiApi.functions.invoke("confirmMyOrderReceived", {
-        orderId: order.id,
-      });
+      try {
+        const response =
+          await qurbiApi.functions.invoke(
+            "confirmMyOrderReceived",
+            {
+              orderId: order.id,
+            },
+          );
 
-      setOrder(
-        response.data?.order || {
-          ...order,
-          status: "completed",
-        },
-      );
+        setOrder(
+          response.data?.order || {
+            ...order,
+            status: "completed",
+          },
+        );
 
       setMessage("Order received and completed successfully.");
     } catch (error) {
@@ -433,22 +573,31 @@ export default function OrderDetail() {
           "We couldn't confirm receipt of this order.",
       );
 
-      await loadOrder();
-    } finally {
-      setActionLoading(false);
-    }
-  };
+        await loadOrder();
+      } finally {
+        setActionLoading(false);
+      }
+    };
 
-  const saveReceivedProof = async () => {
-    if (!order || !receivedFile || actionLoading) return;
+  const saveReceivedProof =
+    async () => {
+      if (
+        !order ||
+        !receivedFile ||
+        actionLoading
+      )
+        return;
 
-    setActionLoading(true);
-    setActionError("");
+      setActionLoading(true);
+      setActionError("");
 
-    try {
-      const { file_url } = await qurbiApi.integrations.Core.UploadFile({
-        file: receivedFile,
-      });
+      try {
+        const { file_url } =
+          await qurbiApi.integrations.Core.UploadFile(
+            {
+              file: receivedFile,
+            },
+          );
 
       const response = await qurbiApi.functions.invoke(
         "saveMyReceivedOrderProof",
@@ -472,45 +621,67 @@ export default function OrderDetail() {
     }
   };
 
-  const requestRefund = async (reason, evidenceFiles) => {
-    if (!order || actionLoading) return;
+  const requestRefund = async (
+    reason,
+    evidenceFiles,
+  ) => {
+    if (
+      !order ||
+      actionLoading
+    )
+      return;
 
     setActionLoading(true);
     setActionError("");
 
     try {
-      const files = Array.isArray(evidenceFiles) ? evidenceFiles : [];
+      const files = Array.isArray(
+        evidenceFiles,
+      )
+        ? evidenceFiles
+        : [];
 
       if (!files.length) {
         throw new Error(
-          "Upload at least one photo as refund evidence before submitting your request.",
+          t("orderDetail.errors.evidenceRequired"),
         );
       }
 
-      const evidence = await Promise.all(
-        files.map(
-          async (file) =>
-            (
-              await qurbiApi.integrations.Core.UploadFile({
-                file,
-              })
-            ).file_url,
-        ),
-      );
+      const evidence =
+        await Promise.all(
+          files.map(
+            async (file) =>
+              (
+                await qurbiApi.integrations.Core.UploadFile(
+                  {
+                    file,
+                  },
+                )
+              ).file_url,
+          ),
+        );
 
-      const response = await qurbiApi.functions.invoke("requestMyOrderRefund", {
-        orderId: order.id,
-        reason,
-        refundEvidence: evidence,
-      });
+      const response =
+        await qurbiApi.functions.invoke(
+          "requestMyOrderRefund",
+          {
+            orderId: order.id,
+            reason,
+            refundEvidence:
+              evidence,
+          },
+        );
 
       setOrder(
         response.data?.order || {
           ...order,
-          status: "refund_requested",
+          status:
+            "refund_requested",
           refund_reason: reason,
-          refund_evidence: evidence,
-          refund_status: "pending_admin_approval",
+          refund_evidence:
+            evidence,
+          refund_status:
+            "pending_admin_approval",
         },
       );
 
@@ -521,7 +692,7 @@ export default function OrderDetail() {
       setActionError(
         error.data?.error ||
           error.message ||
-          "We couldn't submit your refund request.",
+          t("orderDetail.errors.refundRequestFallback"),
       );
     } finally {
       setActionLoading(false);
@@ -530,9 +701,9 @@ export default function OrderDetail() {
 
   if (loading) {
     return (
-      <div className="qurbi-page">
+      <div className="aisyah-page">
         <AppHeader
-          title="Order Details"
+          title={t("orderDetail.title")}
           backTo="/orders"
           subtitle="Track your purchase and delivery progress"
         />
@@ -541,7 +712,10 @@ export default function OrderDetail() {
     );
   }
 
-  if (authChecked && !isAuthenticated) {
+  if (
+    authChecked &&
+    !isAuthenticated
+  ) {
     return (
       <div className="aisyah-page min-h-screen pb-28">
         <AppHeader title="Order Details" backTo="/orders" subtitle="Track your purchase and delivery progress" />
@@ -553,14 +727,14 @@ export default function OrderDetail() {
             onClick={() => requestSignIn({ returnTo: `/orders/${orderId}`, message: "Sign in to view this order and its delivery progress." })}
             className="mt-2 rounded-xl bg-gradient-to-br from-[#41362D] to-[#6B594A] px-6 py-3 text-sm font-bold text-white"
           >
-            Sign In
+            {t("orderDetail.signIn")}
           </button>
         </div>
       </div>
     );
   }
 
-  if (loadError) {
+  if (loadError || !order) {
     return (
       <div className="qurbi-page flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center">
         <Package className="h-12 w-12 text-[#41362D]/25" />
@@ -594,10 +768,16 @@ export default function OrderDetail() {
   const farmerPhotosComplete = ["before", "during", "after"].every(
     (stage) => order.tracking_photos?.[stage]?.image_url,
   );
+  const receivedProofSaved = Boolean(order.tracking_photos?.received?.image_url);
 
-  const progressImages = Array.isArray(order.progress_images)
-    ? order.progress_images.filter(Boolean)
-    : [];
+  const progressImages =
+    Array.isArray(
+      order.progress_images,
+    )
+      ? order.progress_images.filter(
+          Boolean,
+        )
+      : [];
 
   const returnTab =
     searchParams.get("fromTab") || TAB_FOR_STATUS[order.status] || "to-pay";
@@ -617,22 +797,29 @@ export default function OrderDetail() {
   const isRefundRejected = order.refund_status?.toLowerCase() === "rejected";
 
   return (
-    <div className="qurbi-page">
+    <div className={`aisyah-page ${stickyAction ? "pb-[calc(11rem+env(safe-area-inset-bottom))]" : ""}`}>
       <AppHeader
-        title="Order Details"
+        title={t("orderDetail.title")}
         backTo={returnPath}
-        subtitle={`${order.order_number} · ${formatOrderDateTime(order.created_date)}`}
+        preferRecentBack={false}
+        subtitle={`${order.order_number} · ${formatOrderDateTime(
+          order.created_date,
+        )}`}
       />
 
       {message && (
-        <div className="fixed top-5 left-4 right-4 z-50 rounded-xl bg-[#5A493C] px-4 py-3 text-sm font-semibold text-white shadow-lg">
+        <div
+          role="status"
+          className="fixed left-4 right-4 top-5 z-50 mx-auto max-w-md rounded-xl bg-[#41362D] px-4 py-3 text-[15px] font-semibold text-white shadow-lg"
+        >
           {message}
         </div>
       )}
 
-      <main className="p-4 space-y-3">
-        {actionError && (
-          <p className="rounded-xl bg-red-50 px-3 py-3 text-sm font-medium text-red-500">
+      <main className="aisyah-content mx-auto max-w-3xl space-y-3">
+        {actionError && !refundSheetOpen && (
+          <p role="alert" className="flex items-start gap-2 rounded-xl border border-[#E8A39A] bg-[#FBE4E1] px-3 py-3 text-[15px] font-semibold text-[#8A1C12]">
+            <CircleAlert className="mt-0.5 h-5 w-5 flex-none" aria-hidden="true" />
             {actionError}
           </p>
         )}
@@ -659,13 +846,15 @@ export default function OrderDetail() {
                 onClick={() => navigate(`/payment?${groupedOrderQuery(order)}`)}
                 className="flex-none rounded-xl border border-[#F7EDE2]/70 bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] px-4 py-2.5 text-xs font-extrabold text-[#41362D]"
               >
-                Retry Payment
+                {t("orderDetail.confirm.returnRefund")}
               </button>
             </div>
           </section>
         )}
 
-        {!isAwaitingPayment && (
+        <ProgressTimeline order={order} />
+
+        {!isAwaitingPayment && (isPaid || Object.keys(photos).length > 0) && (
           <OrderTracking
             order={order}
             onPreview={(image, alt) => setPreviewImage({ image, alt })}
@@ -718,8 +907,8 @@ export default function OrderDetail() {
 
             {order.refund_evidence?.length > 0 && (
               <div className="mt-3">
-                <p className="text-xs font-semibold text-gray-500">
-                  Photo evidence
+                <p className="text-sm font-semibold text-white/80">
+                  {t("orderDetail.refundSection.photoEvidence")}
                 </p>
 
                 <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
@@ -768,6 +957,10 @@ export default function OrderDetail() {
             )}
           </section>
         )}
+
+        {/* =====================================================
+            ORDER ITEMS
+        ===================================================== */}
 
         <section className="rounded-2xl border border-[#E3C19F]/60 bg-gradient-to-br from-[#41362D] to-[#6B594A] p-4 shadow-lg shadow-[#41362D]/20">
           <div className="mb-4 flex items-center gap-3">
@@ -951,12 +1144,21 @@ export default function OrderDetail() {
                 {actionLoading ? "Updating..." : "Approve Receive"}
               </button>
             </div>
-          </section>
+        </section>
         )}
+
+        <DeliveryCard order={order} />
+
       </main>
 
+      {stickyAction && <StickyActionBar>{stickyAction}</StickyActionBar>}
+
       <RefundRequestSheet
-        order={refundSheetOpen ? order : null}
+        order={
+          refundSheetOpen
+            ? order
+            : null
+        }
         loading={actionLoading}
         error={actionError}
         onClose={() => {
@@ -967,26 +1169,39 @@ export default function OrderDetail() {
       />
 
       <ImageLightbox
-        image={previewImage?.image}
+        image={
+          previewImage?.image
+        }
         alt={previewImage?.alt}
-        onClose={() => setPreviewImage(null)}
+        onClose={() =>
+          setPreviewImage(null)
+        }
       />
+
       <PaymentErrorModal
         error={paymentError}
-        viewOrderLabel="Stay on To Pay Order"
+        viewOrderLabel={t("orderDetail.paymentError.stayOnOrder")}
         onClose={() => {
           setPaymentError(null);
-          navigate(`${location.pathname}${location.search}`, {
-            replace: true,
-            state: null,
-          });
+
+          navigate(
+            `${location.pathname}${location.search}`,
+            {
+              replace: true,
+              state: null,
+            },
+          );
         }}
         onViewOrders={() => {
           setPaymentError(null);
-          navigate(`${location.pathname}${location.search}`, {
-            replace: true,
-            state: null,
-          });
+
+          navigate(
+            `${location.pathname}${location.search}`,
+            {
+              replace: true,
+              state: null,
+            },
+          );
         }}
       />
     </div>

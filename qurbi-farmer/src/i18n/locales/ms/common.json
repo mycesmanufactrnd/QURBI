@@ -1,0 +1,45 @@
+{
+  "language": {
+    "title": "Bahasa",
+    "subtitle": "Pilih bahasa yang digunakan dalam aplikasi.",
+    "malay": "Bahasa Melayu",
+    "english": "English"
+  },
+  "actions": {
+    "cancel": "Batal",
+    "logOut": "Log keluar",
+    "retry": "Cuba lagi",
+    "goHome": "Ke Laman Utama"
+  },
+  "verification": {
+    "Not Submitted": "Belum Dihantar",
+    "Pending": "Menunggu Pengesahan",
+    "Approved": "Penternak Disahkan",
+    "Rejected": "Pengesahan Ditolak"
+  },
+  "relativeTime": {
+    "justNow": "Baru sahaja",
+    "minutesAgo": "{{count}} min lalu",
+    "hoursAgo": "{{count}} j lalu",
+    "daysAgo": "{{count}} h lalu"
+  },
+  "errors": {
+    "notFarmer": "Akaun ini tidak didaftarkan sebagai penternak. Buka aplikasi pembeli QURBI, pergi ke Profil dan pilih Daftar sebagai penternak.",
+    "noPortalAccess": "Akaun ini tidak mempunyai akses ke portal QURBI Farmer.",
+    "authRequired": "Pengesahan identiti diperlukan"
+  },
+  "notFound": {
+    "title": "Halaman Tidak Ditemui",
+    "description": "Halaman \"{{page}}\" tidak ditemui dalam aplikasi ini.",
+    "adminNote": "Nota Admin",
+    "adminNoteBody": "Ini mungkin bermakna halaman ini belum dilaksanakan oleh AI. Minta AI melaksanakannya dalam sembang."
+  },
+  "notRegistered": {
+    "title": "Akses Dihadkan",
+    "description": "Anda tidak didaftarkan untuk menggunakan aplikasi ini. Sila hubungi pentadbir aplikasi untuk memohon akses.",
+    "intro": "Jika anda percaya ini satu kesilapan, anda boleh:",
+    "tip1": "Pastikan anda log masuk dengan akaun yang betul",
+    "tip2": "Hubungi pentadbir aplikasi untuk akses",
+    "tip3": "Cuba log keluar dan log masuk semula"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "docUploader": {
+    "uploaded": "Uploaded",
+    "loadFailed": "Unable to display the uploaded document.",
+    "uploadFailed": "Upload failed. Please try again.",
+    "noUrl": "Upload returned no URL",
+    "loadingPreview": "Loading secure preview...",
+    "removePhoto": "Remove this photo",
+    "uploading": "Uploading...",
+    "tapToUpload": "Tap to upload",
+    "replace": "Replace"
+  },
+  "signaturePad": {
+    "signHere": "Sign here with your finger",
+    "areaLabel": "Digital signature area",
+    "captured": "Signature captured",
+    "pleaseSign": "Please sign in the box",
+    "requiredHint": "Required. Draw your usual signature.",
+    "clear": "Clear"
+  },
+  "formField": {
+    "optional": "(optional)"
+  },
+  "confirmDialog": {
+    "title": "Are you sure?",
+    "confirm": "Confirm",
+    "cancel": "Cancel"
+  },
+  "stepIndicator": {
+    "listingDetails": "Listing Details",
+    "reviewSign": "Review & Sign"
+  },
+  "reviewSummary": {
+    "heading": "Review summary",
+    "description": "Confirm the details below before submitting your listing.",
+    "edit": "Edit",
+    "coverPhoto": "Cover photo",
+    "speciesBreed": "Species & breed",
+    "sellingPrice": "Selling price",
+    "state": "State",
+    "deliveryMethod": "Delivery method",
+    "signerName": "Signer name",
+    "signedDate": "Signed date"
+  },
+  "status": {
+    "verification": {
+      "Not Submitted": "Not Submitted",
+      "Pending": "Pending Verification",
+      "Approved": "Verified Farmer",
+      "Rejected": "Verification Rejected",
+      "Unknown": "Unknown"
+    }
+  }
+}

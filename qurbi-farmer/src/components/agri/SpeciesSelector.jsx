@@ -1,8 +1,13 @@
 import React from "react";
 import { SPECIES } from "@/lib/agri";
+import { useLivestockDisplay } from "@/lib/livestockDisplay";
 import { cn } from "@/lib/utils";
 
+/**
+ * @param {{ value?: string, onChange: (selection: { species: string, speciesRequestId: string, speciesApprovalStatus: string }) => void }} props
+ */
 export default function SpeciesSelector({ value, onChange }) {
+  const { t, species: speciesLabel } = useLivestockDisplay();
   const supportedValue = SPECIES.includes(value) ? value : "";
 
   return (
@@ -28,14 +33,14 @@ export default function SpeciesSelector({ value, onChange }) {
                   : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground",
               )}
             >
-              {species}
+              {speciesLabel(species)}
             </button>
           );
         })}
       </div>
-      <p className="text-xs text-muted-foreground">QURBI currently supports Cow and Goat listings only.</p>
+      <p className="text-xs text-muted-foreground">{t("speciesSelector.supportedNote")}</p>
       {value && !supportedValue && (
-        <p className="text-xs font-medium text-destructive">This legacy species is no longer supported. Select Cow or Goat to continue.</p>
+        <p className="text-xs font-medium text-destructive">{t("speciesSelector.legacyNote")}</p>
       )}
     </div>
   );

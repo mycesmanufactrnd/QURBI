@@ -1,0 +1,54 @@
+{
+  "docUploader": {
+    "uploaded": "Dimuat naik",
+    "loadFailed": "Tidak dapat memaparkan dokumen yang dimuat naik.",
+    "uploadFailed": "Muat naik gagal. Sila cuba lagi.",
+    "noUrl": "Muat naik tidak memulangkan URL",
+    "loadingPreview": "Memuatkan pratonton selamat...",
+    "removePhoto": "Buang foto ini",
+    "uploading": "Sedang memuat naik...",
+    "tapToUpload": "Ketik untuk muat naik",
+    "replace": "Tukar"
+  },
+  "signaturePad": {
+    "signHere": "Tandatangan di sini dengan jari anda",
+    "areaLabel": "Ruang tandatangan digital",
+    "captured": "Tandatangan diterima",
+    "pleaseSign": "Sila tandatangan dalam kotak",
+    "requiredHint": "Wajib. Lukis tandatangan biasa anda.",
+    "clear": "Padam"
+  },
+  "formField": {
+    "optional": "(pilihan)"
+  },
+  "confirmDialog": {
+    "title": "Adakah anda pasti?",
+    "confirm": "Sahkan",
+    "cancel": "Batal"
+  },
+  "stepIndicator": {
+    "listingDetails": "Butiran Senarai",
+    "reviewSign": "Semak & Tandatangan"
+  },
+  "reviewSummary": {
+    "heading": "Ringkasan semakan",
+    "description": "Sahkan butiran di bawah sebelum menghantar senarai anda.",
+    "edit": "Sunting",
+    "coverPhoto": "Foto muka depan",
+    "speciesBreed": "Spesies & baka",
+    "sellingPrice": "Harga jualan",
+    "state": "Negeri",
+    "deliveryMethod": "Kaedah penghantaran",
+    "signerName": "Nama penandatangan",
+    "signedDate": "Tarikh tandatangan"
+  },
+  "status": {
+    "verification": {
+      "Not Submitted": "Belum Dihantar",
+      "Pending": "Menunggu Pengesahan",
+      "Approved": "Penternak Disahkan",
+      "Rejected": "Pengesahan Ditolak",
+      "Unknown": "Tidak diketahui"
+    }
+  }
+}

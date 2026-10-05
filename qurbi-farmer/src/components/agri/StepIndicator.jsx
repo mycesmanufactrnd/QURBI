@@ -1,13 +1,14 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 import { Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
-const STEPS = [
-  { n: 1, label: "Listing Details" },
-  { n: 2, label: "Review & Sign" },
-];
-
-export default function StepIndicator({ current, className, steps = STEPS }) {
+export default function StepIndicator({ current, className, steps: stepsProp }) {
+  const { t } = useTranslation("shared");
+  const steps = stepsProp || [
+    { n: 1, label: t("stepIndicator.listingDetails") },
+    { n: 2, label: t("stepIndicator.reviewSign") },
+  ];
   return (
     <div className={cn("flex items-center gap-2", className)}>
       {steps.map((s, i) => {

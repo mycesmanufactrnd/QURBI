@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { OrderStatus, UserRole } from '../entities';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -28,8 +37,10 @@ export class OrdersController {
 
   @Get()
   findAll(@CurrentUser() user: AuthenticatedUser) {
-    if (user.role === UserRole.BUYER) return this.ordersService.findAllForBuyer(user.id);
-    if (user.role === UserRole.FARMER) return this.ordersService.findAllForFarmer(user.id);
+    if (user.role === UserRole.BUYER)
+      return this.ordersService.findAllForBuyer(user.id);
+    if (user.role === UserRole.FARMER)
+      return this.ordersService.findAllForFarmer(user.id);
     return []; // admins use GET /orders/admin instead
   }
 
@@ -81,14 +92,21 @@ export class OrdersController {
   }
 
   @Patch(':id/cancel')
-  cancel(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser, @Body() body: CancelOrderDto) {
+  cancel(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: CancelOrderDto,
+  ) {
     return this.ordersService.cancel(id, user, body.reason);
   }
 
   @Roles(UserRole.BUYER)
   @UseGuards(RolesGuard)
   @Post(':id/payment-failed')
-  paymentFailed(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+  paymentFailed(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.ordersService.markPaymentFailed(id, user);
   }
 

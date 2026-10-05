@@ -12,6 +12,7 @@ export function resolveApiAssetUrl(url) {
 
 export const ACCESS_TOKEN_KEY = "qurbi_access_token";
 export const REFRESH_TOKEN_KEY = "qurbi_refresh_token";
+export const AUTH_EXPIRED_EVENT = "qurbi:auth-expired";
 
 function readToken(key) {
   try {
@@ -33,6 +34,9 @@ function writeToken(key, token) {
 export const getAccessToken = () => readToken(ACCESS_TOKEN_KEY);
 export const getRefreshToken = () => readToken(REFRESH_TOKEN_KEY);
 
+/**
+ * @param {{ accessToken?: string | null, refreshToken?: string | null }} [tokens]
+ */
 export function setSessionTokens({ accessToken, refreshToken } = {}) {
   writeToken(ACCESS_TOKEN_KEY, accessToken);
   writeToken(REFRESH_TOKEN_KEY, refreshToken);
@@ -41,6 +45,12 @@ export function setSessionTokens({ accessToken, refreshToken } = {}) {
 export function clearSessionTokens() {
   writeToken(ACCESS_TOKEN_KEY, null);
   writeToken(REFRESH_TOKEN_KEY, null);
+}
+
+function notifyAuthExpired() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
+  }
 }
 
 const apiClient = axios.create({
@@ -70,7 +80,13 @@ apiClient.interceptors.response.use(
       originalRequest?.url?.includes("/auth/firebase") ||
       originalRequest?.url?.includes("/auth/refresh");
 
-    if (error.response?.status !== 401 || originalRequest?._retry || !refreshToken || isAuthRequest) {
+    if (error.response?.status !== 401 || isAuthRequest) {
+      return Promise.reject(error);
+    }
+
+    if (originalRequest?._retry || !refreshToken) {
+      clearSessionTokens();
+      notifyAuthExpired();
       return Promise.reject(error);
     }
 
@@ -91,6 +107,7 @@ apiClient.interceptors.response.use(
       return apiClient(originalRequest);
     } catch (refreshError) {
       clearSessionTokens();
+      notifyAuthExpired();
       return Promise.reject(refreshError);
     }
   },
@@ -114,11 +131,13 @@ async function unwrap(request) {
 
 export const authApi = {
   register: (details) => unwrap(apiClient.post("/auth/register", details)),
-  login: (credentials) => unwrap(apiClient.post("/auth/login", credentials)),
+  login: (credentials) => unwrap(apiClient.post("/auth/login", { ...credentials, portal: "farmer" })),
   me: () => unwrap(apiClient.get("/auth/me")),
   refresh: (refreshToken) => unwrap(apiClient.post("/auth/refresh", { refreshToken })),
   logout: (refreshToken) => unwrap(apiClient.post("/auth/logout", { refreshToken })),
   firebase: (idToken) => unwrap(apiClient.post("/auth/firebase", { idToken, portal: "farmer" })),
+  // Returns a NEW session for the other portal; this portal stays signed in.
+  switchRole: (role, refreshToken) => unwrap(apiClient.post("/auth/switch-role", { role, refreshToken })),
 };
 
 export const uploadApi = {

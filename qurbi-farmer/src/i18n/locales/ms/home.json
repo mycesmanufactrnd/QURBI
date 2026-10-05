@@ -1,0 +1,53 @@
+{
+  "headerLabel": "Pengepala QURBI Farmer",
+  "openProfile": "Buka profil penternak",
+  "profileAlt": "Profil penternak",
+  "greeting": {
+    "morning": "Selamat Pagi",
+    "afternoon": "Selamat Petang",
+    "evening": "Selamat Malam"
+  },
+  "verifiedFarmer": "Penternak Disahkan",
+  "loadError": "Kami tidak dapat memuat semula papan pemuka anda. Maklumat terkini yang ada dipaparkan.",
+  "invalidOrderResponse": "Perkhidmatan pesanan memberi respons yang tidak sah.",
+  "quick": {
+    "addAnimal": "Tambah haiwan",
+    "bulkSell": "Jual pukal",
+    "orders": "Pesanan",
+    "myAnimals": "Haiwan saya",
+    "toHandle": "{{count}} perlu diuruskan"
+  },
+  "todo": {
+    "title": "Perlu dibuat",
+    "expired_one": "{{count}} senarai telah tamat tempoh",
+    "expired_other": "{{count}} senarai telah tamat tempoh",
+    "expiredHint_one": "Pembeli tidak dapat melihatnya. Semak butiran dan baharui selama 14 hari.",
+    "expiredHint_other": "Pembeli tidak dapat melihatnya. Semak butiran dan baharui selama 14 hari."
+  },
+  "overview": {
+    "title": "Ringkasan ladang",
+    "forSale": "Dijual",
+    "ordersToHandle": "Pesanan perlu diuruskan",
+    "sold": "Terjual",
+    "awaitingPayment_one": "{{count}} lagi pesanan menunggu pembeli membuat pembayaran.",
+    "awaitingPayment_other": "{{count}} lagi pesanan menunggu pembeli membuat pembayaran."
+  },
+  "forSale": {
+    "title": "Haiwan anda yang dijual",
+    "seeAll": "Lihat semua",
+    "emptyTitle": "Tiada apa yang dijual buat masa ini",
+    "emptyDescription": "Tambah haiwan supaya pembeli dapat menemuinya di QURBI.",
+    "addAnimal": "Tambah haiwan"
+  },
+  "recentOrders": {
+    "title": "Pesanan terkini",
+    "seeAll": "Lihat semua"
+  },
+  "carousel": {
+    "viewListing": "Lihat senarai {{title}}",
+    "listingAlt": "Senarai {{species}}",
+    "livestock": "Ternakan",
+    "slideOf": "Slaid {{current}} daripada {{total}}",
+    "showListing": "Papar senarai {{index}}"
+  }
+}

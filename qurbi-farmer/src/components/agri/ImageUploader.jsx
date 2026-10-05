@@ -3,6 +3,7 @@ import { uploadApi } from "@/api/apiClient";
 import { ImagePlus, X, Star, Loader2, ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Image } from "@/components/ui/image";
+import { useTranslation } from "react-i18next";
 
 const MAX_IMAGES = 10;
 const MAX_DIMENSION = 1280;
@@ -37,6 +38,7 @@ async function compressFile(file) {
 }
 
 export default function ImageUploader({ value = [], cover, onChange }) {
+  const { t } = useTranslation("livestock");
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
@@ -53,14 +55,14 @@ export default function ImageUploader({ value = [], cover, onChange }) {
         files.map(async (file) => {
           const compressed = await compressFile(file);
           const { fileUrl } = await uploadApi.upload(compressed, "public");
-          if (!fileUrl) throw new Error("Upload returned no URL");
+          if (!fileUrl) throw new Error(t("imageUploader.noUrl"));
           return fileUrl;
         })
       );
       const next = [...images, ...uploads];
       onChange(next, coverUrl || next[0] || null);
     } catch (uploadError) {
-      setError(uploadError.message || "Image upload failed. Please try again.");
+      setError(uploadError.message || t("imageUploader.uploadFailed"));
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -84,20 +86,23 @@ export default function ImageUploader({ value = [], cover, onChange }) {
             <button
               type="button"
               onClick={() => removeAt(images.indexOf(url))}
-              className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
+              aria-label={t("imageUploader.removePhoto")}
+              className="absolute top-1.5 right-1.5 w-9 h-9 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
             >
               <X className="w-4 h-4" />
             </button>
             <button
               type="button"
               onClick={() => setCover(url)}
+              aria-label={url === coverUrl ? t("imageUploader.coverPhoto") : t("imageUploader.setCoverPhoto")}
+              aria-pressed={url === coverUrl}
               className={cn(
-                "absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold flex items-center gap-1 transition-colors",
+                "absolute bottom-1.5 left-1.5 min-h-8 px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1 transition-colors",
                 url === coverUrl ? "bg-primary text-primary-foreground" : "bg-black/55 text-white"
               )}
             >
               <Star className={cn("w-3 h-3", url === coverUrl && "fill-current")} />
-              {url === coverUrl ? "Cover" : "Set"}
+              {url === coverUrl ? t("imageUploader.cover") : t("imageUploader.set")}
             </button>
           </div>
         ))}
@@ -113,17 +118,18 @@ export default function ImageUploader({ value = [], cover, onChange }) {
             ) : (
               <>
                 <ImagePlus className="w-6 h-6" />
-                <span className="text-[10px] font-medium mt-1">{images.length}/{MAX_IMAGES}</span>
+                <span className="text-sm font-semibold mt-1">{t("imageUploader.addPhoto")}</span>
+                <span className="text-xs font-medium">{t("imageUploader.count", { count: images.length, max: MAX_IMAGES })}</span>
               </>
             )}
           </button>
         )}
       </div>
-      <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1.5">
-        <ImageIcon className="w-3.5 h-3.5" />
-        Tap a photo to set it as the cover. Up to {MAX_IMAGES} images.
+      <p className="text-sm text-muted-foreground mt-2 flex items-start gap-1.5">
+        <ImageIcon className="mt-0.5 w-4 h-4 shrink-0" />
+        <span>{t("imageUploader.tip", { max: MAX_IMAGES })}</span>
       </p>
-      {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
+      {error && <p role="alert" className="mt-2 text-sm text-destructive">{error}</p>}
       <input
         ref={inputRef}
         type="file"

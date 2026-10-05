@@ -1,4 +1,5 @@
-  import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { useLivestockDisplay } from "@/lib/livestockDisplay";
 import { qurbi } from "@/api/qurbiClient";
 import { resolveApiAssetUrl } from "@/api/apiClient";
 import { useAuth } from "@/lib/AuthContext";
@@ -13,6 +14,7 @@ import { breedsFor } from "@/lib/agri";
 
 export default function BreedSelector({ species, value, approvalStatus, requestId, livestockId, onChange }) {
   const { user } = useAuth();
+  const { t, breed: breedLabel } = useLivestockDisplay();
   const [managedBreeds, setManagedBreeds] = useState([]);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -38,10 +40,10 @@ export default function BreedSelector({ species, value, approvalStatus, requestI
   if (pending) {
     return (
       <div className="space-y-2">
-        <Input value={value} readOnly className="h-12 bg-muted" />
+        <Input value={breedLabel(value)} readOnly className="h-12 bg-muted" />
         <p className="flex items-start gap-1.5 text-xs text-amber-700">
           <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          This breed is pending superadmin approval. The listing can be saved but stays hidden from buyers.
+          {t("breedSelector.pendingNote")}
         </p>
       </div>
     );
@@ -50,9 +52,9 @@ export default function BreedSelector({ species, value, approvalStatus, requestI
   return (
     <div className="space-y-2">
       <Select value={value} onValueChange={selectBreed} disabled={!species}>
-        <SelectTrigger className="h-12"><SelectValue placeholder="Select breed" /></SelectTrigger>
+        <SelectTrigger className="h-12"><SelectValue placeholder={t("breedSelector.placeholder")} /></SelectTrigger>
         <SelectContent>
-          {options.map((breed) => <SelectItem key={breed} value={breed}>{breed}</SelectItem>)}
+          {options.map((breed) => <SelectItem key={breed} value={breed}>{breedLabel(breed)}</SelectItem>)}
         </SelectContent>
       </Select>
 
@@ -60,16 +62,16 @@ export default function BreedSelector({ species, value, approvalStatus, requestI
         <div className="rounded-xl border border-amber-300/60 bg-amber-50 p-3">
           <p className="flex items-start gap-1.5 text-xs text-amber-800">
             <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            An unspecified breed may be harder for buyers to find and may reduce enquiries.
+            {t("breedSelector.unspecifiedWarning")}
           </p>
           <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => setDialogOpen(true)}>
-            <Plus className="mr-1.5 h-4 w-4" /> Add new breed
+            <Plus className="mr-1.5 h-4 w-4" /> {t("breedSelector.addNew")}
           </Button>
         </div>
       )}
 
       {approvalStatus === "Rejected" && (
-        <p className="text-xs text-destructive">The previous breed request was rejected. Choose another breed or submit a new request.</p>
+        <p className="text-xs text-destructive">{t("breedSelector.rejectedNote")}</p>
       )}
 
       <BreedRequestDialog
@@ -93,6 +95,7 @@ export default function BreedSelector({ species, value, approvalStatus, requestI
 }
 
 function BreedRequestDialog({ open, onOpenChange, species, farmerId, livestockId, onCreated }) {
+  const { t, species: speciesLabel } = useLivestockDisplay();
   const fileRef = useRef(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -109,7 +112,7 @@ function BreedRequestDialog({ open, onOpenChange, species, farmerId, livestockId
       const result = await qurbi.integrations.Core.UploadFile({ file });
       setImage(result.file_url);
     } catch (uploadError) {
-      setError(uploadError.message || "Image upload failed.");
+      setError(uploadError.message || t("breedSelector.uploadFailed"));
     } finally {
       setUploading(false);
     }
@@ -134,7 +137,7 @@ function BreedRequestDialog({ open, onOpenChange, species, farmerId, livestockId
       setDescription("");
       setImage("");
     } catch (requestError) {
-      setError(requestError.message || "Breed request could not be submitted.");
+      setError(requestError.message || t("breedSelector.requestFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -143,17 +146,17 @@ function BreedRequestDialog({ open, onOpenChange, species, farmerId, livestockId
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md rounded-3xl">
-        <DialogHeader><DialogTitle>Request a new {species?.toLowerCase()} breed</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{species ? t("breedSelector.dialogTitle", { species: speciesLabel(species).toLowerCase() }) : t("breedSelector.dialogTitleGeneric")}</DialogTitle></DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label>Breed name *</Label>
-            <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Enter the breed name" />
+            <Label>{t("breedSelector.nameLabel")}</Label>
+            <Input value={name} onChange={(event) => setName(event.target.value)} placeholder={t("breedSelector.namePlaceholder")} />
           </div>
           <div className="space-y-1.5">
-            <Label>Reference image *</Label>
+            <Label>{t("breedSelector.referenceImage")}</Label>
             {image ? (
               <div className="relative h-40 overflow-hidden rounded-2xl border border-border bg-muted">
-                <img src={resolveApiAssetUrl(image)} alt="Breed reference" className="h-full w-full object-cover" />
+                <img src={resolveApiAssetUrl(image)} alt={t("breedSelector.referenceAlt")} className="h-full w-full object-cover" />
                 <button type="button" onClick={() => setImage("")} className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white">
                   <X className="h-4 w-4" />
                 </button>
@@ -161,21 +164,21 @@ function BreedRequestDialog({ open, onOpenChange, species, farmerId, livestockId
             ) : (
               <button type="button" onClick={() => fileRef.current?.click()} className="flex h-28 w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border text-muted-foreground">
                 {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <ImagePlus className="h-5 w-5" />}
-                <span className="mt-1 text-xs">{uploading ? "Uploading..." : "Upload breed image"}</span>
+                <span className="mt-1 text-xs">{uploading ? t("breedSelector.uploading") : t("breedSelector.uploadImage")}</span>
               </button>
             )}
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(event) => uploadImage(event.target.files?.[0])} />
           </div>
           <div className="space-y-1.5">
-            <Label>Description (optional)</Label>
+            <Label>{t("breedSelector.descriptionLabel")}</Label>
             <Textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} />
           </div>
           <div className="rounded-xl bg-muted p-3 text-xs text-muted-foreground">
-            <CheckCircle2 className="mr-1 inline h-3.5 w-3.5 text-primary" /> Your livestock can still be saved while this request is reviewed.
+            <CheckCircle2 className="mr-1 inline h-3.5 w-3.5 text-primary" /> {t("breedSelector.canStillSave")}
           </div>
           {error && <p className="text-xs text-destructive">{error}</p>}
           <Button type="button" onClick={submit} disabled={!name.trim() || !image || uploading || submitting} className="w-full">
-            {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Submit for review
+            {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} {t("breedSelector.submitReview")}
           </Button>
         </div>
       </DialogContent>

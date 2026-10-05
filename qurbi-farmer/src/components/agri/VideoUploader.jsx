@@ -1,11 +1,13 @@
 import React, { useRef, useState } from "react";
 import { resolveApiAssetUrl, uploadApi } from "@/api/apiClient";
 import { Loader2, PlaySquare, Upload, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const MAX_VIDEOS = 2;
 const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 
-export default function VideoUploader({ value = [], onChange, buttonLabel = "Add livestock video" }) {
+export default function VideoUploader({ value = [], onChange, buttonLabel }) {
+  const { t } = useTranslation("livestock");
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
@@ -16,7 +18,7 @@ export default function VideoUploader({ value = [], onChange, buttonLabel = "Add
     if (!files.length) return;
     const invalid = files.find((file) => !file.type.startsWith("video/") || file.size > MAX_VIDEO_BYTES);
     if (invalid) {
-      setError("Use MP4, MOV or WebM videos up to 50 MB each.");
+      setError(t("videoUploader.invalid"));
       return;
     }
 
@@ -24,12 +26,12 @@ export default function VideoUploader({ value = [], onChange, buttonLabel = "Add
     try {
       const urls = await Promise.all(files.map(async (file) => {
         const result = await uploadApi.upload(file, "public");
-        if (!result.fileUrl) throw new Error("Upload returned no URL");
+        if (!result.fileUrl) throw new Error(t("videoUploader.noUrl"));
         return result.fileUrl;
       }));
       onChange([...value, ...urls]);
     } catch (uploadError) {
-      setError(uploadError.message || "Video upload failed.");
+      setError(uploadError.message || t("videoUploader.uploadFailed"));
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -44,8 +46,8 @@ export default function VideoUploader({ value = [], onChange, buttonLabel = "Add
           <button
             type="button"
             onClick={() => onChange(value.filter((_, itemIndex) => itemIndex !== index))}
-            className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white"
-            aria-label={`Remove video ${index + 1}`}
+            className="absolute right-2 top-2 flex h-10 w-10 items-center justify-center rounded-full bg-black/70 text-white"
+            aria-label={t("videoUploader.removeVideo", { number: index + 1 })}
           >
             <X className="h-4 w-4" />
           </button>
@@ -57,17 +59,17 @@ export default function VideoUploader({ value = [], onChange, buttonLabel = "Add
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="flex min-h-24 w-full items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-border text-sm font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+          className="flex min-h-20 w-full items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-border text-sm font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary"
         >
           {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
-          {uploading ? "Uploading video..." : buttonLabel}
+          {uploading ? t("videoUploader.uploading") : (buttonLabel || t("videoUploader.addVideo"))}
         </button>
       )}
 
-      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <PlaySquare className="h-3.5 w-3.5" /> Up to {MAX_VIDEOS} videos, 50 MB each.
+      <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <PlaySquare className="h-3.5 w-3.5" /> {t("videoUploader.limits", { max: MAX_VIDEOS })}
       </p>
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <input
         ref={inputRef}
         type="file"

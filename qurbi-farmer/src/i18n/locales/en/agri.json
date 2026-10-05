@@ -1,0 +1,97 @@
+{
+  "renewalUnavailable": "Renewal date unavailable",
+  "farmerFallback": "Farmer",
+  "unknown": "Unknown",
+  "livestock": "Livestock",
+  "delivery": {
+    "self": {
+      "label": "Own delivery",
+      "description": "I will arrange delivery to the buyer."
+    },
+    "qurbi": {
+      "label": "QURBI delivery",
+      "description": "I want QURBI to arrange delivery."
+    },
+    "both": {
+      "label": "Both options",
+      "description": "Delivery method can be decided per order."
+    }
+  },
+  "verification": {
+    "notSubmitted": "Not Submitted",
+    "pending": "Pending Verification",
+    "approved": "Verified Farmer",
+    "rejected": "Verification Rejected"
+  },
+  "age": {
+    "month_one": "{{count}} month",
+    "month_other": "{{count}} months",
+    "year_one": "{{count}} year",
+    "year_other": "{{count}} years"
+  },
+  "visibility": {
+    "speciesPending": "Species is waiting for superadmin approval",
+    "speciesRejected": "Species request was rejected",
+    "breedPending": "Breed is waiting for superadmin approval",
+    "breedRejected": "Breed request was rejected",
+    "status": "Status is {{status}}",
+    "notAvailable": "not available",
+    "expired": "Listing expired after 14 days; farmer confirmation is required",
+    "ageUnknown": "Age could not be verified",
+    "belowThreshold": "Below the {{minimum}}-month marketplace threshold"
+  },
+  "relative": {
+    "justNow": "Just now",
+    "minutesAgo": "{{count}} min ago",
+    "hoursAgo": "{{count}} h ago",
+    "yesterday": "Yesterday"
+  },
+  "livestockStatus": {
+    "Available": "For sale",
+    "Reserved": "Reserved",
+    "Sold": "Sold",
+    "Unavailable": "Hidden",
+    "Draft": "Draft",
+    "Sick": "Sick",
+    "Expired": "Expired"
+  },
+  "bulkStatus": {
+    "Available": "For sale",
+    "Open": "For sale",
+    "Paused": "Paused",
+    "Draft": "Draft",
+    "Sold": "Sold",
+    "Cancelled": "Cancelled"
+  },
+  "paymentStatus": {
+    "paid": "Paid",
+    "unpaid": "Not paid yet",
+    "failed": "Payment failed",
+    "refunded": "Refunded",
+    "partiallyRefunded": "Partly refunded"
+  },
+  "orderStatus": {
+    "awaitingPayment": "Awaiting payment",
+    "toPrepare": "To prepare",
+    "preparing": "Preparing",
+    "onTheWay": "On the way",
+    "delivered": "Delivered",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "returnRequested": "Return requested",
+    "refundRequested": "Refund requested",
+    "returnRefund": "Return / refund",
+    "refunded": "Refunded",
+    "nextPayment": "Wait for the buyer to pay. Don't send the animal yet.",
+    "nextBefore": "Buyer has paid. Prepare the animal, then upload the before-delivery photo.",
+    "nextDuring": "Upload the during-delivery photo once the animal is on its way.",
+    "nextAfter": "Upload the arrival photo when you hand the animal to the buyer.",
+    "nextDelivered": "Your part is done. Waiting for the buyer to confirm they received the animal.",
+    "nextCompleted": "The buyer confirmed receipt. Nothing more to do.",
+    "nextCancelled": "This order was cancelled.",
+    "nextReturn": "The buyer asked for a return. QURBI admin will review it.",
+    "nextRefundRequested": "The buyer asked for a refund. QURBI admin will review it.",
+    "nextReturnRefund": "A return or refund is in progress. QURBI admin will contact you.",
+    "nextRefunded": "This order was refunded."
+  }
+}

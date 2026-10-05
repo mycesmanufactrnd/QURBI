@@ -46,6 +46,11 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use((config) => {
   const accessToken = getAccessToken();
   if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
+  // Let the browser add the multipart boundary for file uploads. The
+  // instance's JSON default would otherwise send an invalid multipart body.
+  if (config.data instanceof FormData) {
+    delete config.headers["Content-Type"];
+  }
   return config;
 });
 
@@ -103,10 +108,29 @@ async function unwrap(request) {
 }
 
 export const authApi = {
+  register: (details) => unwrap(apiClient.post("/auth/register", { ...details, role: "buyer" })),
+  login: (credentials) => unwrap(apiClient.post("/auth/login", { ...credentials, portal: "buyer" })),
   firebase: (idToken) => unwrap(apiClient.post("/auth/firebase", { idToken, portal: "buyer" })),
   me: () => unwrap(apiClient.get("/auth/me")),
   refresh: (refreshToken) => unwrap(apiClient.post("/auth/refresh", { refreshToken })),
   logout: (refreshToken) => unwrap(apiClient.post("/auth/logout", { refreshToken })),
+  // Both return a NEW session for the farmer portal; this portal stays signed in.
+  switchRole: (role, refreshToken) => unwrap(apiClient.post("/auth/switch-role", { role, refreshToken })),
+  becomeFarmer: (refreshToken) => unwrap(apiClient.post("/auth/become-farmer", { refreshToken })),
+};
+
+export const uploadApi = {
+  /**
+   * @param {File} file
+   * @param {"public" | "private"} [visibility]
+   * @returns {Promise<{ fileUrl: string }>}
+   */
+  upload: (file, visibility = "private") => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("visibility", visibility);
+    return unwrap(apiClient.post("/uploads", formData));
+  },
 };
 
 export default apiClient;

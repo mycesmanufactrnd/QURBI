@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, DeepPartial, EntityManager, FindOptionsWhere, Repository } from 'typeorm';
 import { BulkListing, BulkListingStatus, OrderItem, UserRole } from '../entities';
@@ -21,7 +26,8 @@ export class BulkListingsService extends BaseCrudService<BulkListing> {
     where: FindOptionsWhere<BulkListing> | undefined,
     viewer?: AuthenticatedUser,
   ): Promise<BulkListing[]> {
-    const isOwnInventory = viewer?.role === UserRole.FARMER && where?.farmerId === viewer.id;
+    const isOwnInventory =
+      viewer?.role === UserRole.FARMER && where?.farmerId === viewer.id;
     const isAdmin = viewer?.role === UserRole.ADMIN;
     const finalWhere =
       isAdmin || isOwnInventory
@@ -35,14 +41,25 @@ export class BulkListingsService extends BaseCrudService<BulkListing> {
     });
   }
 
-  async createForFarmer(farmerId: string, data: DeepPartial<BulkListing>): Promise<BulkListing> {
-    if (data.status === BulkListingStatus.SOLD || data.status === BulkListingStatus.CANCELLED) {
-      throw new BadRequestException('a new bulk listing can only start as DRAFT or OPEN');
+  async createForFarmer(
+    farmerId: string,
+    data: DeepPartial<BulkListing>,
+  ): Promise<BulkListing> {
+    if (
+      data.status === BulkListingStatus.SOLD ||
+      data.status === BulkListingStatus.CANCELLED
+    ) {
+      throw new BadRequestException(
+        'a new bulk listing can only start as DRAFT or OPEN',
+      );
     }
     return this.create({ ...data, farmerId });
   }
 
-  async findOneForViewer(id: string, viewer?: AuthenticatedUser): Promise<BulkListing> {
+  async findOneForViewer(
+    id: string,
+    viewer?: AuthenticatedUser,
+  ): Promise<BulkListing> {
     const listing = await this.findOne(id);
     const buyerOwnsOrderItem =
       viewer?.role === UserRole.BUYER &&
@@ -63,10 +80,16 @@ export class BulkListingsService extends BaseCrudService<BulkListing> {
     return listing;
   }
 
-  async updateOwned(id: string, viewer: AuthenticatedUser, data: DeepPartial<BulkListing>): Promise<BulkListing> {
+  async updateOwned(
+    id: string,
+    viewer: AuthenticatedUser,
+    data: DeepPartial<BulkListing>,
+  ): Promise<BulkListing> {
     const listing = await this.findOwned(id, viewer);
     if (data.status === BulkListingStatus.SOLD) {
-      throw new BadRequestException('status SOLD can only be set by completing a purchase');
+      throw new BadRequestException(
+        'status SOLD can only be set by completing a purchase',
+      );
     }
     return super.update(listing.id, data);
   }
@@ -78,7 +101,10 @@ export class BulkListingsService extends BaseCrudService<BulkListing> {
 
   // Fetches a lot and confirms `viewer` owns it (or is an admin). Anyone else
   // gets the exact same 404 a made-up id would return.
-  private async findOwned(id: string, viewer: AuthenticatedUser): Promise<BulkListing> {
+  private async findOwned(
+    id: string,
+    viewer: AuthenticatedUser,
+  ): Promise<BulkListing> {
     const listing = await this.findOne(id);
     if (viewer.role !== UserRole.ADMIN && listing.farmerId !== viewer.id) {
       throw new NotFoundException(`BulkListing ${id} not found`);
@@ -104,7 +130,9 @@ export class BulkListingsService extends BaseCrudService<BulkListing> {
         throw new NotFoundException(`BulkListing ${id} not found`);
       }
       if (listing.status !== BulkListingStatus.OPEN) {
-        throw new ConflictException(`BulkListing ${id} is no longer available for purchase`);
+        throw new ConflictException(
+          `BulkListing ${id} is no longer available for purchase`,
+        );
       }
 
       listing.status = BulkListingStatus.SOLD;

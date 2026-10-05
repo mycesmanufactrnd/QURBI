@@ -1,0 +1,209 @@
+{
+  "form": {
+    "goBack": "Go back",
+    "title": "Farmer verification",
+    "resubmitTitle": "Fix & resubmit",
+    "subtitle": "Takes about 5 minutes. Have your IC ready.",
+    "steps": {
+      "farmDetails": "Farm Details",
+      "policyTerms": "Policy & Terms"
+    },
+    "whatToFix": "What to fix",
+    "previousFilled": "Your previous details are filled in below. Change what's needed, then continue.",
+    "requiredNote": "Required",
+    "loadError": "Your previous details couldn't be loaded. You can still fill in this form.",
+    "sections": {
+      "aboutYou": "1. About you",
+      "yourFarm": "2. Your farm",
+      "identityDocs": "3. Identity documents",
+      "identityDocsDesc": "Only QURBI admins see these. They are used to confirm you are a real farmer."
+    },
+    "fields": {
+      "name": "Full name (as on IC)",
+      "namePlaceholder": "Ahmad bin Ali",
+      "phone": "Phone number",
+      "phonePlaceholder": "012-345 6789",
+      "icNumber": "IC number",
+      "icHint": "12 digits, e.g. 900312-11-5087",
+      "icPlaceholder": "XXXXXX-XX-XXXX",
+      "farmName": "Farm name",
+      "farmNamePlaceholder": "e.g. Ladang Ternakan Ali",
+      "address": "Farm address",
+      "addressPlaceholder": "Lot 12, Jalan...",
+      "city": "City",
+      "cityPlaceholder": "Kuantan",
+      "postcode": "Postcode",
+      "postcodePlaceholder": "25000",
+      "state": "State",
+      "statePlaceholder": "Select state",
+      "delivery": "How will you deliver to buyers?",
+      "deliveryHint": "You can change this later in your profile."
+    },
+    "docs": {
+      "tipsTitle": "For clear IC photos",
+      "tips": {
+        "corners": "All 4 corners of the card are in the photo",
+        "readable": "Name and IC number are sharp and readable",
+        "noGlare": "No glare, flash reflection or fingers covering it"
+      },
+      "icFront": "Front of IC",
+      "icFrontUpload": "Tap to photograph the front",
+      "icBack": "Back of IC",
+      "icBackUpload": "Tap to photograph the back",
+      "selfie": "Selfie",
+      "selfieUpload": "Take a selfie",
+      "selfieRetake": "Retake",
+      "selfieHint": "A clear, recent photo of your face. An admin compares it with your IC photo.",
+      "selfieTips": {
+        "light": "Face the camera in good light.",
+        "remove": "Remove sunglasses, mask or anything covering your face.",
+        "alone": "Only you in the photo."
+      },
+      "certificate": "Farm certificate (optional)",
+      "certificateHint": "Not every farmer has one. You can continue without it."
+    },
+    "missing": {
+      "name": "Enter your full name as shown on your IC.",
+      "phone": "Enter a phone number buyers and QURBI can reach.",
+      "icNumber": "Enter your IC number, e.g. 900312-11-5087.",
+      "farmName": "Enter your farm's name.",
+      "address": "Enter the farm address.",
+      "city": "Enter the city or town.",
+      "postcode": "Enter the postcode.",
+      "state": "Choose the state.",
+      "delivery": "Choose how you will deliver to buyers.",
+      "icFront": "Upload a photo of the front of your IC.",
+      "icBack": "Upload a photo of the back of your IC.",
+      "selfie": "Take a selfie so we can match it to your IC."
+    },
+    "labels": {
+      "name": "Full name",
+      "phone": "Phone number",
+      "icNumber": "IC number",
+      "farmName": "Farm name",
+      "address": "Farm address",
+      "city": "City",
+      "postcode": "Postcode",
+      "state": "State",
+      "delivery": "Delivery method",
+      "icFront": "Front of IC",
+      "icBack": "Back of IC",
+      "selfie": "Selfie"
+    },
+    "hint": {
+      "ready": "All done. Next, read and sign the farmer policy.",
+      "stillNeeded": "Still needed: {{items}}.",
+      "remaining_one": "{{count}} required item left",
+      "remaining_other": "{{count}} required items left"
+    },
+    "next": "Next: policy & sign"
+  },
+  "policy": {
+    "backToDetails": "Back to farm details",
+    "title": "Policy & terms",
+    "subtitle": "Last step before we review your account.",
+    "readAndTick": "1. Read and tick each point",
+    "progress": "{{done}} of {{total}}",
+    "version": "Policy version: {{version}}",
+    "points": {
+      "identityStorage": {
+        "title": "IC, selfie and document storage",
+        "text": "I consent to QURBI securely storing my IC, selfie and submitted documents for manual identity verification and account administration."
+      },
+      "platformMarkup": {
+        "title": "20% platform markup",
+        "text": "I understand QURBI may add a 20% markup on top of the price I set for livestock displayed to buyers."
+      },
+      "accurateInformation": {
+        "title": "Accurate information",
+        "text": "I confirm my personal, farm, livestock and pricing information is truthful, complete and kept up to date."
+      },
+      "animalCompliance": {
+        "title": "Animal health and legal compliance",
+        "text": "I am responsible for animal welfare and compliance with applicable Malaysian livestock, health, permit and movement requirements."
+      },
+      "deliveryResponsibility": {
+        "title": "Delivery responsibility",
+        "text": "I will fulfil orders according to my selected delivery method and cooperate with QURBI where platform delivery is selected."
+      },
+      "privacyEnforcement": {
+        "title": "Privacy and platform enforcement",
+        "text": "I will protect buyer information and accept that QURBI may review, reject or suspend accounts that breach these terms."
+      }
+    },
+    "sign": "2. Sign",
+    "fullName": "Full name",
+    "nameError": "Enter your full name.",
+    "date": "Date",
+    "signature": "Signature",
+    "nextTitle": "What happens next?",
+    "nextText": "A QURBI admin checks your IC, selfie and farm details — usually within 1–2 working days. You'll be able to list livestock once approved.",
+    "signatureUploadFailed": "Signature upload failed.",
+    "submitFailed": "Submission failed. Your details are saved on this device; please try again.",
+    "missing": {
+      "tickAll": "tick all {{total}} points ({{done}} done)",
+      "name": "your name",
+      "date": "the date",
+      "signature": "your signature"
+    },
+    "hint": {
+      "ready": "Ready to send for review.",
+      "toSubmit": "To submit: {{items}}."
+    },
+    "back": "Back",
+    "sending": "Sending...",
+    "submit": "Submit for review"
+  },
+  "pending": {
+    "title": "We're checking your application",
+    "thanks": "Thank you! There's nothing more you need to do right now.",
+    "status": "Status",
+    "steps": {
+      "sent": { "title": "Application sent", "text": "We received your details, IC and selfie." },
+      "review": { "title": "Admin review", "text": "A QURBI admin checks your documents. Usually 1–2 working days." },
+      "start": { "title": "Start selling", "text": "Once approved, you can list livestock and receive orders." }
+    },
+    "linkedTo": "Application linked to",
+    "yourEmail": "your signed-in email",
+    "checkNow": "Check status now",
+    "stillReview": "Still under review (checked {{time}}).",
+    "logout": "Log out"
+  },
+  "rejected": {
+    "title": "Your application needs a fix",
+    "intro": "We couldn't approve it yet. Fix the item below and send it again — it only takes a few minutes.",
+    "status": "Status",
+    "notApproved": "Not approved",
+    "adminNote": "Admin's note",
+    "loadingNote": "Loading the admin's note...",
+    "noReason": "No reason was given. Please contact QURBI support before resubmitting.",
+    "howToFix": "How to fix it",
+    "fixSteps": {
+      "read": "Read the admin's note above.",
+      "tap": "Tap “Fix and resubmit”. Your previous details are filled in for you.",
+      "change": "Change what the admin asked for — for example retake a blurry IC photo.",
+      "sign": "Sign the policy again and submit. We'll review it again in 1–2 working days."
+    },
+    "resubmit": "Fix and resubmit",
+    "logout": "Log out"
+  },
+  "oauth": {
+    "authorizeTitle": "Authorize access",
+    "loading": "Loading…",
+    "aiClient": "An AI client",
+    "thisApp": "this app",
+    "granted": "Access granted",
+    "denied": "Access denied",
+    "returnToClient": "You can return to {{client}} and close this window.",
+    "reconnectTitle": "Reconnect required",
+    "reconnectDefault": "This authorization can no longer be completed. Reconnect from your AI client to try again.",
+    "invalidLink": "This authorization link is invalid or has expired.",
+    "loadFailed": "Could not load this authorization request. Please try again.",
+    "completeFailed": "Could not complete authorization. Please try again.",
+    "wantsAccess": "{{client}} wants to access {{app}} on your behalf",
+    "toolsIntro": "It will be able to use these tools in {{app}}:",
+    "noTools": "No tools requested",
+    "deny": "Deny",
+    "approve": "Approve"
+  }
+}
