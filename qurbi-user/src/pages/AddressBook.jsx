@@ -534,7 +534,9 @@ export default function AddressBook() {
         setShowForm(false);
       }
       flash(ta("address.savedNotice"));
-      if (isOnboarding) navigate(returnTo, { replace: true });
+      if (isOnboarding || openedFromPayment) {
+        navigate(returnTo, { replace: true });
+      }
     } catch (error) {
       // Keep the form open with the buyer's input and explain what happened.
       setFormError(error.data?.error || error.message || t("addressBook.saveError"));
@@ -559,6 +561,7 @@ export default function AddressBook() {
         <AppHeader
           title={t("addressBook.pageTitle")}
           backTo={returnTo}
+          preferRecentBack={false}
           subtitle={t("addressBook.pageSubtitle")}
         />
         <PageLoading contentOnly message={t("addressBook.loading")} />
@@ -569,7 +572,12 @@ export default function AddressBook() {
   if (!isAuthenticated) {
     return (
       <div className="aisyah-page min-h-screen">
-        <AppHeader title={t("addressBook.pageTitle")} backTo={returnTo} subtitle={t("addressBook.pageSubtitle")} />
+        <AppHeader
+          title={t("addressBook.pageTitle")}
+          backTo={returnTo}
+          preferRecentBack={false}
+          subtitle={t("addressBook.pageSubtitle")}
+        />
         <div className="aisyah-content flex flex-col items-center justify-center gap-3 py-16 text-center">
           <MapPin className="h-12 w-12 text-[#41362D]/40" aria-hidden="true" />
           <p className="max-w-xs text-[15px] text-[#41362D]/75">{t("addressBook.signInPrompt")}</p>
@@ -595,6 +603,7 @@ export default function AddressBook() {
       <AppHeader
         title={t("addressBook.pageTitle")}
         backTo={returnTo}
+        preferRecentBack={false}
         subtitle={isOnboarding
           ? t("addressBook.onboardingSubtitle")
           : t("addressBook.savedCount", { count: addresses.length })}

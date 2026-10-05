@@ -12,6 +12,7 @@ export function resolveApiAssetUrl(url) {
 
 export const ACCESS_TOKEN_KEY = "qurbi_access_token";
 export const REFRESH_TOKEN_KEY = "qurbi_refresh_token";
+export const AUTH_EXPIRED_EVENT = "qurbi:auth-expired";
 
 function readToken(key) {
   try {
@@ -46,6 +47,12 @@ export function clearSessionTokens() {
   writeToken(REFRESH_TOKEN_KEY, null);
 }
 
+function notifyAuthExpired() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
+  }
+}
+
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: { "Content-Type": "application/json" },
@@ -73,7 +80,13 @@ apiClient.interceptors.response.use(
       originalRequest?.url?.includes("/auth/firebase") ||
       originalRequest?.url?.includes("/auth/refresh");
 
-    if (error.response?.status !== 401 || originalRequest?._retry || !refreshToken || isAuthRequest) {
+    if (error.response?.status !== 401 || isAuthRequest) {
+      return Promise.reject(error);
+    }
+
+    if (originalRequest?._retry || !refreshToken) {
+      clearSessionTokens();
+      notifyAuthExpired();
       return Promise.reject(error);
     }
 
@@ -94,6 +107,7 @@ apiClient.interceptors.response.use(
       return apiClient(originalRequest);
     } catch (refreshError) {
       clearSessionTokens();
+      notifyAuthExpired();
       return Promise.reject(refreshError);
     }
   },

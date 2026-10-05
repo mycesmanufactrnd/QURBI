@@ -1099,3 +1099,25 @@ html {
   outline: 3px solid #a9825f;
   outline-offset: 2px;
 }
+
+@keyframes product-name-scroll {
+  0% {
+    transform: translateX(0);
+  }
+
+  20% {
+    transform: translateX(0);
+  }
+
+  80% {
+    transform: translateX(var(--scroll-distance));
+  }
+
+  100% {
+    transform: translateX(var(--scroll-distance));
+  }
+}
+
+.product-name-scroll {
+  animation: product-name-scroll 10s ease-in-out infinite;
+}

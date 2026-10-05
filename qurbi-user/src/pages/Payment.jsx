@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   MapPin,
@@ -12,6 +12,7 @@ import {
   Lock,
   Package,
   Check,
+  Store,
 } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
 import { useUserProfile } from "@/lib/user-profile-context";
@@ -35,7 +36,7 @@ import AppHeader from "@/components/AppHeader";
 import StickyActionBar from "@/components/shop/StickyActionBar";
 import { formatRM } from "@/lib/format";
 import { extractState } from "@/lib/livestock-data";
-import { combineOrders, groupedOrderQuery } from "@/lib/order-groups";
+import { combineOrders, groupItemsByFarm } from "@/lib/order-groups";
 
 const DELIVERY_FEE_PER_FARMER = 10;
 const PAYMENT_CARD_SHADOW = "shadow-[0_12px_28px_rgba(65,54,45,0.18)]";
@@ -217,12 +218,18 @@ export default function Payment() {
   } = useUserProfile();
   const { navigateWithTransition, navigateFromProductCard } =
     useHeaderTransition();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { reveal } = useReveal();
   const resumeOrderParam = searchParams.get("order_ids") || searchParams.get("order_id") || "";
   const resumeOrderIds = resumeOrderParam.split(",").map((id) => id.trim()).filter(Boolean);
   const resumeOrderId = resumeOrderIds[0] || "";
   const isBuyNowCheckout = searchParams.get("source") === "buy-now";
+  const requestedCheckoutStep = Number(searchParams.get("step"));
+  const initialCheckoutStep = resumeOrderId
+    ? 3
+    : [1, 2, 3].includes(requestedCheckoutStep)
+      ? requestedCheckoutStep
+      : 1;
   const [resumedOrder, setResumedOrder] = useState(null);
   const [loadingOrder, setLoadingOrder] = useState(Boolean(resumeOrderId));
   const [resumeError, setResumeError] = useState("");
@@ -234,15 +241,28 @@ export default function Payment() {
   const [loading, setLoading] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [checkoutError, setCheckoutError] = useState(null);
-  const [checkoutStep, setCheckoutStep] = useState(resumeOrderId ? 3 : 1);
+  const [checkoutStep, setCheckoutStep] = useState(initialCheckoutStep);
   const [newCheckoutGroupId] = useState(() =>
     globalThis.crypto?.randomUUID?.() || `checkout-${Date.now()}-${Math.random().toString(36).slice(2)}`,
   );
   const fulfillmentMethod = "delivery";
 
   useEffect(() => {
-    setCheckoutStep(resumeOrderId ? 3 : 1);
-  }, [resumeOrderId]);
+    if (resumeOrderId) {
+      setCheckoutStep(3);
+      return;
+    }
+    if ([1, 2, 3].includes(requestedCheckoutStep)) {
+      setCheckoutStep(requestedCheckoutStep);
+    }
+  }, [requestedCheckoutStep, resumeOrderId]);
+
+  const changeCheckoutStep = (step) => {
+    setCheckoutStep(step);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("step", String(step));
+    setSearchParams(nextParams, { replace: true });
+  };
 
   useEffect(() => {
     if (!resumeOrderId) return;
@@ -338,6 +358,16 @@ export default function Payment() {
   const paymentSubtotal = resumedOrder?.subtotal ?? (
     isBuyNowCheckout ? Number(buyNowItem?.total || 0) : selectedSubtotal
   );
+  const paymentFarmGroups = groupItemsByFarm(
+    paymentItems,
+    (item) => productForPaymentItem(item, productDetails),
+  );
+  const paymentReturnParams = new URLSearchParams(searchParams);
+  paymentReturnParams.set("step", String(checkoutStep));
+  const currentPaymentReturnTo = `/payment?${paymentReturnParams.toString()}`;
+  const deliveryReturnParams = new URLSearchParams(searchParams);
+  deliveryReturnParams.set("step", "2");
+  const deliveryReturnTo = `/payment?${deliveryReturnParams.toString()}`;
 
   const buyerName = isResumingOrder
     ? resumedOrder?.buyer_name || ""
@@ -638,7 +668,11 @@ export default function Payment() {
           addresses={addresses}
           selectedId={selectedAddressId}
           onSelect={setSelectedAddressId}
-          onAddNew={() => navigateWithTransition("/address-book?new=1&returnTo=%2Fpayment")}
+          onAddNew={() =>
+            navigateWithTransition(
+              `/address-book?new=1&returnTo=${encodeURIComponent(deliveryReturnTo)}`,
+            )
+          }
           onClose={() => setShowPicker(false)}
         />
       )}
@@ -646,6 +680,7 @@ export default function Payment() {
       <AppHeader
         title={tf("payment.title")}
         backTo={isResumingOrder ? "/orders" : "/cart"}
+        preferRecentBack={false}
         subtitle={
           isResumingOrder
             ? t("payment.continueOrder", {
@@ -660,7 +695,7 @@ export default function Payment() {
 
       <PaymentStepper
         currentStep={checkoutStep}
-        onStepChange={setCheckoutStep}
+        onStepChange={changeCheckoutStep}
       />
 
       <div className="aisyah-content max-w-2xl">
@@ -686,92 +721,102 @@ export default function Payment() {
                 </div>
               </div>
               <div className="space-y-3">
-                {paymentItems.map((item) => {
-                  const productId =
-                    item.item_type === "bulk"
-                      ? item.bulk_listing_id || item.id
-                      : item.livestock_id || item.id;
-                  const returnTo = isResumingOrder
-                    ? `/payment?${groupedOrderQuery(resumedOrder)}`
-                    : isBuyNowCheckout
-                      ? "/payment?source=buy-now"
-                      : "/payment";
-                  const productPath = productId
-                    ? `${item.item_type === "bulk" ? "/bulk-buy" : "/livestock"}/${encodeURIComponent(productId)}?from=payment&returnTo=${encodeURIComponent(returnTo)}`
-                    : "";
-                  const ItemContainer = productPath ? "button" : "div";
-                  const product = productForPaymentItem(item, productDetails);
-                  const productLabel =
-                    (item.item_type === "bulk" ? item.listing_name : item.breed) ||
-                    t("payment.productDetailsFallback");
-                  const farmerLocation =
-                    paymentItemLocation(item, product) || t("payment.stateUnavailable");
+                {paymentFarmGroups.map((farmGroup) => (
+                  <div key={farmGroup.key} className="space-y-2">
+                    <div className="flex items-center gap-2 border-b border-white/15 px-1 pb-2">
+                      <Store aria-hidden="true" className="h-4 w-4 flex-none text-[#E3C19F]" />
+                      <p className="min-w-0 truncate text-sm font-extrabold text-white">
+                        {farmGroup.name === "Farm unavailable"
+                          ? t("payment.farmUnavailable")
+                          : farmGroup.name}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                    {farmGroup.items.map((item) => {
+                      const productId =
+                        item.item_type === "bulk"
+                          ? item.bulk_listing_id || item.id
+                          : item.livestock_id || item.id;
+                      const returnTo = currentPaymentReturnTo;
+                      const productPath = productId
+                        ? `${item.item_type === "bulk" ? "/bulk-buy" : "/livestock"}/${encodeURIComponent(productId)}?from=payment&returnTo=${encodeURIComponent(returnTo)}`
+                        : "";
+                      const ItemContainer = productPath ? "button" : "div";
+                      const product = productForPaymentItem(item, productDetails);
+                      const productLabel =
+                        (item.item_type === "bulk" ? item.listing_name : item.breed) ||
+                        t("payment.productDetailsFallback");
+                      const farmerLocation =
+                        paymentItemLocation(item, product) || t("payment.stateUnavailable");
 
-                  return (
-                    <ItemContainer
-                      key={item.key}
-                      type={productPath ? "button" : undefined}
-                      onClick={
-                        productPath
-                          ? (event) =>
-                              navigateFromProductCard(
-                                productPath,
-                                event.currentTarget,
-                                {
-                                  image: paymentItemImageUrl(item, product),
-                                  label: productLabel,
-                                },
-                              )
-                          : undefined
-                      }
-                      className={`flex w-full items-center justify-between gap-3 rounded-xl border border-[#E3C19F]/35 bg-[rgba(255,255,255,0.08)] p-3 text-left shadow-sm transition-all duration-200 ${productPath ? "cursor-pointer hover:border-[#F7EDE2] hover:bg-[rgba(255,255,255,0.14)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E3C19F] active:scale-[0.99]" : ""}`}
-                      aria-label={
-                        productPath
-                          ? t("payment.viewProductAria", { name: productLabel })
-                          : undefined
-                      }
-                    >
-                      <div className="flex min-w-0 items-center gap-3">
-                        <ProductImage
-                          src={paymentItemImageUrl(item, product)}
-                          alt={productLabel}
-                          className="h-12 w-12 shadow-md shadow-black/15"
-                        />
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-bold text-white">
-                            {itemTitle(item)}
-                          </p>
-                          <p className="flex min-w-0 items-center gap-1 truncate text-xs font-medium text-white/65">
-                            <MapPin aria-hidden="true" className="h-3 w-3 flex-none text-[#E3C19F]" />
-                            <span className="truncate">{farmerLocation}</span>
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex flex-none items-center gap-2">
-                        <div className="text-right">
-                          <p className="whitespace-nowrap text-sm font-extrabold text-white">
-                            {formatRM(item.total)}
-                          </p>
-                          {productPath && (
-                            <p className="text-[10px] font-semibold text-white/60">
-                              {t("payment.viewDetails")}
-                            </p>
-                          )}
-                        </div>
-                        {productPath && (
-                          <span className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#F7EDE2] bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] text-[#41362D] shadow-md shadow-black/20">
-                            <ChevronRight aria-hidden="true" className="h-5 w-5" strokeWidth={3} />
-                          </span>
-                        )}
-                      </div>
-                    </ItemContainer>
-                  );
-                })}
+                      return (
+                        <ItemContainer
+                          key={item.key}
+                          type={productPath ? "button" : undefined}
+                          onClick={
+                            productPath
+                              ? (event) =>
+                                  navigateFromProductCard(
+                                    productPath,
+                                    event.currentTarget,
+                                    {
+                                      image: paymentItemImageUrl(item, product),
+                                      label: productLabel,
+                                    },
+                                  )
+                              : undefined
+                          }
+                          className={`flex w-full items-center justify-between gap-3 rounded-xl border border-[#E3C19F]/35 bg-[rgba(255,255,255,0.08)] p-3 text-left shadow-sm transition-all duration-200 ${productPath ? "cursor-pointer hover:border-[#F7EDE2] hover:bg-[rgba(255,255,255,0.14)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E3C19F] active:scale-[0.99]" : ""}`}
+                          aria-label={
+                            productPath
+                              ? t("payment.viewProductAria", { name: productLabel })
+                              : undefined
+                          }
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <ProductImage
+                              src={paymentItemImageUrl(item, product)}
+                              alt={productLabel}
+                              className="h-12 w-12 shadow-md shadow-black/15"
+                            />
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-bold text-white">
+                                {itemTitle(item)}
+                              </p>
+                              <p className="flex min-w-0 items-center gap-1 truncate text-xs font-medium text-white/65">
+                                <MapPin aria-hidden="true" className="h-3 w-3 flex-none text-[#E3C19F]" />
+                                <span className="truncate">{farmerLocation}</span>
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex flex-none items-center gap-2">
+                            <div className="text-right">
+                              <p className="whitespace-nowrap text-sm font-extrabold text-white">
+                                {formatRM(item.total)}
+                              </p>
+                              {productPath && (
+                                <p className="text-[10px] font-semibold text-white/60">
+                                  {t("payment.viewDetails")}
+                                </p>
+                              )}
+                            </div>
+                            {productPath && (
+                              <span className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#F7EDE2] bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] text-[#41362D] shadow-md shadow-black/20">
+                                <ChevronRight aria-hidden="true" className="h-5 w-5" strokeWidth={3} />
+                              </span>
+                            )}
+                          </div>
+                        </ItemContainer>
+                      );
+                    })}
+                    </div>
+                  </div>
+                ))}
               </div>
             </section>
             <button
               type="button"
-              onClick={() => setCheckoutStep(2)}
+              onClick={() => changeCheckoutStep(2)}
               className="mt-4 min-h-12 w-full rounded-2xl border-2 border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] py-3.5 text-sm font-extrabold text-white shadow-md shadow-black/20"
             >
               {t("payment.continueToDelivery")}
@@ -855,12 +900,6 @@ export default function Payment() {
                 <h2 id="payment-contact-title" className="text-base font-bold text-[#41362D]">
                   {t("payment.buyerInformationHeading")}
                 </h2>
-                <Link
-                  to="/address-book"
-                  className="flex min-h-11 items-center gap-0.5 rounded-xl px-2 text-sm font-bold text-[#41362D] underline underline-offset-4"
-                >
-                  {t("payment.editLink")} <ChevronRight aria-hidden="true" className="h-4 w-4" />
-                </Link>
               </div>
               {!selectedAddress ? (
                 <p className="text-sm text-[#6B594A]">
@@ -898,14 +937,14 @@ export default function Payment() {
             <div className="grid grid-cols-2 gap-3 pt-1">
               <button
                 type="button"
-                onClick={() => setCheckoutStep(1)}
+                onClick={() => changeCheckoutStep(1)}
                 className="min-h-12 rounded-2xl border-2 border-[#41362D] bg-white py-3 text-sm font-extrabold text-[#41362D]"
               >
                 {t("payment.backToReview")}
               </button>
               <button
                 type="button"
-                onClick={() => setCheckoutStep(3)}
+                onClick={() => changeCheckoutStep(3)}
                 disabled={!canCheckout}
                 className="min-h-12 rounded-2xl border-2 border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] py-3 text-sm font-extrabold text-white shadow-md shadow-black/20 disabled:cursor-not-allowed disabled:opacity-45"
               >
@@ -981,7 +1020,7 @@ export default function Payment() {
             {!isResumingOrder && (
               <button
                 type="button"
-                onClick={() => setCheckoutStep(2)}
+                onClick={() => changeCheckoutStep(2)}
                 disabled={loading}
                 className="mt-3 min-h-12 w-full rounded-xl border-2 border-[#41362D] bg-white py-3 text-sm font-bold text-[#41362D] disabled:opacity-50"
               >

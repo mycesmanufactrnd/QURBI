@@ -25,6 +25,7 @@ export default function AppHeader({
   thresholdShrink = false,
   titleClassName = "",
   subtitleClassName = "",
+  preferRecentBack = true,
 }) {
   const { t } = useTranslation("common");
   const location = useLocation();
@@ -171,7 +172,9 @@ export default function AppHeader({
           {backTo && (
             <button
               type="button"
-              onClick={() => navigateWithTransition(recentPageOr(backTo))}
+              onClick={() =>
+                navigateWithTransition(preferRecentBack ? recentPageOr(backTo) : backTo)
+              }
               aria-label={t("appHeader.goBack")}
               className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#F7EDE2]/60 bg-white/10 text-white transition-transform active:scale-90"
             >
