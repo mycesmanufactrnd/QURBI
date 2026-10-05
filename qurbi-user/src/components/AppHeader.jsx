@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/AuthContext";
 import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
 import { useNotifications } from "@/lib/notification-context";
+import { recentPageOr } from "@/lib/navigation";
 
 const HEADER_SHRINK_SCROLL_Y = 12;
 const HEADER_EXPAND_SCROLL_Y = 4;
@@ -15,6 +16,7 @@ export default function AppHeader({
   eyebrow = "QURBI",
   subtitle = "",
   backTo = "",
+  leftAction = null,
   search = null,
   children = null,
   sticky = false,
@@ -91,7 +93,7 @@ export default function AppHeader({
       if (headerRef.current) setExpandedHeight(headerRef.current.scrollHeight);
     }, 850);
     return () => window.clearTimeout(timer);
-  }, [shrinkEnabled, headerEntered, extraVisible, title, subtitle]);
+  }, [shrinkEnabled, headerEntered, extraVisible, title]);
 
   useLayoutEffect(() => {
     if (!shrinkEnabled || !expandedHeight || !headerRef.current) return undefined;
@@ -141,6 +143,8 @@ export default function AppHeader({
   const headerMarkup = (
     <header
       ref={headerRef}
+      data-page-description={subtitle || undefined}
+      data-description-class={subtitleClassName || undefined}
       className={`${shrinkEnabled ? (expandedHeight ? "absolute inset-x-0 top-0" : "relative") : sticky ? "sticky top-0 z-30" : "relative"} qurbi-header-background overflow-hidden rounded-b-[28px] bg-gradient-to-br from-[#41362D] to-[#6B594A] px-4 shadow-lg transition-[padding,border-radius,box-shadow] duration-500 ease-in-out sm:px-5 ${headerExpanded ? "pb-4 pt-7 sm:pt-8" : "pb-2 pt-3 sm:pt-4"}`}
       style={{ viewTransitionName: "qurbi-header", ...shrinkStyle }}
     >
@@ -195,6 +199,7 @@ export default function AppHeader({
               <ArrowLeft className="h-5 w-5" />
             </button>
           )}
+          {!backTo && leftAction}
         </div>
 
         <div className="absolute right-0 top-0 z-20 flex flex-row items-center gap-1.5">
@@ -216,6 +221,27 @@ export default function AppHeader({
           )}
           {isAuthenticated && (
             <Link
+              to="/notifications"
+              onClick={(event) =>
+                beginIconTransition("notification", event.currentTarget)
+              }
+              aria-label={
+                unreadCount
+                  ? `Open notifications, ${unreadCount} unread`
+                  : "Open notifications"
+              }
+              className="relative flex h-10 w-10 items-center justify-center rounded-full bg-transparent text-white transition-transform active:scale-90"
+            >
+              <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full border border-white bg-red-500 px-1 text-[9px] font-bold leading-none text-white">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
+            </Link>
+          )}
+          {isAuthenticated && (
+            <Link
               to="/profile"
               onClick={(event) =>
                 beginIconTransition("profile", event.currentTarget)
@@ -233,19 +259,27 @@ export default function AppHeader({
         <div
           className={`pointer-events-none flex w-full flex-col items-center text-center ${headerCopyAnimation}`}
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 backdrop-blur-sm">
-            <Leaf className="h-4 w-4 text-white" />
+          <div className="flex items-center justify-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#F7EDE2]/70 bg-white/10 shadow-sm backdrop-blur-sm">
+              <Leaf className="h-3.5 w-3.5 text-white" />
+            </div>
+            {eyebrow ? (
+              <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white/80">
+                {eyebrow}
+              </p>
+            ) : (
+              <h1
+                className={`max-w-[65%] text-xl font-bold leading-tight tracking-tight text-white sm:max-w-none ${titleClassName}`}
+              >
+                {title}
+              </h1>
+            )}
           </div>
           {eyebrow && (
             <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.28em] text-white/75">
               {eyebrow}
             </p>
           )}
-          <h1
-            className={`mt-0.5 max-w-[65%] text-xl font-bold leading-tight tracking-tight text-white sm:max-w-none ${titleClassName}`}
-          >
-            {title}
-          </h1>
         </div>
       </div>
 

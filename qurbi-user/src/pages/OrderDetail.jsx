@@ -560,6 +560,8 @@ export default function OrderDetail() {
   const { t: ta } = useTranslation("account");
   const { orderId } = useParams();
   const [searchParams] = useSearchParams();
+  const groupOrderParam = searchParams.get("group_ids") || orderId || "";
+  const detailOrderIds = groupOrderParam.split(",").map((id) => id.trim()).filter(Boolean);
 
   const { user, isAuthenticated, authChecked } = useAuth();
   const { requestSignIn } = useAuthPrompt();
@@ -573,6 +575,9 @@ export default function OrderDetail() {
   const [message, setMessage] = useState("");
   const [receivedFile, setReceivedFile] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
+  const [paymentError, setPaymentError] = useState(
+    () => location.state?.paymentError || null,
+  );
 
   const loadOrder = useCallback(async () => {
     if (!authChecked) return;
@@ -587,11 +592,12 @@ export default function OrderDetail() {
     setLoadError("");
 
     try {
-      const response = await qurbiApi.functions.invoke("fetchMyOrders", {
-        orderId,
-      });
-
-      setOrder(response.data?.order || null);
+      const responses = await Promise.all(
+        detailOrderIds.map((id) =>
+          qurbiApi.functions.invoke("fetchMyOrders", { orderId: id }),
+        ),
+      );
+      setOrder(combineOrders(responses.map((response) => response.data?.order)));
     } catch (error) {
       setLoadError(
         error.data?.error ||
@@ -601,7 +607,7 @@ export default function OrderDetail() {
     } finally {
       setLoading(false);
     }
-  }, [authChecked, isAuthenticated, orderId, user?.id]);
+  }, [authChecked, groupOrderParam, isAuthenticated, user?.id]);
 
   useEffect(() => {
     loadOrder();
@@ -1166,7 +1172,7 @@ export default function OrderDetail() {
                 {formatRM(item.total)}
               </p>
             </div>
-          ))}
+          </div>
 
           <dl className="mt-1 space-y-1.5 border-t border-white/25 pt-3 text-[15px]">
             {Number(order.subtotal) > 0 && Number(order.subtotal) !== Number(order.total) && (
@@ -1215,6 +1221,24 @@ export default function OrderDetail() {
         image={previewImage?.image}
         alt={previewImage?.alt}
         onClose={() => setPreviewImage(null)}
+      />
+      <PaymentErrorModal
+        error={paymentError}
+        viewOrderLabel="Stay on To Pay Order"
+        onClose={() => {
+          setPaymentError(null);
+          navigate(`${location.pathname}${location.search}`, {
+            replace: true,
+            state: null,
+          });
+        }}
+        onViewOrders={() => {
+          setPaymentError(null);
+          navigate(`${location.pathname}${location.search}`, {
+            replace: true,
+            state: null,
+          });
+        }}
       />
     </div>
   );

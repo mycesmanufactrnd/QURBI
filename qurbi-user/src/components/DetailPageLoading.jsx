@@ -2,6 +2,7 @@ import React from "react";
 import { ArrowLeft } from "lucide-react";
 import PageLoading from "@/components/PageLoading";
 import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
+import { recentPageOr } from "@/lib/navigation";
 
 /** Keeps the product-detail hero and sheet mounted while its data is loading. */
 export default function DetailPageLoading({ message, backTo, backLabel }) {
@@ -12,7 +13,7 @@ export default function DetailPageLoading({ message, backTo, backLabel }) {
       <div className="relative h-72 bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2]">
         <button
           type="button"
-          onClick={() => navigateWithTransition(backTo)}
+          onClick={() => navigateWithTransition(recentPageOr(backTo))}
           aria-label={backLabel}
           className="absolute left-4 top-4 z-20 flex h-11 w-11 items-center justify-center rounded-xl border border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white shadow-lg transition-transform active:scale-90"
         >

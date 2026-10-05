@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useLivestockDisplay } from "@/lib/livestockDisplay";
 import { qurbi } from "@/api/qurbiClient";
+import { resolveApiAssetUrl } from "@/api/apiClient";
 import { useAuth } from "@/lib/AuthContext";
 import { AlertCircle, CheckCircle2, ImagePlus, Loader2, Plus, ShieldCheck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -156,6 +157,7 @@ function BreedRequestDialog({ open, onOpenChange, species, farmerId, livestockId
             {image ? (
               <div className="relative h-40 overflow-hidden rounded-2xl border border-border bg-muted">
                 <img src={image} alt={t("breedSelector.referenceAlt")} className="h-full w-full object-cover" />
+                <img src={resolveApiAssetUrl(image)} alt="Breed reference" className="h-full w-full object-cover" />
                 <button type="button" onClick={() => setImage("")} className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white">
                   <X className="h-4 w-4" />
                 </button>

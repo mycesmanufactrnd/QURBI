@@ -4,8 +4,10 @@ import { loadBulkListingById, loadLivestockById } from "@/lib/farmerClient";
 
 const CartContext = createContext(null);
 const CART_STORAGE_PREFIX = "qurbi_cart_v1:";
+const BUY_NOW_STORAGE_PREFIX = "qurbi_buy_now_v1:";
 
 const storageKey = (scope) => `${CART_STORAGE_PREFIX}${scope}`;
+const buyNowStorageKey = (scope) => `${BUY_NOW_STORAGE_PREFIX}${scope}`;
 
 const readStoredCart = (scope) => {
   try {
@@ -36,6 +38,7 @@ export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([]);
   const [selectedKeys, setSelectedKeys] = useState([]);
   const [hydratedScope, setHydratedScope] = useState(null);
+  const [buyNowItem, setBuyNowItem] = useState(null);
   const accountId = user?.id || null;
   const cartScope = authChecked ? accountId || "guest" : null;
 
@@ -47,6 +50,11 @@ export function CartProvider({ children }) {
     const stored = readStoredCart(cartScope);
     setCartItems(stored.items);
     setSelectedKeys(stored.selectedKeys);
+    try {
+      setBuyNowItem(JSON.parse(sessionStorage.getItem(buyNowStorageKey(cartScope)) || "null"));
+    } catch {
+      setBuyNowItem(null);
+    }
     setHydratedScope(cartScope);
   }, [cartScope]);
 
@@ -66,7 +74,34 @@ export function CartProvider({ children }) {
 
   useEffect(() => {
     if (!cartScope || hydratedScope !== cartScope) return;
-    const missing = cartItems.filter((item) => !item.image && !item.image_checked);
+    try {
+      if (buyNowItem) {
+        sessionStorage.setItem(buyNowStorageKey(cartScope), JSON.stringify(buyNowItem));
+      } else {
+        sessionStorage.removeItem(buyNowStorageKey(cartScope));
+      }
+    } catch {
+      // Keep the one-item checkout available in memory when storage is blocked.
+    }
+  }, [buyNowItem, cartScope, hydratedScope]);
+
+  useEffect(() => {
+    if (!cartScope || hydratedScope !== cartScope) return;
+    const missing = cartItems.filter((item) => {
+      const needsImage = !item.image && !item.image_checked;
+      const needsFarmer =
+        (!item.farmer_id ||
+          !item.farmer_name ||
+          item.farmer_name === "Unknown Farmer") &&
+        !item.farmer_checked;
+      const needsFarmName =
+        !item.farm_name && !item.farmName && !item.farm_name_checked;
+      const needsLocation =
+        !item.farm_location && !item.farmLocation && !item.farm_address &&
+        !item.farm_state && !item.state &&
+        !item.location_state_checked;
+      return needsImage || needsFarmer || needsFarmName || needsLocation;
+    });
     if (!missing.length) return;
     let active = true;
     Promise.all(missing.map(async (item) => {
@@ -74,15 +109,67 @@ export function CartProvider({ children }) {
         const product = item.item_type === "bulk"
           ? await loadBulkListingById(item.bulk_listing_id || item.id)
           : await loadLivestockById(item.livestock_id || item.id);
-        return [item.key, product?.coverImage || product?.images?.[0] || ""];
+        return [item.key, {
+          image: item.image || product?.coverImage || product?.images?.[0] || "",
+          image_checked: true,
+          farmer_id:
+            item.farmer_id ||
+            product?.ownerId ||
+            product?.farmer_id ||
+            product?.created_by_id ||
+            "",
+          farmer_name:
+            item.farmer_name && item.farmer_name !== "Unknown Farmer"
+              ? item.farmer_name
+              : product?.farmer_name || "Unknown Farmer",
+          farmer_checked: true,
+          farm_name:
+            item.farm_name ||
+            item.farmName ||
+            product?.farm_name ||
+            product?.farmName ||
+            "",
+          farm_name_checked: true,
+          farm_location:
+            item.farm_location ||
+            item.farmLocation ||
+            item.farm_address ||
+            product?.farm_location ||
+            product?.farmLocation ||
+            product?.farm_address ||
+            product?.farm_state ||
+            product?.state ||
+            "",
+          farm_state:
+            item.farm_state ||
+            item.state ||
+            product?.farm_state ||
+            product?.state ||
+            "",
+          state:
+            item.state ||
+            item.farm_state ||
+            product?.state ||
+            product?.farm_state ||
+            "",
+          location_checked: true,
+          location_state_checked: true,
+        }];
       } catch {
-        return [item.key, ""];
+        return [item.key, {
+          image: item.image || "",
+          image_checked: true,
+          farmer_checked: true,
+          farm_name_checked: true,
+          location_checked: true,
+          location_state_checked: true,
+        }];
       }
-    })).then((images) => {
+    })).then((updates) => {
       if (!active) return;
-      const byKey = Object.fromEntries(images);
+      const byKey = Object.fromEntries(updates);
       setCartItems((current) => current.map((item) => Object.prototype.hasOwnProperty.call(byKey, item.key)
-        ? { ...item, image: byKey[item.key], image_checked: true }
+        ? { ...item, ...byKey[item.key] }
         : item));
     });
     return () => { active = false; };
@@ -101,17 +188,13 @@ export function CartProvider({ children }) {
     return true;
   };
 
-  // Buy Now: add item (if not already present) and select ONLY this item for checkout
+  // Buy Now uses an isolated one-item checkout and never mutates the cart.
   const buyNow = (item) => {
     const key = keyFor(item);
     const unitPrice = Number(item.price_per_head) || 0;
-    setCartItems((prev) => {
-      const exists = prev.some((i) => i.key === key);
-      if (exists) return prev;
-      return [...prev, { ...item, key, quantity: 1, price_per_head: unitPrice, total: unitPrice }];
-    });
-    setSelectedKeys([key]);
+    setBuyNowItem({ ...item, key, quantity: 1, price_per_head: unitPrice, total: unitPrice });
   };
+  const clearBuyNow = () => setBuyNowItem(null);
 
   const removeFromCart = (key) => {
     setCartItems((prev) => prev.filter((i) => i.key !== key));
@@ -150,7 +233,7 @@ export function CartProvider({ children }) {
 
   return (
     <CartContext.Provider value={{
-      cartItems, addToCart, buyNow, removeFromCart, updateQty, clearCart,
+      cartItems, addToCart, buyNow, buyNowItem, clearBuyNow, removeFromCart, updateQty, clearCart,
       totalItems, totalPrice,
       selectedKeys, toggleSelect, selectAll, clearSelection, removeSelected,
       selectedItems, selectedSubtotal,

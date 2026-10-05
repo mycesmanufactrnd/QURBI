@@ -17,7 +17,10 @@ import {
   User,
   Navigation,
 } from "lucide-react";
-import { loadLivestockById } from "@/lib/farmerClient";
+import {
+  loadLivestockById,
+  loadLivestockWithFarmers,
+} from "@/lib/farmerClient";
 import { useCart } from "@/lib/cart-context";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useReveal } from "@/hooks/useReveal";
@@ -43,11 +46,16 @@ import {
   animateProductToCart,
   captureCartAnimationSource,
 } from "@/lib/cart-animation";
+import ProductImage from "@/components/ProductImage";
+import { extractState } from "@/lib/livestock-data";
+import { recentPageOr } from "@/lib/navigation";
 
 function AvailabilityModal({ state, onClose, onBrowse, backLabel }) {
   const { t } = useTranslation("listings");
   if (!state) return null;
   const unavailable = state === "unavailable";
+  const reserved = ["reserved", "reserved_by_you"].includes(state);
+  const returnToOrders = state === "reserved_by_you";
   return (
     <div
       className="fixed inset-0 z-[75] flex items-center justify-center bg-black/45 p-5 backdrop-blur-sm"
@@ -85,7 +93,11 @@ export default function LivestockDetail() {
   const { t } = useTranslation("listings");
   const { t: tf } = useTranslation("shopflow");
   const { id } = useParams();
-  const { navigateWithTransition, completeProductTransition } = useHeaderTransition();
+  const {
+    navigateWithTransition,
+    navigateFromProductCard,
+    completeProductTransition,
+  } = useHeaderTransition();
   const [searchParams] = useSearchParams();
   const openedFromCart = searchParams.get("from") === "cart";
   const returnPath = openedFromCart ? "/cart" : "/browse";
@@ -96,6 +108,7 @@ export default function LivestockDetail() {
   const requireAuth = useRequireAuth();
   const { reveal } = useReveal();
   const [livestock, setLivestock] = useState(null);
+  const [relatedLivestock, setRelatedLivestock] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeImage, setActiveImage] = useState(0);
@@ -141,6 +154,15 @@ export default function LivestockDetail() {
     weight_max: livestock.weight ? Number(livestock.weight) : 0,
     farmer_id: livestock.ownerId || livestock.created_by_id || "",
     farmer_name: livestock.farmer_name || "Unknown Farmer",
+    farm_name: livestock.farm_name || livestock.farmName || "",
+    farm_location:
+      livestock.farm_location ||
+      livestock.farmLocation ||
+      livestock.farm_address ||
+      livestock.farm_state ||
+      "",
+    farm_state: livestock.farm_state || livestock.state || "",
+    state: livestock.state || livestock.farm_state || "",
     image: livestock.coverImage || livestock.images?.[0] || "",
     created_date: livestock.created_date || "",
     listingPublishedAt: livestock.listingPublishedAt || "",
@@ -158,9 +180,13 @@ export default function LivestockDetail() {
       try {
         const latest = await checkLivestockAvailability([livestock.id]);
         const result = latest[livestock.id];
-        if (!result?.available) {
+        if (result?.state !== "available") {
           setAvailabilityModal(
-            result?.state === "unavailable" ? "unavailable" : "verification",
+            ["reserved", "reserved_by_you"].includes(result?.state)
+              ? result.state
+              : result?.state === "unavailable"
+                ? "unavailable"
+                : "verification",
           );
           load();
           return;
@@ -187,9 +213,13 @@ export default function LivestockDetail() {
       try {
         const latest = await checkLivestockAvailability([livestock.id]);
         const result = latest[livestock.id];
-        if (!result?.available) {
+        if (result?.state !== "available") {
           setAvailabilityModal(
-            result?.state === "unavailable" ? "unavailable" : "verification",
+            ["reserved", "reserved_by_you"].includes(result?.state)
+              ? result.state
+              : result?.state === "unavailable"
+                ? "unavailable"
+                : "verification",
           );
           load();
           return;
@@ -200,7 +230,7 @@ export default function LivestockDetail() {
       }
       buyNow(buildCartItem());
       animateProductToCart(animationSource);
-      navigateWithTransition("/payment");
+      navigateWithTransition("/payment?source=buy-now");
     });
   };
 
@@ -278,6 +308,14 @@ export default function LivestockDetail() {
     { label: t("livestockDetail.earTag"), value: livestock.earTag },
     { label: t("livestockDetail.rfid"), value: livestock.rfid },
   ].filter((i) => i.value);
+  const farmState =
+    livestock.state ||
+    extractState(
+      livestock.farmLocation ||
+        livestock.farm_location ||
+        livestock.farm_address ||
+        "",
+    );
 
   const farmRows = [
     { icon: MapPin, label: tf("detail.listedIn"), value: listedState },
@@ -297,7 +335,7 @@ export default function LivestockDetail() {
       >
         <button
           type="button"
-          onClick={() => navigateWithTransition(returnPath)}
+          onClick={() => navigateWithTransition(recentPageOr(returnPath))}
           aria-label={returnLabel}
           className="absolute left-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-xl border border-[#F7EDE2]/60 bg-[#41362D]/80 text-white shadow-lg backdrop-blur-sm active:scale-95"
         >
@@ -465,6 +503,67 @@ export default function LivestockDetail() {
             </div>
           </LightDetailCard>
         )}
+
+        {relatedLivestock.length > 0 && (
+          <section
+            className={`${reveal()} mt-6 border-t border-white/20 pt-5`}
+            aria-labelledby="related-products-title"
+          >
+            <div className="mb-3 flex items-end justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#E3C19F]">
+                  Same breed
+                </p>
+                <h2
+                  id="related-products-title"
+                  className="text-xl font-extrabold text-white"
+                >
+                  Add item
+                </h2>
+              </div>
+              <span className="text-xs font-semibold text-white/60">
+                Swipe to explore
+              </span>
+            </div>
+            <div className="no-scrollbar -mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-3">
+              {relatedLivestock.map((item) => {
+                const image = item.coverImage || item.images?.[0] || "";
+                const label = item.breed || item.species || "Livestock";
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={(event) =>
+                      navigateFromProductCard(
+                        `/livestock/${encodeURIComponent(item.id)}`,
+                        event.currentTarget,
+                        { image, label },
+                      )
+                    }
+                    className="w-40 flex-none snap-start overflow-hidden rounded-2xl border border-[#E3C19F]/55 bg-gradient-to-br from-[#41362D] to-[#6B594A] text-left shadow-lg shadow-black/20 transition-transform duration-200 active:scale-[0.98] sm:w-48"
+                  >
+                    <ProductImage
+                      src={image}
+                      alt={label}
+                      className="h-28 w-full rounded-none border-0 sm:h-32"
+                    />
+                    <div className="p-3">
+                      <p className="truncate text-sm font-extrabold text-white">
+                        {label}
+                      </p>
+                      <p className="mt-1 text-base font-extrabold text-[#F7EDE2]">
+                        RM {Number(item.price || 0).toLocaleString()}
+                      </p>
+                      <span className="mt-2 inline-flex rounded-lg border border-[#F7EDE2]/70 bg-white/10 px-2.5 py-1 text-[11px] font-bold text-white">
+                        View item
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </DetailOuterSheet>
 
       {/* Primary actions stay reachable above the bottom nav */}
@@ -507,7 +606,11 @@ export default function LivestockDetail() {
       <AvailabilityModal
         state={availabilityModal}
         onClose={() => setAvailabilityModal("")}
-        onBrowse={() => navigateWithTransition(returnPath)}
+        onBrowse={() =>
+          navigateWithTransition(
+            availabilityModal === "reserved_by_you" ? "/orders" : returnPath,
+          )
+        }
         backLabel={returnLabel}
       />
     </div>

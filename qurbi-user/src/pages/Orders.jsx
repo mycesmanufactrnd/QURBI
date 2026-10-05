@@ -13,6 +13,10 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import { qurbiApi } from "@/api/qurbiClient";
+import AppHeader from "@/components/AppHeader";
+import CancelOrderModal from "@/components/CancelOrderModal";
+import PageLoading from "@/components/PageLoading";
+import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
 import { useAuth } from "@/lib/AuthContext";
 import { useAuthPrompt } from "@/lib/auth-prompt-context";
 import { useReveal } from "@/hooks/useReveal";
@@ -352,28 +356,21 @@ export default function Orders() {
   const { t } = useTranslation("orders");
   const { t: ta } = useTranslation("account");
   const { user, isAuthenticated, authChecked } = useAuth();
+  const { requestSignIn } = useAuthPrompt();
+  const { navigateWithTransition } = useHeaderTransition();
   const navigate = useNavigate();
-  const { reveal } = useReveal();
   const [activeTab, setActiveTab] = useState(() => {
     const queryTab = new URLSearchParams(window.location.search).get("tab");
     const savedTab = sessionStorage.getItem("gh_orders_active_tab");
     if (ORDER_TABS.some((tab) => tab.key === queryTab)) return queryTab;
     return ORDER_TABS.some((tab) => tab.key === savedTab) ? savedTab : "to-pay";
   });
-  const [view, setView] = useState(
-    () => sessionStorage.getItem("gh_orders_view") || "current",
-  );
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [cancellingOrderId, setCancellingOrderId] = useState("");
   const [cancelCandidate, setCancelCandidate] = useState(null);
-  const [successMessage, setSuccessMessage] = useState("");
   const [cancelError, setCancelError] = useState("");
-  const [selectingHistory, setSelectingHistory] = useState(false);
-  const [historyIds, setHistoryIds] = useState([]);
-  const [deletingHistory, setDeletingHistory] = useState(false);
-  const [showDeleteHistory, setShowDeleteHistory] = useState(false);
+  const [cancellingOrderId, setCancellingOrderId] = useState("");
 
   const loadOrders = useCallback(async () => {
     if (!authChecked) return;
@@ -394,20 +391,21 @@ export default function Orders() {
     }
   }, [authChecked, isAuthenticated, user?.id]);
 
-  useEffect(() => {
-    loadOrders();
-  }, [loadOrders]);
+  useEffect(() => { loadOrders(); }, [loadOrders]);
+  useEffect(() => { sessionStorage.setItem("gh_orders_active_tab", activeTab); }, [activeTab]);
   useEffect(() => {
     const queryTab = new URLSearchParams(window.location.search).get("tab");
     if (ORDER_TABS.some((tab) => tab.key === queryTab))
       navigate("/orders", { replace: true });
   }, [navigate]);
-  useEffect(() => {
-    sessionStorage.setItem("gh_orders_active_tab", activeTab);
-  }, [activeTab]);
-  useEffect(() => {
-    sessionStorage.setItem("gh_orders_view", view);
-  }, [view]);
+
+  const active = TABS.find((tab) => tab.key === activeTab) || TABS[0];
+  const groupedOrders = useMemo(
+    () => groupOrdersByDay(groupOrdersByCheckout(
+      orders.filter((order) => active.statuses.includes(order.status)),
+    )),
+    [active, orders],
+  );
 
   const cancelOrder = async () => {
     const orderId = cancelCandidate?.id;
@@ -415,15 +413,9 @@ export default function Orders() {
     setCancellingOrderId(orderId);
     setCancelError("");
     try {
-      const response = await qurbiApi.functions.invoke("cancelMyOrder", {
-        orderId,
-      });
-      const cancelledOrder = response.data?.order;
-      setOrders((current) =>
-        current.map((order) =>
-          order.id === orderId
-            ? { ...order, ...cancelledOrder, status: "cancelled" }
-            : order,
+      await Promise.all(
+        (cancelCandidate.order_ids || [orderId]).map((id) =>
+          qurbiApi.functions.invoke("cancelMyOrder", { orderId: id }),
         ),
       );
       setCancelCandidate(null);
@@ -438,6 +430,8 @@ export default function Orders() {
       );
       // The server may have detected a stock change while cancellation was open.
       await loadOrders();
+    } catch (cancelFailure) {
+      setCancelError(cancelFailure.data?.error || cancelFailure.message || "We couldn't cancel this order. Please try again.");
     } finally {
       setCancellingOrderId("");
     }
@@ -499,6 +493,10 @@ export default function Orders() {
   );
 
   if (!authChecked) {
+    return <div className="aisyah-page"><AppHeader title="My Orders" /><PageLoading contentOnly message="Loading orders..." /></div>;
+  }
+
+  if (!isAuthenticated) {
     return (
       <div className="aisyah-page">
         <AppHeader title={t("orders.title")} subtitle={t("orders.subtitle")} />
@@ -699,22 +697,7 @@ export default function Orders() {
           </>
         )}
       </main>
-      <DeleteHistoryModal
-        count={showDeleteHistory ? historyIds.length : 0}
-        loading={deletingHistory}
-        onConfirm={deleteHistory}
-        onClose={() => setShowDeleteHistory(false)}
-      />
-      <CancelOrderModal
-        order={cancelCandidate}
-        loading={!!cancellingOrderId}
-        error={cancelError}
-        onConfirm={cancelOrder}
-        onClose={() => {
-          setCancelError("");
-          setCancelCandidate(null);
-        }}
-      />
+      <CancelOrderModal order={cancelCandidate} loading={Boolean(cancellingOrderId)} error={cancelError} onConfirm={cancelOrder} onClose={() => { setCancelError(""); setCancelCandidate(null); }} />
     </div>
   );
 }

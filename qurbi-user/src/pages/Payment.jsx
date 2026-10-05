@@ -7,7 +7,6 @@ import {
   User,
   Phone,
   Mail,
-  Star,
   CreditCard,
   Lock,
 } from "lucide-react";
@@ -23,7 +22,8 @@ import {
 import AddressPickerModal from "@/components/AddressPickerModal";
 import CancelOrderModal from "@/components/CancelOrderModal";
 import PaymentErrorModal from "@/components/PaymentErrorModal";
-import { loadLivestockById } from "@/lib/farmerClient";
+import ProductImage from "@/components/ProductImage";
+import { loadBulkListingById, loadLivestockById } from "@/lib/farmerClient";
 import { QurbiPageLoader } from "@/components/QurbiLoading";
 import { useAuthPrompt } from "@/lib/auth-prompt-context";
 import AuthRequiredState from "@/components/AuthRequiredState";
@@ -32,7 +32,7 @@ import AppHeader from "@/components/AppHeader";
 import StickyActionBar from "@/components/shop/StickyActionBar";
 import { formatRM } from "@/lib/format";
 
-const DUMMY_DELIVERY_FEE_PER_FARMER = 10;
+const DELIVERY_FEE_PER_FARMER = 10;
 const PAYMENT_CARD_SHADOW = "shadow-[0_12px_28px_rgba(65,54,45,0.18)]";
 
 function friendlyPaymentError(error, reservationAlreadyExists = false, t) {
@@ -93,8 +93,24 @@ function PaymentItemImage({ item, product }) {
     item.images?.[0] ||
     product?.coverImage ||
     product?.images?.[0] ||
-    "";
+    ""
+  );
+}
 
+function paymentItemLocation(item, product) {
+  const location =
+    item.farm_location ||
+    item.farmLocation ||
+    item.farm_address ||
+    item.farm_state ||
+    product?.farm_location ||
+    product?.farmLocation ||
+    product?.farm_address ||
+    product?.farm_state ||
+    product?.farmer?.farmerProfile?.farmState ||
+    item.state ||
+    product?.state ||
+    "";
   return (
     <div
       className={`flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl shadow-md shadow-black/15 ${
@@ -123,7 +139,13 @@ export default function Payment() {
   const { t } = useTranslation("cart");
   const { t: tf } = useTranslation("shopflow");
   const { requestSignIn } = useAuthPrompt();
-  const { selectedItems, selectedSubtotal, removeSelected } = useCart();
+  const {
+    selectedItems,
+    selectedSubtotal,
+    removeSelected,
+    buyNowItem,
+    clearBuyNow,
+  } = useCart();
   const { user, isAuthenticated, authChecked } = useAuth();
   const {
     addresses,
@@ -132,10 +154,14 @@ export default function Payment() {
     selectedAddress,
     profile,
   } = useUserProfile();
-  const { navigateWithTransition } = useHeaderTransition();
+  const { navigateWithTransition, navigateFromProductCard } =
+    useHeaderTransition();
   const [searchParams] = useSearchParams();
   const { reveal } = useReveal();
-  const resumeOrderId = searchParams.get("order_id");
+  const resumeOrderParam = searchParams.get("order_ids") || searchParams.get("order_id") || "";
+  const resumeOrderIds = resumeOrderParam.split(",").map((id) => id.trim()).filter(Boolean);
+  const resumeOrderId = resumeOrderIds[0] || "";
+  const isBuyNowCheckout = searchParams.get("source") === "buy-now";
   const [resumedOrder, setResumedOrder] = useState(null);
   const [loadingOrder, setLoadingOrder] = useState(Boolean(resumeOrderId));
   const [resumeError, setResumeError] = useState("");
@@ -147,7 +173,15 @@ export default function Payment() {
   const [loading, setLoading] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [checkoutError, setCheckoutError] = useState(null);
+  const [checkoutStep, setCheckoutStep] = useState(resumeOrderId ? 3 : 1);
+  const [newCheckoutGroupId] = useState(() =>
+    globalThis.crypto?.randomUUID?.() || `checkout-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  );
   const fulfillmentMethod = "delivery";
+
+  useEffect(() => {
+    setCheckoutStep(resumeOrderId ? 3 : 1);
+  }, [resumeOrderId]);
 
   useEffect(() => {
     if (!resumeOrderId) return;
@@ -177,9 +211,7 @@ export default function Payment() {
         }
         if (active) {
           setResumedOrder(order);
-          setLoadingProductDetails(
-            (order.items || []).some((item) => item.livestock_id),
-          );
+          setLoadingProductDetails(Boolean(order.items?.length));
         }
       } catch (error) {
         if (active)
@@ -193,7 +225,7 @@ export default function Payment() {
     return () => {
       active = false;
     };
-  }, [authChecked, isAuthenticated, resumeOrderId, user?.id]);
+  }, [authChecked, isAuthenticated, resumeOrderParam, user?.id]);
 
   useEffect(() => {
     if (!resumedOrder?.items?.length) {
@@ -203,9 +235,12 @@ export default function Payment() {
     let active = true;
     Promise.all(
       resumedOrder.items.map(async (item) => {
-        if (!item.livestock_id) return null;
         try {
-          return await loadLivestockById(item.livestock_id);
+          if (item.item_type === "bulk" && item.bulk_listing_id) {
+            return await loadBulkListingById(item.bulk_listing_id);
+          }
+          if (item.livestock_id) return await loadLivestockById(item.livestock_id);
+          return null;
         } catch {
           return null;
         }
@@ -223,9 +258,9 @@ export default function Payment() {
     return () => {
       active = false;
     };
-  }, [resumedOrder?.id]);
+  }, [resumedOrder?.id, resumedOrder?.order_ids?.length]);
 
-  const isResumingOrder = Boolean(resumeOrderId);
+  const isResumingOrder = resumeOrderIds.length > 0;
   const paymentItems = resumedOrder
     ? (resumedOrder.items || []).map((item, index) => ({
         ...item,
@@ -233,8 +268,12 @@ export default function Payment() {
         quantity: 1,
         total: item.total ?? item.price_per_head,
       }))
-    : selectedItems;
-  const paymentSubtotal = resumedOrder?.subtotal ?? selectedSubtotal;
+    : isBuyNowCheckout
+      ? buyNowItem ? [buyNowItem] : []
+      : selectedItems;
+  const paymentSubtotal = resumedOrder?.subtotal ?? (
+    isBuyNowCheckout ? Number(buyNowItem?.total || 0) : selectedSubtotal
+  );
 
   const buyerName = isResumingOrder
     ? resumedOrder?.buyer_name || ""
@@ -246,21 +285,71 @@ export default function Payment() {
     ? resumedOrder?.buyer_phone || ""
     : selectedAddress?.phone || profile.phone || "";
 
-  // Delivery fee: RM 10 per unique farmer (charged once per farmer), only for delivery
+  // A resumed order always belongs to exactly one farmer. A new checkout may
+  // contain several farmers, so count each stable farmer identity once. The
+  // listing fallback prevents legacy cart rows with missing farmer metadata
+  // from being incorrectly collapsed into a single "Unknown Farmer" fee.
   const farmerSet = new Set(
-    paymentItems.map((i) => i.farmer_id || i.farmer_name || "unknown"),
+    paymentItems.map((item, index) => {
+      const farmerName = String(item.farmer_name || "").trim();
+      return (
+        item.farmer_id ||
+        item.ownerId ||
+        item.created_by_id ||
+        (farmerName && farmerName !== "Unknown Farmer"
+          ? `name:${farmerName.toLowerCase()}`
+          : `listing:${item.key || item.livestock_id || item.bulk_listing_id || item.id || index}`)
+      );
+    }),
   );
-  const farmerCount = farmerSet.size;
-  const deliveryFee =
-    resumedOrder?.delivery_fee ??
-    (paymentItems.length > 0
-      ? farmerCount * DUMMY_DELIVERY_FEE_PER_FARMER
-      : 0);
-  const grandTotal = resumedOrder?.total ?? paymentSubtotal + deliveryFee;
+  const farmerCount = isResumingOrder
+    ? paymentItems.length > 0 ? 1 : 0
+    : farmerSet.size;
+  const savedDeliveryFee = Number(resumedOrder?.delivery_fee || 0);
+  const deliveryFee = isResumingOrder
+    ? resumedOrder?.fulfillment_method === "pickup"
+      ? 0
+      : savedDeliveryFee || farmerCount * DELIVERY_FEE_PER_FARMER
+    : paymentItems.length > 0
+      ? farmerCount * DELIVERY_FEE_PER_FARMER
+      : 0;
+  const grandTotal = isResumingOrder
+    ? Number(paymentSubtotal) + deliveryFee - Number(resumedOrder?.discount || 0)
+    : paymentSubtotal + deliveryFee;
 
   const canCheckout = isResumingOrder
     ? Boolean(resumedOrder)
     : Boolean(paymentItems.length > 0 && buyerName && buyerEmail && selectedAddress);
+
+  const findReservedOrder = async () => {
+    if (isResumingOrder && resumedOrder?.id) return resumedOrder;
+
+    const requestedProducts = new Set(
+      paymentItems.map((item) =>
+        item.item_type === "bulk"
+          ? `bulk:${item.bulk_listing_id || item.id}`
+          : `livestock:${item.livestock_id || item.id}`,
+      ),
+    );
+
+    try {
+      const response = await qurbiApi.functions.invoke("fetchMyOrders", {});
+      return (response.data?.orders || []).find((order) => {
+        if (!["pending", "pending_payment", "to_pay"].includes(order.status)) {
+          return false;
+        }
+        return (order.items || []).some((item) => {
+          const key =
+            item.item_type === "bulk"
+              ? `bulk:${item.bulk_listing_id}`
+              : `livestock:${item.livestock_id}`;
+          return requestedProducts.has(key);
+        });
+      });
+    } catch {
+      return null;
+    }
+  };
 
   const handleCheckout = async () => {
     if (!isAuthenticated || !user?.id) {
@@ -324,6 +413,7 @@ export default function Payment() {
       return;
     }
     setLoading(true);
+    let checkoutOrder = resumedOrder;
     try {
       const orderNumber = resumedOrder?.order_number || "GH-" + Date.now();
       const order =
@@ -371,6 +461,7 @@ export default function Payment() {
           buyer_phone: buyerPhone,
           buyer_id: user.id,
         }));
+      checkoutOrder = order;
       const res = await qurbiApi.functions.invoke("createCheckout", {
         orderId: order.id,
         orderNumber,
@@ -382,9 +473,13 @@ export default function Payment() {
         total: grandTotal,
         fulfillmentMethod,
         deliveryAddress: selectedAddress || resumedOrder?.delivery_address || {},
+        checkoutGroupId: resumedOrder?.checkout_group_id || newCheckoutGroupId,
       });
       if (res.data?.url) {
-        if (!isResumingOrder) removeSelected();
+        if (!isResumingOrder) {
+          if (isBuyNowCheckout) clearBuyNow();
+          else removeSelected();
+        }
         navigateWithTransition(res.data.url, {
           navigateOptions: { replace: true },
         });
@@ -393,6 +488,10 @@ export default function Payment() {
           title: t("payment.paymentCouldNotStartTitle"),
           message: t("payment.paymentCouldNotStartMessage"),
           reserved: true,
+          orderId: order.id,
+        };
+        navigateWithTransition(`/orders/${encodeURIComponent(order.id)}?fromTab=to-pay`, {
+          navigateOptions: { replace: true, state: { paymentError: paymentFailure } },
         });
       }
     } catch (err) {
@@ -407,9 +506,11 @@ export default function Payment() {
     setCancelling(true);
     setCancelError("");
     try {
-      await qurbiApi.functions.invoke("cancelMyOrder", {
-        orderId: resumedOrder.id,
-      });
+      await Promise.all(
+        (resumedOrder.order_ids || [resumedOrder.id]).map((orderId) =>
+          qurbiApi.functions.invoke("cancelMyOrder", { orderId }),
+        ),
+      );
       navigateWithTransition("/orders", { navigateOptions: { replace: true } });
     } catch (error) {
       setCancelError(
@@ -741,7 +842,11 @@ export default function Payment() {
         onClose={() => setCheckoutError(null)}
         onViewOrders={() => {
           setCheckoutError(null);
-          navigateWithTransition("/orders");
+          navigateWithTransition(
+            checkoutError?.orderId
+              ? `/orders/${encodeURIComponent(checkoutError.orderId)}?fromTab=to-pay`
+              : "/orders?tab=to-pay",
+          );
         }}
       />
     </div>

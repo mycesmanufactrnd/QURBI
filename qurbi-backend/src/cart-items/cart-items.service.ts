@@ -69,13 +69,15 @@ export class CartItemsService {
       },
     });
     if (existing) {
-      // A lot is bought whole — re-adding an already-carted lot is a no-op,
-      // never a quantity bump.
-      if (input.itemType === OrderItemType.BULK_LISTING) {
-        return existing;
+      // Both targets are unique marketplace listings: one livestock record
+      // represents one specific animal and one bulk record represents one
+      // complete lot. Re-adding either target must therefore be idempotent,
+      // never a quantity bump. Normalise legacy cart rows while they are here.
+      if (existing.quantity !== 1) {
+        existing.quantity = 1;
+        return this.repository.save(existing);
       }
-      existing.quantity += input.quantity;
-      return this.repository.save(existing);
+      return existing;
     }
 
     return this.repository.save(
@@ -96,9 +98,9 @@ export class CartItemsService {
     quantity: number,
   ): Promise<CartItem> {
     const item = await this.findOwnedItem(userId, itemId);
-    if (item.itemType === OrderItemType.BULK_LISTING && quantity !== 1) {
+    if (quantity !== 1) {
       throw new BadRequestException(
-        'A bulk listing is purchased as a whole lot; quantity must be 1',
+        'Each livestock or bulk listing is unique; quantity must be 1',
       );
     }
     item.quantity = quantity;
@@ -136,17 +138,15 @@ export class CartItemsService {
     if (input.itemType === OrderItemType.LIVESTOCK && !hasLivestock) {
       throw new BadRequestException('itemType livestock requires livestockId');
     }
+    if (input.quantity !== 1) {
+      throw new BadRequestException(
+        'Each livestock or bulk listing is unique; quantity must be 1',
+      );
+    }
     if (input.itemType === OrderItemType.BULK_LISTING) {
       if (!hasBulkListing) {
         throw new BadRequestException(
           'itemType bulk_listing requires bulkListingId',
-        );
-      }
-      // A lot is one unit, not a repeatable SKU — you can't buy "2 of" a
-      // specific group of animals.
-      if (input.quantity !== 1) {
-        throw new BadRequestException(
-          'A bulk listing is purchased as a whole lot; quantity must be 1',
         );
       }
     }

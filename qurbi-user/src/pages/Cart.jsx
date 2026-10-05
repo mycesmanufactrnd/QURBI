@@ -14,7 +14,7 @@ import StickyActionBar from "@/components/shop/StickyActionBar";
 import { formatRM } from "@/lib/format";
 
 const isUnobtainable = (result) =>
-  result?.available === false && result?.state !== "reserved_by_you";
+  result?.state === "reserved_by_you" || result?.available === false;
 
 function CartItemImage({ item }) {
   const { t } = useTranslation("cart");
@@ -114,7 +114,7 @@ export default function Cart() {
 
   useEffect(() => {
     const removed = cartItems.filter((item) =>
-      availability[item.key]?.state === "reserved",
+      ["reserved", "reserved_by_you"].includes(availability[item.key]?.state),
     );
     if (!removed.length) return;
 
@@ -132,14 +132,19 @@ export default function Cart() {
         (item) => isUnobtainable(latest[item.key]),
       );
       if (blocked.length) {
-        const reserved = blocked.some(
-          (item) => latest[item.key]?.state === "reserved",
+        const reserved = blocked.some((item) =>
+          ["reserved", "reserved_by_you"].includes(latest[item.key]?.state),
+        );
+        const reservedByCurrentUser = blocked.some(
+          (item) => latest[item.key]?.state === "reserved_by_you",
         );
         const expired = blocked.some(
           (item) => latest[item.key]?.state === "expired",
         );
         blocked
-          .filter((item) => latest[item.key]?.state === "reserved")
+          .filter((item) =>
+            ["reserved", "reserved_by_you"].includes(latest[item.key]?.state),
+          )
           .forEach((item) => removeFromCart(item.key));
         setAvailabilityNotice(
           reserved
@@ -279,8 +284,6 @@ export default function Cart() {
           <ul className="space-y-3 animate-content-ready" aria-label={t("cart.title")}>
             {cartItems.map((item, idx) => {
               const availabilityResult = availability[item.key];
-              const reservedByYou =
-                availabilityResult?.state === "reserved_by_you";
               const expired =
                 item.item_type !== "bulk" &&
                 (availabilityResult?.state === "expired" ||

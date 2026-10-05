@@ -20,8 +20,6 @@ export default function FilterSidebar({ open, onClose, filters, options, resultC
     setFilterGender,
     filterAge,
     setFilterAge,
-    filterStatus,
-    setFilterStatus,
     filterLocation,
     setFilterLocation,
     priceMin,

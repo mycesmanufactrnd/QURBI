@@ -120,6 +120,8 @@ export class ReservationsService {
         livestock.breedApprovalStatus === RequestStatus.APPROVED) &&
       (!livestock.marketplaceEligibleFrom ||
         livestock.marketplaceEligibleFrom <= now) &&
+      livestock.breedApprovalStatus === RequestStatus.APPROVED &&
+      (!livestock.marketplaceEligibleFrom || livestock.marketplaceEligibleFrom <= now) &&
       listingExpiresAt > now;
     if (!reservable) {
       throw new ConflictException(

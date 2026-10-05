@@ -6,6 +6,7 @@ import {
 import {
   computeMarketplaceVisibility,
   LISTING_LIFETIME_MS,
+  LivestockService,
 } from './livestock.service';
 
 jest.mock('@nestjs/typeorm', () => ({
@@ -77,5 +78,57 @@ describe('computeMarketplaceVisibility', () => {
       computeMarketplaceVisibility(visibleListing, VerificationStatus.PENDING)
         .marketplaceVisible,
     ).toBe(false);
+  });
+
+  it('hides an unspecified breed after its breed request is rejected', () => {
+    const result = computeMarketplaceVisibility(
+      {
+        ...visibleListing,
+        breedId: null,
+        breedApprovalStatus: RequestStatus.REJECTED,
+      },
+      VerificationStatus.VERIFIED,
+    );
+
+    expect(result).toEqual({
+      marketplaceVisible: false,
+      marketplaceVisibilityReason: 'Breed request was rejected',
+    });
+  });
+});
+
+describe('LivestockService publishing approval rules', () => {
+  it('rejects publishing when an unspecified breed request was rejected', async () => {
+    const listing = {
+      id: 'livestock-1',
+      farmerId: 'farmer-1',
+      speciesId: 'species-1',
+      breedId: null,
+      speciesApprovalStatus: RequestStatus.APPROVED,
+      breedApprovalStatus: RequestStatus.REJECTED,
+    };
+    const repository = {
+      findOne: jest.fn().mockResolvedValue(listing),
+    };
+    const dataSource = {
+      getRepository: jest.fn().mockReturnValue({
+        findOne: jest.fn().mockResolvedValue({ id: 'species-1' }),
+      }),
+    };
+    const service = new LivestockService(
+      repository as never,
+      dataSource as never,
+      {} as never,
+    );
+
+    await expect(
+      service.updateOwned(
+        listing.id,
+        { id: listing.farmerId, role: 'farmer' } as never,
+        { status: LivestockStatus.AVAILABLE, breedId: null },
+      ),
+    ).rejects.toThrow(
+      'This livestock cannot be published until an approved breed is selected',
+    );
   });
 });

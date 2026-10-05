@@ -6,6 +6,7 @@ import {
   Leaf,
   ShoppingCart,
   Package,
+  ReceiptText,
   User,
   ChevronRight,
   Search,
@@ -84,7 +85,12 @@ export default function Home() {
 
   const { reveal } = useReveal();
 
-  const { authChecked, isLoadingAuth, isLoadingPublicSettings } = useAuth();
+  const {
+    authChecked,
+    isAuthenticated,
+    isLoadingAuth,
+    isLoadingPublicSettings,
+  } = useAuth();
 
   const [showSplash, setShowSplash] = useState(
     () => !sessionStorage.getItem("gh_splash_shown"),

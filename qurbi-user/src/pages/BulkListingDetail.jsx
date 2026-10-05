@@ -41,7 +41,8 @@ export default function BulkListingDetail() {
   const { t } = useTranslation("listings");
   const { t: tf } = useTranslation("shopflow");
   const { id } = useParams();
-  const { navigateWithTransition } = useHeaderTransition();
+  const { navigateWithTransition, completeProductTransition } =
+    useHeaderTransition();
   const [searchParams] = useSearchParams();
   const openedFromCart = searchParams.get("from") === "cart";
   const returnPath = openedFromCart ? "/cart" : "/bulk-buy";
@@ -68,6 +69,10 @@ export default function BulkListingDetail() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (listing || error) completeProductTransition();
+  }, [completeProductTransition, error, listing]);
 
   useEffect(() => {
     const handleScroll = () => setDetailsRaised(window.scrollY > 36);
@@ -121,6 +126,13 @@ export default function BulkListingDetail() {
     listing_name: listing.name,
     farmer_id: listing.ownerId || "",
     farmer_name: listing.farmer_name || "Unknown Farmer",
+    farm_name: listing.farm_name || listing.farmName || "",
+    farm_location:
+      listing.farm_location ||
+      listing.farmLocation ||
+      listing.farm_address ||
+      listing.state ||
+      "",
     male_count: Number(listing.maleCount || 0),
     female_count: Number(listing.femaleCount || 0),
     total_animals: total,
@@ -142,7 +154,7 @@ export default function BulkListingDetail() {
         if (now) {
           buyNow(item);
           animateProductToCart(animationSource);
-          navigateWithTransition("/payment");
+          navigateWithTransition("/payment?source=buy-now");
         } else {
           if (!addToCart(item)) {
             alert(t("bulkListingDetail.alreadyInCart"));
@@ -179,6 +191,15 @@ export default function BulkListingDetail() {
       value: t("bulkListingDetail.quantityValue"),
     },
   ];
+  const farmState =
+    listing.farm_state ||
+    listing.state ||
+    extractState(
+      listing.farm_location ||
+        listing.farmLocation ||
+        listing.farm_address ||
+        "",
+    );
 
   const farmRows = [
     { icon: MapPin, label: tf("detail.lotLocation"), value: listing.state },
@@ -201,12 +222,20 @@ export default function BulkListingDetail() {
       <div className="qurbi-page-header relative h-72 overflow-hidden bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] sm:h-96">
         <button
           type="button"
-          onClick={() => navigateWithTransition(returnPath)}
+          onClick={() => navigateWithTransition(recentPageOr(returnPath))}
           aria-label={returnLabel}
           className="absolute left-4 top-4 z-20 flex h-11 w-11 items-center justify-center rounded-xl border border-[#F7EDE2]/60 bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white shadow-lg shadow-black/20 transition-all duration-200 ease-out active:scale-[0.98]"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
+        <div className="pointer-events-none absolute inset-x-0 top-4 z-10 flex items-center justify-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#F7EDE2]/70 bg-[#41362D]/55 shadow-sm backdrop-blur-sm">
+            <Leaf className="h-3.5 w-3.5 text-white" />
+          </span>
+          <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white drop-shadow">
+            QURBI
+          </p>
+        </div>
         {image ? (
           <img
             data-cart-product-image

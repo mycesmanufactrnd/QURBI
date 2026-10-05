@@ -197,13 +197,31 @@ const LivestockForm = forwardRef(
                   value={form.species}
                   onChange={changeSpecies}
                 />
-              </FormField>
-              <FormField id="gender" label={t("form.fields.gender")} required error={errorFor("gender")}>
-                <Select value={form.gender} onValueChange={(value) => setValue("gender", value)}>
-                  <SelectTrigger className="h-12"><SelectValue placeholder={t("form.fields.genderPlaceholder")} /></SelectTrigger>
-                  <SelectContent>{GENDERS.map((gender) => <SelectItem key={gender} value={gender}>{display.gender(gender)}</SelectItem>)}</SelectContent>
-                </Select>
-              </FormField>
+              </Field>
+              <Field label="Gender" required>
+                <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Gender">
+                  {GENDERS.map((gender) => {
+                    const selected = form.gender === gender;
+                    return (
+                      <button
+                        key={gender}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        onClick={() => setValue("gender", gender)}
+                        className={cn(
+                          "h-12 rounded-xl border px-3 text-sm font-semibold transition-colors",
+                          selected
+                            ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                            : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground",
+                        )}
+                      >
+                        {gender}
+                      </button>
+                    );
+                  })}
+                </div>
+              </Field>
             </Grid>
 
             <FormField id="breed" label={t("form.fields.breed")} required error={errorFor("breed")} hint={!form.species ? t("form.fields.breedHint") : undefined}>

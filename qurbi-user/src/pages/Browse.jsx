@@ -40,7 +40,6 @@ export default function Browse() {
   const [filterBreed, setFilterBreed] = useState("");
   const [filterGender, setFilterGender] = useState("");
   const [filterAge, setFilterAge] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
   const [filterLocation, setFilterLocation] = useState("");
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
@@ -226,14 +225,6 @@ export default function Browse() {
         return false;
       }
 
-      // Status
-      if (
-        filterStatus &&
-        l.status !== filterStatus
-      ) {
-        return false;
-      }
-
       // Location
       if (
         filterLocation &&
@@ -334,7 +325,6 @@ export default function Browse() {
     filterBreed,
     filterGender,
     filterAge,
-    filterStatus,
     filterLocation,
     priceMin,
     priceMax,
@@ -353,7 +343,6 @@ export default function Browse() {
     filterBreed ||
     filterGender ||
     filterAge ||
-    filterStatus ||
     filterLocation ||
     priceMin ||
     priceMax ||
@@ -366,7 +355,6 @@ export default function Browse() {
     filterBreed,
     filterGender,
     filterAge,
-    filterStatus,
     filterLocation,
     priceMin,
     priceMax,
@@ -383,7 +371,6 @@ export default function Browse() {
     setFilterBreed("");
     setFilterGender("");
     setFilterAge("");
-    setFilterStatus("");
     setFilterLocation("");
     setPriceMin("");
     setPriceMax("");
@@ -643,8 +630,6 @@ export default function Browse() {
           setFilterGender,
           filterAge,
           setFilterAge,
-          filterStatus,
-          setFilterStatus,
           filterLocation,
           setFilterLocation,
           priceMin,
@@ -659,7 +644,6 @@ export default function Browse() {
           breedOptions,
           genderOptions,
           ageOptions,
-          statusOptions,
           locationOptions,
         }}
       />

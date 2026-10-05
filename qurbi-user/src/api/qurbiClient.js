@@ -83,6 +83,7 @@ function farmDetails(item) {
     farm_name: profile.farmName || "",
     farm_address: address,
     farm_state: profile.farmState || "",
+    state: profile.farmState || item.state || "",
     farmLocation: address,
     farm_location: address,
   };
@@ -164,17 +165,22 @@ function orderForUser(order) {
   const activeReservation = (order.reservations || []).find(
     (reservation) => reservation.status === "active",
   );
-  const items = (order.items || []).map((item) => ({
-    ...item,
-    item_type: item.itemType === "bulk_share" ? "bulk" : "livestock",
-    livestock_id: item.livestockId,
-    bulk_listing_id: item.bulkListingId,
-    breed: item.itemType === "livestock" ? item.titleSnapshot : "",
-    listing_name: item.itemType === "bulk_share" ? item.titleSnapshot : "",
-    image: item.imageSnapshot || "",
-    price_per_head: Number(item.unitPrice || 0),
-    total: Number(item.lineTotal || 0),
-  }));
+  const items = (order.items || []).map((item) => {
+    const isBulk = ["bulk", "bulk_share", "bulk_listing"].includes(item.itemType);
+    return {
+      ...item,
+      item_type: isBulk ? "bulk" : "livestock",
+      livestock_id: item.livestockId,
+      bulk_listing_id: item.bulkListingId,
+      farmer_id: order.farmerId || "",
+      breed: isBulk ? "" : item.titleSnapshot,
+      listing_name: isBulk ? item.titleSnapshot : "",
+      image: mediaUrl(item.imageSnapshot || ""),
+      price_per_head: Number(item.unitPrice || 0),
+      total: Number(item.lineTotal || 0),
+    };
+  });
+  const checkoutGroupId = checkoutGroupFromOrder(order);
   return {
     ...order,
     items,
@@ -189,6 +195,57 @@ function orderForUser(order) {
     reservation_expires_at: activeReservation?.expiresAt || null,
     fulfillment_method: order.deliveryMethod === "self_pickup" ? "pickup" : "delivery",
     tracking_events: order.trackingEvents || [],
+    checkout_group_id: checkoutGroupId,
+  };
+}
+
+async function orderWithFarmName(order, farmProfileCache = new Map()) {
+  const mappedOrder = orderForUser(order);
+  const farmerId = mappedOrder?.farmerId || mappedOrder?.farmer_id;
+  if (!mappedOrder || !farmerId) return mappedOrder;
+
+  if (!farmProfileCache.has(farmerId)) {
+    farmProfileCache.set(
+      farmerId,
+      request({
+        method: "get",
+        url: `/farmer-profiles/by-user/${encodeURIComponent(farmerId)}`,
+      }).catch(() => null),
+    );
+  }
+
+  const profile = await farmProfileCache.get(farmerId);
+  const farmName = profile?.farmName || profile?.farm_name || "";
+  const farmState = profile?.farmState || profile?.farm_state || profile?.state || "";
+  const farmAddress = [
+    profile?.farmAddressLine || profile?.farm_address_line,
+    profile?.farmCity || profile?.farm_city,
+    farmState,
+    profile?.farmPostcode || profile?.farm_postcode,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  if (!farmName && !farmState && !farmAddress) return mappedOrder;
+
+  return {
+    ...mappedOrder,
+    farmName,
+    farm_name: farmName,
+    farmState,
+    farm_state: farmState,
+    farmLocation: farmAddress,
+    farm_location: farmAddress,
+    items: (mappedOrder.items || []).map((item) => ({
+      ...item,
+      farmName,
+      farm_name: farmName,
+      farmState,
+      farm_state: farmState,
+      state: farmState,
+      farmLocation: farmAddress,
+      farm_location: farmAddress,
+    })),
   };
 }
 
@@ -283,10 +340,18 @@ const functionHandlers = {
   },
   /** @param {{ orderId?: string }} [payload] */
   async fetchMyOrders({ orderId } = {}) {
-    if (orderId) return wrap({ order: orderForUser(await request({ method: "get", url: `/orders/${orderId}` })) });
+    const farmProfileCache = new Map();
+    if (orderId) {
+      const order = await request({ method: "get", url: `/orders/${orderId}` });
+      return wrap({ order: await orderWithFarmName(order, farmProfileCache) });
+    }
     const response = await request({ method: "get", url: "/orders", params: { buyerId: currentUserId() } });
     const orders = collectionFrom(response) || [];
-    return wrap({ orders: orders.map(orderForUser) });
+    return wrap({
+      orders: await Promise.all(
+        orders.map((order) => orderWithFarmName(order, farmProfileCache)),
+      ),
+    });
   },
   async cancelMyOrder({ orderId, reason = "Cancelled by buyer" }) {
     const order = await request({ method: "patch", url: `/orders/${orderId}/cancel`, data: { reason } });
@@ -309,7 +374,7 @@ const functionHandlers = {
   async markPurchasedLivestock({ orderId }) {
     return wrap({ order: orderForUser(await request({ method: "get", url: `/orders/${orderId}` })) });
   },
-  async createCheckout({ items = [], fulfillmentMethod = "delivery", deliveryAddress = {} }) {
+  async createCheckout({ items = [], fulfillmentMethod = "delivery", deliveryAddress = {}, checkoutGroupId = "" }) {
     await Promise.all(items.map((item) => request({
       method: "post",
       url: "/cart-items",
@@ -326,11 +391,20 @@ const functionHandlers = {
       data: {
         deliveryMethod: fulfillmentMethod === "pickup" ? "self_pickup" : "delivery",
         deliveryAddress,
+        buyerNotes: checkoutGroupNote(checkoutGroupId),
       },
     });
     const mappedOrders = orders.map(orderForUser);
     const firstOrder = mappedOrders[0];
-    return wrap({ orders: mappedOrders, order: firstOrder, url: firstOrder ? `/orders/${firstOrder.id}` : "/orders" });
+    const ids = mappedOrders.map((order) => order.id).filter(Boolean);
+    const groupQuery = ids.length > 1
+      ? `?group_ids=${encodeURIComponent(ids.join(","))}`
+      : "";
+    return wrap({
+      orders: mappedOrders,
+      order: firstOrder,
+      url: firstOrder ? `/orders/${firstOrder.id}${groupQuery}` : "/orders",
+    });
   },
   // The backend only accepts the buyer's proof photo as part of marking the
   // order received, so hold the uploaded file's URL until the buyer confirms.

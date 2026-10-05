@@ -6,7 +6,7 @@ export default function AuthLayout({
   mode = "login",
   icon: Icon = null,
   title,
-  subtitle,
+  subtitle = "",
   footer = null,
   onModeChange = null,
   iconClassName = "text-white",
@@ -22,10 +22,10 @@ export default function AuthLayout({
       <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br from-[#E8C7A5] to-[#F7EDE2] transition-opacity duration-500 ${isRegister ? "opacity-100" : "opacity-0"}`} />
       {/* Brand */}
       <div className="relative z-10 flex items-center gap-2 mb-6 animate-fade-in-up">
-        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#41362D] to-[#6B594A] flex items-center justify-center shadow-md shadow-[#41362D]/20">
-          <Leaf className="w-4 h-4 text-white" />
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] shadow-md shadow-[#41362D]/20">
+          <Leaf className="h-3.5 w-3.5 text-white" />
         </div>
-        <span className="text-[#41362D] font-bold text-sm tracking-[0.16em]">
+        <span className="text-[11px] font-bold uppercase tracking-[0.28em] text-[#41362D]">
           QURBI
         </span>
       </div>

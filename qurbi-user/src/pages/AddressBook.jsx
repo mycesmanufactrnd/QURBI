@@ -29,7 +29,7 @@ import {
 } from "@/components/account/buttons";
 
 const EMPTY = {
-  label: "",
+  label: "home",
   name: "",
   email: "",
   phone: "",
