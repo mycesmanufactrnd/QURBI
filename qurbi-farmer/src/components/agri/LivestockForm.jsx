@@ -166,10 +166,28 @@ const LivestockForm = forwardRef(function LivestockForm({
                 />
               </Field>
               <Field label="Gender" required>
-                <Select value={form.gender} onValueChange={(value) => setValue("gender", value)}>
-                  <SelectTrigger className="h-12"><SelectValue placeholder="Select gender" /></SelectTrigger>
-                  <SelectContent>{GENDERS.map((gender) => <SelectItem key={gender} value={gender}>{gender}</SelectItem>)}</SelectContent>
-                </Select>
+                <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Gender">
+                  {GENDERS.map((gender) => {
+                    const selected = form.gender === gender;
+                    return (
+                      <button
+                        key={gender}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        onClick={() => setValue("gender", gender)}
+                        className={cn(
+                          "h-12 rounded-xl border px-3 text-sm font-semibold transition-colors",
+                          selected
+                            ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                            : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground",
+                        )}
+                      >
+                        {gender}
+                      </button>
+                    );
+                  })}
+                </div>
               </Field>
             </Grid>
 
