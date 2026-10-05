@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import {
   authApi,
+  AUTH_EXPIRED_EVENT,
   clearSessionTokens,
   getAccessToken,
   getRefreshToken,
@@ -87,6 +88,21 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     checkUserAuth();
   }, [checkUserAuth]);
+
+  useEffect(() => {
+    const handleExpiredSession = () => {
+      clearAuth();
+      setAuthError({
+        type: "auth_required",
+        message: "Your session has expired. Please sign in again.",
+      });
+      setIsLoadingAuth(false);
+      setAuthChecked(true);
+    };
+
+    window.addEventListener(AUTH_EXPIRED_EVENT, handleExpiredSession);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, handleExpiredSession);
+  }, [clearAuth]);
 
   const login = useCallback(async (credentials) => {
     const session = await authApi.login(credentials);
