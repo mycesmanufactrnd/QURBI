@@ -7,6 +7,7 @@ import { GRADE_COLORS } from "@/lib/livestock-data";
 import { useReveal } from "@/hooks/useReveal";
 import { QurbiPageLoader } from "@/components/QurbiLoading";
 import { useAuthPrompt } from "@/lib/auth-prompt-context";
+import { combineOrders, groupedOrderQuery } from "@/lib/order-groups";
 
 const ANIMAL_EMOJIS = {
   Cow: "🐄",
@@ -27,7 +28,9 @@ export default function Receipt() {
   const { requestSignIn } = useAuthPrompt();
 
   const sessionId = searchParams.get("session_id");
-  const orderId = searchParams.get("order_id");
+  const orderParam = searchParams.get("order_ids") || searchParams.get("order_id") || "";
+  const orderIds = orderParam.split(",").map((id) => id.trim()).filter(Boolean);
+  const orderId = orderIds[0] || "";
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -35,19 +38,22 @@ export default function Receipt() {
       setLoadError("");
       try {
         if (orderId && isAuthenticated && user?.id) {
-          const response = await qurbiApi.functions.invoke("fetchMyOrders", {
-            orderId,
-          });
-          let o = response.data?.order;
+          const responses = await Promise.all(
+            orderIds.map((id) => qurbiApi.functions.invoke("fetchMyOrders", { orderId: id })),
+          );
+          const orders = responses.map((response) => response.data?.order).filter(Boolean);
+          const o = combineOrders(orders);
           if (!o) return;
           // Verify payment server-side, then idempotently reserve the livestock
           // and notify each farmer. Re-running this function is safe after refresh.
-          const confirmation = await qurbiApi.functions.invoke(
-            "markPurchasedLivestock",
-            { orderId, sessionId },
+          const confirmations = await Promise.all(
+            orderIds.map((id) => qurbiApi.functions.invoke(
+              "markPurchasedLivestock",
+              { orderId: id, sessionId },
+            )),
           );
           setOrder(
-            confirmation.data?.order || {
+            combineOrders(confirmations.map((confirmation) => confirmation.data?.order)) || {
               ...o,
               status: "paid",
               stripe_session_id: sessionId || o.stripe_session_id || "",
@@ -67,7 +73,7 @@ export default function Receipt() {
   }, [
     authChecked,
     isAuthenticated,
-    orderId,
+    orderParam,
     retryToken,
     sessionId,
     user?.id,
@@ -154,7 +160,7 @@ export default function Receipt() {
           </p>
           <div className="mt-6 grid gap-3">
             <Link
-              to={`/payment?order_id=${encodeURIComponent(order.id)}`}
+              to={`/payment?${groupedOrderQuery(order)}`}
               className="rounded-xl bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] px-4 py-3 text-sm font-bold text-[#41362D]"
             >
               Continue Payment

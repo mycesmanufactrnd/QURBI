@@ -6,10 +6,9 @@ import {
   User,
   Phone,
   Mail,
-  Star,
   CreditCard,
-  ArrowLeft,
   Package,
+  Check,
 } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
 import { useUserProfile } from "@/lib/user-profile-context";
@@ -29,6 +28,9 @@ import { QurbiPageLoader } from "@/components/QurbiLoading";
 import { useAuthPrompt } from "@/lib/auth-prompt-context";
 import AuthRequiredState from "@/components/AuthRequiredState";
 import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
+import AppHeader from "@/components/AppHeader";
+import { extractState } from "@/lib/livestock-data";
+import { combineOrders, groupedOrderQuery } from "@/lib/order-groups";
 
 const DELIVERY_FEE_PER_FARMER = 10;
 const PAYMENT_CARD_SHADOW = "shadow-[0_12px_28px_rgba(65,54,45,0.18)]";
@@ -99,22 +101,105 @@ function paymentItemImageUrl(item, product) {
 }
 
 function paymentItemLocation(item, product) {
-  return (
+  const location =
     item.farm_location ||
     item.farmLocation ||
     item.farm_address ||
+    item.farm_state ||
     product?.farm_location ||
     product?.farmLocation ||
     product?.farm_address ||
+    product?.farm_state ||
+    product?.farmer?.farmerProfile?.farmState ||
     item.state ||
     product?.state ||
-    "Location unavailable"
+    "";
+  return (
+    extractState(location) ||
+    item.farm_state ||
+    item.state ||
+    product?.farm_state ||
+    product?.state ||
+    "State unavailable"
+  );
+}
+
+function productForPaymentItem(item, productDetails) {
+  const productId = item.item_type === "bulk"
+    ? item.bulk_listing_id || item.id
+    : item.livestock_id || item.id;
+  return productDetails[productId];
+}
+
+function deliveryAddressLines(address) {
+  if (!address) return [];
+
+  const street = String(address.street || address.addressLine1 || "").trim();
+  const streetTwo = String(address.addressLine2 || "").trim();
+  const postcode = String(address.postcode || address.postalCode || "").trim();
+  const city = String(address.city || "").trim();
+  const state = String(address.state || "").trim();
+  const country = String(address.country || "").trim();
+  const locality = [postcode, city].filter(Boolean).join(" ");
+
+  return [street, streetTwo, locality, state, country].filter(Boolean);
+}
+
+function PaymentStepper({ currentStep, onStepChange }) {
+  const steps = ["Review", "Delivery", "Payment"];
+  return (
+    <div className="mx-auto w-full max-w-2xl px-4 pt-5" aria-label="Payment progress">
+      <div className="rounded-2xl border border-[#E3C19F]/70 bg-white/75 px-4 py-4 shadow-sm backdrop-blur-sm">
+        <div className="flex items-start">
+          {steps.map((label, index) => {
+            const step = index + 1;
+            const completed = step < currentStep;
+            const active = step === currentStep;
+            return (
+              <React.Fragment key={label}>
+                <button
+                  type="button"
+                  onClick={() => step < currentStep && onStepChange(step)}
+                  disabled={step >= currentStep}
+                  className="flex min-w-0 flex-1 flex-col items-center text-center disabled:cursor-default"
+                  aria-current={active ? "step" : undefined}
+                >
+                  <span
+                    className={`flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-extrabold [text-shadow:0_1px_2px_rgba(65,54,45,0.85)] ${
+                      completed
+                        ? "border-[#15803D] bg-gradient-to-br from-[#22C55E] to-[#15803D] text-white shadow-sm"
+                        : active
+                          ? "border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white shadow-md"
+                          : "border-[#6B594A] bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] text-white"
+                    }`}
+                  >
+                    {completed ? <Check className="h-4 w-4" strokeWidth={3} /> : step}
+                  </span>
+                  <span className={`mt-1 text-[11px] font-bold text-white`}>
+                    {label}
+                  </span>
+                </button>
+                {index < steps.length - 1 && (
+                  <span className={`mt-4 h-0.5 flex-1 ${step < currentStep ? "bg-[#16A34A]" : "bg-[#D5B18D]/60"}`} />
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 
 export default function Payment() {
   const { requestSignIn } = useAuthPrompt();
-  const { selectedItems, selectedSubtotal, removeSelected } = useCart();
+  const {
+    selectedItems,
+    selectedSubtotal,
+    removeSelected,
+    buyNowItem,
+    clearBuyNow,
+  } = useCart();
   const { user, isAuthenticated, authChecked } = useAuth();
   const {
     addresses,
@@ -127,7 +212,10 @@ export default function Payment() {
     useHeaderTransition();
   const [searchParams] = useSearchParams();
   const { reveal } = useReveal();
-  const resumeOrderId = searchParams.get("order_id");
+  const resumeOrderParam = searchParams.get("order_ids") || searchParams.get("order_id") || "";
+  const resumeOrderIds = resumeOrderParam.split(",").map((id) => id.trim()).filter(Boolean);
+  const resumeOrderId = resumeOrderIds[0] || "";
+  const isBuyNowCheckout = searchParams.get("source") === "buy-now";
   const [resumedOrder, setResumedOrder] = useState(null);
   const [loadingOrder, setLoadingOrder] = useState(Boolean(resumeOrderId));
   const [resumeError, setResumeError] = useState("");
@@ -139,7 +227,15 @@ export default function Payment() {
   const [loading, setLoading] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [checkoutError, setCheckoutError] = useState(null);
+  const [checkoutStep, setCheckoutStep] = useState(resumeOrderId ? 3 : 1);
+  const [newCheckoutGroupId] = useState(() =>
+    globalThis.crypto?.randomUUID?.() || `checkout-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  );
   const fulfillmentMethod = "delivery";
+
+  useEffect(() => {
+    setCheckoutStep(resumeOrderId ? 3 : 1);
+  }, [resumeOrderId]);
 
   useEffect(() => {
     if (!resumeOrderId) return;
@@ -157,12 +253,15 @@ export default function Payment() {
       setLoadingOrder(true);
       setResumeError("");
       try {
-        const response = await qurbiApi.functions.invoke("fetchMyOrders", {
-          orderId: resumeOrderId,
-        });
-        const order = response.data?.order;
-        if (!order || !["pending", "pending_payment", "to_pay"].includes(order.status)) {
-          if (order?.cancellationReason === "Payment reservation expired") {
+        const responses = await Promise.all(
+          resumeOrderIds.map((orderId) =>
+            qurbiApi.functions.invoke("fetchMyOrders", { orderId }),
+          ),
+        );
+        const orders = responses.map((response) => response.data?.order).filter(Boolean);
+        const order = combineOrders(orders);
+        if (!order || orders.some((item) => !["pending", "pending_payment", "to_pay"].includes(item.status))) {
+          if (orders.some((item) => item?.cancellationReason === "Payment reservation expired")) {
             throw new Error("Payment reservation expired.");
           }
           throw new Error("This order is no longer awaiting payment.");
@@ -183,7 +282,7 @@ export default function Payment() {
     return () => {
       active = false;
     };
-  }, [authChecked, isAuthenticated, resumeOrderId, user?.id]);
+  }, [authChecked, isAuthenticated, resumeOrderParam, user?.id]);
 
   useEffect(() => {
     if (!resumedOrder?.items?.length) {
@@ -216,9 +315,9 @@ export default function Payment() {
     return () => {
       active = false;
     };
-  }, [resumedOrder?.id]);
+  }, [resumedOrder?.id, resumedOrder?.order_ids?.length]);
 
-  const isResumingOrder = Boolean(resumeOrderId);
+  const isResumingOrder = resumeOrderIds.length > 0;
   const paymentItems = resumedOrder
     ? (resumedOrder.items || []).map((item, index) => ({
         ...item,
@@ -226,8 +325,12 @@ export default function Payment() {
         quantity: 1,
         total: item.total ?? item.price_per_head,
       }))
-    : selectedItems;
-  const paymentSubtotal = resumedOrder?.subtotal ?? selectedSubtotal;
+    : isBuyNowCheckout
+      ? buyNowItem ? [buyNowItem] : []
+      : selectedItems;
+  const paymentSubtotal = resumedOrder?.subtotal ?? (
+    isBuyNowCheckout ? Number(buyNowItem?.total || 0) : selectedSubtotal
+  );
 
   const buyerName = isResumingOrder
     ? resumedOrder?.buyer_name || ""
@@ -275,8 +378,8 @@ export default function Payment() {
     ? Boolean(resumedOrder)
     : Boolean(paymentItems.length > 0 && buyerName && buyerEmail && selectedAddress);
 
-  const confirmReservedOrderExists = async () => {
-    if (isResumingOrder && resumedOrder?.id) return true;
+  const findReservedOrder = async () => {
+    if (isResumingOrder && resumedOrder?.id) return resumedOrder;
 
     const requestedProducts = new Set(
       paymentItems.map((item) =>
@@ -288,7 +391,7 @@ export default function Payment() {
 
     try {
       const response = await qurbiApi.functions.invoke("fetchMyOrders", {});
-      return (response.data?.orders || []).some((order) => {
+      return (response.data?.orders || []).find((order) => {
         if (!["pending", "pending_payment", "to_pay"].includes(order.status)) {
           return false;
         }
@@ -301,7 +404,7 @@ export default function Payment() {
         });
       });
     } catch {
-      return false;
+      return null;
     }
   };
 
@@ -359,6 +462,7 @@ export default function Payment() {
       return;
     }
     setLoading(true);
+    let checkoutOrder = resumedOrder;
     try {
       const orderNumber = resumedOrder?.order_number || "GH-" + Date.now();
       const order =
@@ -406,6 +510,7 @@ export default function Payment() {
           buyer_phone: buyerPhone,
           buyer_id: user.id,
         }));
+      checkoutOrder = order;
       const res = await qurbiApi.functions.invoke("createCheckout", {
         orderId: order.id,
         orderNumber,
@@ -417,23 +522,41 @@ export default function Payment() {
         total: grandTotal,
         fulfillmentMethod,
         deliveryAddress: selectedAddress || resumedOrder?.delivery_address || {},
+        checkoutGroupId: resumedOrder?.checkout_group_id || newCheckoutGroupId,
       });
       if (res.data?.url) {
-        if (!isResumingOrder) removeSelected();
+        if (!isResumingOrder) {
+          if (isBuyNowCheckout) clearBuyNow();
+          else removeSelected();
+        }
         navigateWithTransition(res.data.url, {
           navigateOptions: { replace: true },
         });
       } else {
-        setCheckoutError({
+        const paymentFailure = {
           title: "Payment could not start",
           message:
             "Your order was saved, but the payment page could not be opened. Continue from My Orders.",
           reserved: true,
+          orderId: order.id,
+        };
+        navigateWithTransition(`/orders/${encodeURIComponent(order.id)}?fromTab=to-pay`, {
+          navigateOptions: { replace: true, state: { paymentError: paymentFailure } },
         });
       }
     } catch (err) {
-      const reservationWasSaved = await confirmReservedOrderExists();
-      setCheckoutError(friendlyPaymentError(err, reservationWasSaved));
+      const reservedOrder = checkoutOrder?.id ? checkoutOrder : await findReservedOrder();
+      const paymentFailure = {
+        ...friendlyPaymentError(err, Boolean(reservedOrder)),
+        orderId: reservedOrder?.id || "",
+      };
+      if (reservedOrder?.id) {
+        navigateWithTransition(`/orders/${encodeURIComponent(reservedOrder.id)}?fromTab=to-pay`, {
+          navigateOptions: { replace: true, state: { paymentError: paymentFailure } },
+        });
+      } else {
+        setCheckoutError(paymentFailure);
+      }
     } finally {
       setLoading(false);
     }
@@ -444,9 +567,11 @@ export default function Payment() {
     setCancelling(true);
     setCancelError("");
     try {
-      await qurbiApi.functions.invoke("cancelMyOrder", {
-        orderId: resumedOrder.id,
-      });
+      await Promise.all(
+        (resumedOrder.order_ids || [resumedOrder.id]).map((orderId) =>
+          qurbiApi.functions.invoke("cancelMyOrder", { orderId }),
+        ),
+      );
       navigateWithTransition("/orders", { navigateOptions: { replace: true } });
     } catch (error) {
       setCancelError(
@@ -503,31 +628,22 @@ export default function Payment() {
         />
       )}
 
-      <div className="flex items-center gap-3 px-4 pt-5">
-        <button
-          type="button"
-          onClick={() => navigateWithTransition(isResumingOrder ? "/orders" : "/cart")}
-          aria-label="Go back"
-          className="flex h-10 w-10 items-center justify-center rounded-xl border-2 border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white shadow-md shadow-black/20 active:scale-95"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <div>
-          <p className="text-[15px] font-bold uppercase tracking-[0.35em] text-[#6B594A]">
-            QURBI
-          </p>
-          <p className="text-sm font-bold text-[#41362D]">
-            {isResumingOrder
-              ? `Continue ${resumedOrder.order_number}`
-              : `${paymentItems.length} item${paymentItems.length !== 1 ? "s" : ""} · RM ${paymentSubtotal.toLocaleString()}`}
-          </p>
-        </div>
-      </div>
+      <AppHeader
+        title="Payment"
+        backTo={isResumingOrder ? "/orders" : "/cart"}
+      />
+
+      <PaymentStepper
+        currentStep={checkoutStep}
+        onStepChange={setCheckoutStep}
+      />
 
       <div className="aisyah-content">
+        {checkoutStep === 1 && (
+          <>
         {/* Selected Items (read-only) */}
-        <div
-          className={`bg-white rounded-2xl p-4 border border-gray-50 ${reveal()}`}
+        <section
+          className={`rounded-2xl border border-[#E3C19F]/60 bg-gradient-to-br from-[#41362D] to-[#6B594A] p-4 shadow-lg shadow-[#41362D]/20 ${reveal()}`}
           style={{ animationDelay: "80ms" }}
         >
           <div className="mb-4 flex items-center gap-3">
@@ -547,16 +663,16 @@ export default function Payment() {
                 item.item_type === "bulk"
                   ? item.bulk_listing_id || item.id
                   : item.livestock_id || item.id;
-              const returnTo = resumeOrderId
-                ? `/payment?order_id=${encodeURIComponent(resumeOrderId)}`
-                : "/payment";
+              const returnTo = isResumingOrder
+                ? `/payment?${groupedOrderQuery(resumedOrder)}`
+                : isBuyNowCheckout
+                  ? "/payment?source=buy-now"
+                  : "/payment";
               const productPath = productId
                 ? `${item.item_type === "bulk" ? "/bulk-buy" : "/livestock"}/${encodeURIComponent(productId)}?from=payment&returnTo=${encodeURIComponent(returnTo)}`
                 : "";
               const ItemContainer = productPath ? "button" : "div";
-              const product = productDetails[
-                item.item_type === "bulk" ? item.bulk_listing_id : item.livestock_id
-              ];
+              const product = productForPaymentItem(item, productDetails);
               const productLabel =
                 (item.item_type === "bulk"
                   ? item.listing_name
@@ -608,7 +724,7 @@ export default function Payment() {
                   <div className="flex flex-none items-center gap-2">
                     <div className="text-right">
                       <p className="whitespace-nowrap text-sm font-extrabold text-white">
-                        RM {item.total.toLocaleString()}
+                        RM {Number(item.total || 0).toLocaleString()}
                       </p>
                       {productPath && (
                         <p className="text-[10px] font-semibold text-white/60">
@@ -626,28 +742,35 @@ export default function Payment() {
               );
             })}
           </div>
-        </div>
-            <br></br>
+        </section>
+        <button
+          type="button"
+          onClick={() => setCheckoutStep(2)}
+          className="mt-4 w-full rounded-2xl border-2 border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] py-3.5 text-sm font-extrabold text-white shadow-md shadow-black/20"
+        >
+          Continue to Delivery
+        </button>
+          </>
+        )}
+
         {/* Delivery Address + Buyer Info */}
-        {!isResumingOrder && (
+        {checkoutStep === 2 && !isResumingOrder && (
           <>
             <button
               onClick={() => setShowPicker(true)}
-              className={`w-full bg-white rounded-2xl ${PAYMENT_CARD_SHADOW} border-2 overflow-hidden transition-all text-left active:scale-[0.99] ${selectedAddress ? "border-[#D5B18D]" : "border-dashed border-orange-200"}`}
+              className={`w-full overflow-hidden rounded-2xl border-2 bg-white text-left transition-colors ${PAYMENT_CARD_SHADOW} ${selectedAddress ? "border-[#D5B18D]" : "border-dashed border-orange-200"}`}
             >
-              <div
-                className={`px-4 py-2 flex items-center justify-between ${selectedAddress ? "bg-[#F7EDE2]" : "bg-orange-50"}`}
-              >
+              <div className="flex items-center justify-between bg-gradient-to-br from-[#41362D] to-[#6B594A] px-4 py-2">
                 <span
-                  className={`text-xs font-bold ${selectedAddress ? "text-[#41362D]" : "text-orange-500"}`}
+                  className="text-xs font-bold text-white"
                 >
                   DELIVERY ADDRESS
                 </span>
-                <span className="text-xs text-black font-semibold flex items-center gap-0.5">
+                <span className="flex items-center gap-0.5 text-xs font-semibold text-white">
                   Change <ChevronRight className="w-3 h-3" />
                 </span>
               </div>
-              <div className="px-4 py-3 flex items-start gap-3">
+              <div className="flex items-start gap-3 px-4 py-4">
                 <div
                   className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border-2 border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] shadow-md shadow-black/15"
                 >
@@ -656,33 +779,19 @@ export default function Payment() {
                   />
                 </div>
                 {selectedAddress ? (
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {selectedAddress.label && (
-                        <span className="text-gray-900 font-bold text-sm">
-                          {selectedAddress.label}
-                        </span>
-                      )}
-                      {selectedAddress.isDefault && (
-                        <span className="bg-[#E3C19F] text-[#41362D] text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
-                          <Star className="w-2.5 h-2.5 fill-[#5A493C]" />{" "}
-                          DEFAULT
-                        </span>
-                      )}
-                    </div>
-                    {selectedAddress.name && (
-                      <p className="text-gray-700 text-sm font-medium mt-0.5">
-                        {selectedAddress.name}
+                  <div className="min-w-0 flex-1">
+                    {selectedAddress.label && (
+                      <p className="mb-1 text-sm font-extrabold text-white">
+                        {selectedAddress.label}
                       </p>
                     )}
-                    {selectedAddress.phone && (
-                      <p className="text-gray-400 text-xs">
-                        {selectedAddress.phone}
-                      </p>
-                    )}
-                    <p className="text-gray-500 text-xs mt-0.5 truncate">
-                      {selectedAddress.street}, {selectedAddress.city}
-                    </p>
+                    <address className="space-y-0.5 text-sm font-semibold not-italic leading-5 text-gray-700">
+                      {deliveryAddressLines(selectedAddress).map((line, index) => (
+                        <span key={`${line}-${index}`} className="block break-words">
+                          {line}
+                        </span>
+                      ))}
+                    </address>
                   </div>
                 ) : (
                   <div className="flex-1">
@@ -751,12 +860,30 @@ export default function Payment() {
                 </div>
               )}
             </div>
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => setCheckoutStep(1)}
+                className="rounded-2xl border-2 border-[#41362D] bg-white py-3 text-sm font-extrabold text-[#41362D]"
+              >
+                Back to Review
+              </button>
+              <button
+                type="button"
+                onClick={() => setCheckoutStep(3)}
+                disabled={!canCheckout}
+                className="rounded-2xl border-2 border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] py-3 text-sm font-extrabold text-white shadow-md shadow-black/20 disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                Continue to Payment
+              </button>
+            </div>
           </>
         )}
 
       </div>
 
-      {/* Payment box stays at the end of the document and is reached by scrolling. */}
+      {checkoutStep === 3 && (
+      /* Payment is a separate step from delivery details. */
       <div className="mx-auto w-full max-w-5xl px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
         <div className="mx-auto max-w-md rounded-2xl border-2 border-[#41362D]/70 bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] p-4 shadow-xl shadow-black/15">
           <div className="space-y-2">
@@ -849,8 +976,19 @@ export default function Payment() {
                 : "Complete your name and email to continue"}
             </p>
           )}
+          {!isResumingOrder && (
+            <button
+              type="button"
+              onClick={() => setCheckoutStep(2)}
+              disabled={loading}
+              className="mt-2 w-full rounded-xl border-2 border-[#41362D] bg-white py-3 text-sm font-bold text-[#41362D] disabled:opacity-50"
+            >
+              Back to Delivery
+            </button>
+          )}
         </div>
       </div>
+      )}
       <CancelOrderModal
         order={cancelCandidate}
         loading={cancelling}
@@ -866,7 +1004,11 @@ export default function Payment() {
         onClose={() => setCheckoutError(null)}
         onViewOrders={() => {
           setCheckoutError(null);
-          navigateWithTransition("/orders");
+          navigateWithTransition(
+            checkoutError?.orderId
+              ? `/orders/${encodeURIComponent(checkoutError.orderId)}?fromTab=to-pay`
+              : "/orders?tab=to-pay",
+          );
         }}
       />
     </div>

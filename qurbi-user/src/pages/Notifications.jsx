@@ -8,6 +8,7 @@ import {
   RefreshCw,
   Trash2,
   XCircle,
+  Leaf,
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useNotifications } from "@/lib/notification-context";
@@ -19,6 +20,7 @@ import {
 } from "@/lib/order-date";
 import { AisyahCardSkeleton } from "@/components/AisyahLoading";
 import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
+import { recentPageOr } from "@/lib/navigation";
 import AuthRequiredState from "@/components/AuthRequiredState";
 
 const TYPE_STYLE = {
@@ -195,16 +197,21 @@ export default function Notifications() {
           <div className="flex min-w-0 items-start gap-3">
             <button
               type="button"
-              onClick={() => navigateFromIconPage(-1)}
+              onClick={() => navigateFromIconPage(recentPageOr("/"))}
               aria-label="Go back"
               className="mt-0.5 flex h-10 w-10 flex-none items-center justify-center rounded-xl border border-[#F7EDE2]/60 bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white transition-transform active:scale-90"
             >
               <ArrowLeft className="h-5 w-5 text-white" />
             </button>
             <div className="min-w-0">
-              <p className="text-[15px] font-bold uppercase tracking-[0.5em] text-[#41362D]/55">
-                QURBI
-              </p>
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] shadow-sm">
+                  <Leaf className="h-3.5 w-3.5 text-white" />
+                </span>
+                <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-[#41362D]/70">
+                  QURBI
+                </p>
+              </div>
               <h1 className="mt-1 text-2xl font-bold text-[#41362D]">
                 Notifications
               </h1>

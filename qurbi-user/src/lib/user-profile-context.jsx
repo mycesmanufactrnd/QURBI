@@ -28,8 +28,8 @@ const fromAddressApi = (address) => ({
 });
 
 const toAddressApi = (address) => ({
-  label: ["home", "work", "other"].includes(String(address.label).toLowerCase())
-    ? String(address.label).toLowerCase()
+  label: ["home", "work", "other"].includes(String(address.label).trim().toLowerCase())
+    ? String(address.label).trim().toLowerCase()
     : "other",
   recipientName: address.name,
   recipientPhone: address.phone,
@@ -132,9 +132,10 @@ export function UserProfileProvider({ children }) {
   };
 
   const updateAddress = async (id, data) => {
-    const response = data.isDefault
-      ? await apiClient.patch(`/addresses/${id}/set-default`)
-      : await apiClient.patch(`/addresses/${id}`, toAddressApi(data));
+    let response = await apiClient.patch(`/addresses/${id}`, toAddressApi(data));
+    if (data.isDefault) {
+      response = await apiClient.patch(`/addresses/${id}/set-default`);
+    }
     const saved = fromAddressApi(response.data);
     setAddresses((prev) =>
       saved.isDefault

@@ -10,6 +10,7 @@ import {
   MapPin,
   RefreshCw,
   ShoppingCart,
+  Leaf,
 } from "lucide-react";
 import { loadBulkListingById } from "@/lib/farmerClient";
 import { checkBulkListingAvailability } from "@/lib/livestock-availability";
@@ -27,6 +28,8 @@ import {
   captureCartAnimationSource,
 } from "@/lib/cart-animation";
 import { getBreedGenderBreakdown } from "@/lib/bulk-listing";
+import { extractState } from "@/lib/livestock-data";
+import { recentPageOr } from "@/lib/navigation";
 
 export default function BulkListingDetail() {
   const { id } = useParams();
@@ -127,6 +130,7 @@ export default function BulkListingDetail() {
     listing_name: listing.name,
     farmer_id: listing.ownerId || "",
     farmer_name: listing.farmer_name || "Unknown Farmer",
+    farm_name: listing.farm_name || listing.farmName || "",
     farm_location:
       listing.farm_location ||
       listing.farmLocation ||
@@ -154,7 +158,7 @@ export default function BulkListingDetail() {
         if (now) {
           buyNow(item);
           animateProductToCart(animationSource);
-          navigateWithTransition("/payment");
+          navigateWithTransition("/payment?source=buy-now");
         } else {
           if (!addToCart(item)) {
             alert("This bulk lot is already in your cart.");
@@ -175,6 +179,15 @@ export default function BulkListingDetail() {
     { label: "State", value: listing.state || "Not specified" },
     { label: "Quantity", value: "1 complete lot" },
   ];
+  const farmState =
+    listing.farm_state ||
+    listing.state ||
+    extractState(
+      listing.farm_location ||
+        listing.farmLocation ||
+        listing.farm_address ||
+        "",
+    );
 
   return (
     <div
@@ -184,12 +197,20 @@ export default function BulkListingDetail() {
       <div className="qurbi-page-header relative h-72 bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2]">
         <button
           type="button"
-          onClick={() => navigateWithTransition(returnPath)}
+          onClick={() => navigateWithTransition(recentPageOr(returnPath))}
           aria-label={returnLabel}
           className="absolute left-4 top-4 z-20 flex h-11 w-11 items-center justify-center rounded-xl border border-[#F7EDE2]/60 bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white shadow-lg shadow-black/20 transition-all duration-200 ease-out active:scale-[0.98]"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
+        <div className="pointer-events-none absolute inset-x-0 top-4 z-10 flex items-center justify-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#F7EDE2]/70 bg-[#41362D]/55 shadow-sm backdrop-blur-sm">
+            <Leaf className="h-3.5 w-3.5 text-white" />
+          </span>
+          <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white drop-shadow">
+            QURBI
+          </p>
+        </div>
         {image ? (
           <img
             data-cart-product-image
@@ -246,11 +267,7 @@ export default function BulkListingDetail() {
             <p className="flex items-start gap-3 text-base font-bold text-black">
               <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-black" />
               <span className="break-words">
-                {listing.farm_location ||
-                  listing.farm_address ||
-                  listing.farm_state ||
-                  listing.state ||
-                  "Location not specified"}
+                {farmState || "State not specified"}
               </span>
             </p>
           </div>

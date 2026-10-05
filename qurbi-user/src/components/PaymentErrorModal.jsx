@@ -2,7 +2,12 @@ import React, { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { CircleAlert, X } from "lucide-react";
 
-export default function PaymentErrorModal({ error, onClose, onViewOrders }) {
+export default function PaymentErrorModal({
+  error,
+  onClose,
+  onViewOrders,
+  viewOrderLabel = "View Reserved Order",
+}) {
   useEffect(() => {
     if (!error) return undefined;
     const closeOnEscape = (event) => {
@@ -66,7 +71,7 @@ export default function PaymentErrorModal({ error, onClose, onViewOrders }) {
                 onClick={onViewOrders}
                 className="min-h-12 rounded-xl border border-[#E3C19F] text-sm font-bold text-white"
               >
-                View Reserved Order
+                {viewOrderLabel}
               </button>
             )}
             <button

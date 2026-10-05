@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   Link,
+  useLocation,
   useNavigate,
   useParams,
   useSearchParams,
 } from "react-router-dom";
-import { Camera, Check, ChevronRight, Package } from "lucide-react";
+import { Camera, Check, ChevronRight, MapPin, Package } from "lucide-react";
 import { qurbiApi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
 import { useAuthPrompt } from "@/lib/auth-prompt-context";
@@ -14,6 +15,9 @@ import ImageLightbox from "@/components/ImageLightbox";
 import AppHeader from "@/components/AppHeader";
 import PageLoading from "@/components/PageLoading";
 import ProductImage from "@/components/ProductImage";
+import PaymentErrorModal from "@/components/PaymentErrorModal";
+import { extractState } from "@/lib/livestock-data";
+import { combineOrders, groupedOrderQuery } from "@/lib/order-groups";
 
 const RECEIVABLE_STATUSES = ["in_transit", "shipped", "to_receive", "delivering", "delivered"];
 
@@ -341,7 +345,10 @@ function RefundRequestSheet({ order, loading, error, onClose, onSubmit }) {
 export default function OrderDetail() {
   const { orderId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
+  const groupOrderParam = searchParams.get("group_ids") || orderId || "";
+  const detailOrderIds = groupOrderParam.split(",").map((id) => id.trim()).filter(Boolean);
 
   const { user, isAuthenticated, authChecked } = useAuth();
   const { requestSignIn } = useAuthPrompt();
@@ -355,6 +362,9 @@ export default function OrderDetail() {
   const [message, setMessage] = useState("");
   const [receivedFile, setReceivedFile] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
+  const [paymentError, setPaymentError] = useState(
+    () => location.state?.paymentError || null,
+  );
 
   const loadOrder = useCallback(async () => {
     if (!authChecked) return;
@@ -369,11 +379,12 @@ export default function OrderDetail() {
     setLoadError("");
 
     try {
-      const response = await qurbiApi.functions.invoke("fetchMyOrders", {
-        orderId,
-      });
-
-      setOrder(response.data?.order || null);
+      const responses = await Promise.all(
+        detailOrderIds.map((id) =>
+          qurbiApi.functions.invoke("fetchMyOrders", { orderId: id }),
+        ),
+      );
+      setOrder(combineOrders(responses.map((response) => response.data?.order)));
     } catch (error) {
       setLoadError(
         error.data?.error ||
@@ -383,7 +394,7 @@ export default function OrderDetail() {
     } finally {
       setLoading(false);
     }
-  }, [authChecked, isAuthenticated, orderId, user?.id]);
+  }, [authChecked, groupOrderParam, isAuthenticated, user?.id]);
 
   useEffect(() => {
     loadOrder();
@@ -590,6 +601,18 @@ export default function OrderDetail() {
 
   const returnTab =
     searchParams.get("fromTab") || TAB_FOR_STATUS[order.status] || "to-pay";
+  const returnPath =
+    returnTab === "history"
+      ? "/history"
+      : `/orders?tab=${encodeURIComponent(returnTab)}`;
+  const pendingPaymentStatuses = ["pending", "pending_payment", "to_pay"];
+  const isAwaitingPayment = [
+    order.status,
+    order.payment_status,
+    order.paymentStatus,
+  ].some((status) =>
+    pendingPaymentStatuses.includes(String(status || "").toLowerCase()),
+  );
 
   const isRefundRejected = order.refund_status?.toLowerCase() === "rejected";
 
@@ -597,7 +620,7 @@ export default function OrderDetail() {
     <div className="qurbi-page">
       <AppHeader
         title="Order Details"
-        backTo={`/orders?tab=${encodeURIComponent(returnTab)}`}
+        backTo={returnPath}
         subtitle={`${order.order_number} · ${formatOrderDateTime(order.created_date)}`}
       />
 
@@ -622,12 +645,34 @@ export default function OrderDetail() {
           </span>
         </div>
 
-        <OrderTracking
-          order={order}
-          onPreview={(image, alt) => setPreviewImage({ image, alt })}
-        />
+        {isAwaitingPayment && (
+          <section className="rounded-2xl border border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] p-4 shadow-lg shadow-[#41362D]/20">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-extrabold text-white">Payment pending</p>
+                <p className="mt-0.5 text-xs font-semibold text-white/65">
+                  Your order is saved and ready for payment.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate(`/payment?${groupedOrderQuery(order)}`)}
+                className="flex-none rounded-xl border border-[#F7EDE2]/70 bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] px-4 py-2.5 text-xs font-extrabold text-[#41362D]"
+              >
+                Retry Payment
+              </button>
+            </div>
+          </section>
+        )}
 
-        {progressImages.length > 0 && (
+        {!isAwaitingPayment && (
+          <OrderTracking
+            order={order}
+            onPreview={(image, alt) => setPreviewImage({ image, alt })}
+          />
+        )}
+
+        {!isAwaitingPayment && progressImages.length > 0 && (
           <section className="qurbi-photo-area rounded-2xl p-4 shadow-sm border">
             <h2 className="text-gray-900 font-bold">Order progress</h2>
 
@@ -724,8 +769,20 @@ export default function OrderDetail() {
           </section>
         )}
 
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
-          <h2 className="text-gray-900 font-bold mb-3">Items</h2>
+        <section className="rounded-2xl border border-[#E3C19F]/60 bg-gradient-to-br from-[#41362D] to-[#6B594A] p-4 shadow-lg shadow-[#41362D]/20">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-xl border border-[#F7EDE2] bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] text-[#41362D] shadow-sm">
+              <Package className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="font-bold text-white">Order Items</h2>
+              <p className="text-xs font-medium text-white/65">
+                Tap a product to view its details
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
 
           {order.items?.map((item, index) => {
             const productPath = item.item_type === "bulk"
@@ -737,51 +794,76 @@ export default function OrderDetail() {
                 : "";
             const ItemContainer = productPath ? Link : "div";
             const itemName = item.breed || item.listing_name || "Order item";
+            const itemLocation =
+              extractState(
+                item.farm_location ||
+                  item.farmLocation ||
+                  item.farm_address ||
+                  item.farm_state ||
+                  item.state ||
+                  order.farm_location ||
+                  order.farm_state ||
+                  "",
+              ) ||
+              item.farm_state ||
+              item.state ||
+              order.farm_state ||
+              "State unavailable";
 
             return (
               <ItemContainer
                 key={item.id || `${itemName}-${index}`}
                 {...(productPath ? { to: productPath } : {})}
-                className={`flex items-center justify-between gap-3 border-b border-gray-50 py-3 last:border-0 ${productPath ? "group rounded-xl px-2 transition-colors hover:bg-white/10 active:bg-white/15" : ""}`}
+                className={`flex w-full items-center justify-between gap-3 rounded-xl border border-[#E3C19F]/35 bg-[rgba(255,255,255,0.08)] p-3 text-left shadow-sm transition-all duration-200 ${productPath ? "group cursor-pointer hover:border-[#F7EDE2] hover:bg-[rgba(255,255,255,0.14)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E3C19F] active:scale-[0.99]" : ""}`}
                 aria-label={productPath ? `View ${itemName} details` : undefined}
               >
                 <div className="flex min-w-0 items-center gap-3">
                   <ProductImage
                     src={item.image}
                     alt={itemName}
-                    className="h-12 w-12"
+                    className="h-12 w-12 shadow-md shadow-black/15"
                   />
                   <div className="min-w-0">
-                    <p className="break-words text-sm font-semibold text-gray-800">
-                      {itemName} × {item.quantity}
+                    <p className="truncate text-sm font-bold text-white">
+                      {itemName}
                     </p>
-                    <p className="mt-0.5 text-xs text-gray-400">
-                      {item.item_type === "bulk" ? "Bulk listing" : item.animal || "Livestock"}
-                      {item.grade ? ` · Grade ${item.grade}` : ""}
+                    <p className="flex min-w-0 items-center gap-1 truncate text-xs font-medium text-white/65">
+                      <MapPin className="h-3 w-3 flex-none text-[#E3C19F]" />
+                      <span className="truncate">{itemLocation}</span>
                     </p>
                   </div>
                 </div>
 
                 <div className="flex flex-none items-center gap-2">
-                  <p className="whitespace-nowrap text-sm font-bold text-white">
-                    RM {item.total?.toLocaleString()}
-                  </p>
+                  <div className="text-right">
+                    <p className="whitespace-nowrap text-sm font-extrabold text-white">
+                      RM {Number(item.total || 0).toLocaleString()}
+                    </p>
+                    {productPath && (
+                      <p className="text-[10px] font-semibold text-white/60">
+                        View details
+                      </p>
+                    )}
+                  </div>
                   {productPath && (
-                    <ChevronRight className="h-4 w-4 text-white transition-transform group-hover:translate-x-0.5" />
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#F7EDE2] bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] text-[#41362D] shadow-md shadow-black/20">
+                      <ChevronRight className="h-5 w-5" strokeWidth={3} />
+                    </span>
                   )}
                 </div>
               </ItemContainer>
             );
           })}
+          </div>
 
-          <div className="flex justify-between pt-3 mt-1 border-t border-gray-100">
+          <div className="mt-4 flex justify-between border-t border-white/15 pt-3">
             <span className="text-white font-bold">Total</span>
 
             <span className="text-white text-lg font-bold">
               RM {order.total?.toLocaleString()}
             </span>
           </div>
-        </div>
+        </section>
 
         {canConfirmReceipt && (
           <section className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
@@ -888,6 +970,24 @@ export default function OrderDetail() {
         image={previewImage?.image}
         alt={previewImage?.alt}
         onClose={() => setPreviewImage(null)}
+      />
+      <PaymentErrorModal
+        error={paymentError}
+        viewOrderLabel="Stay on To Pay Order"
+        onClose={() => {
+          setPaymentError(null);
+          navigate(`${location.pathname}${location.search}`, {
+            replace: true,
+            state: null,
+          });
+        }}
+        onViewOrders={() => {
+          setPaymentError(null);
+          navigate(`${location.pathname}${location.search}`, {
+            replace: true,
+            state: null,
+          });
+        }}
       />
     </div>
   );

@@ -12,8 +12,12 @@ import {
   AlertCircle,
   ArrowLeft,
   Zap,
+  Leaf,
 } from "lucide-react";
-import { loadLivestockById } from "@/lib/farmerClient";
+import {
+  loadLivestockById,
+  loadLivestockWithFarmers,
+} from "@/lib/farmerClient";
 import { useCart } from "@/lib/cart-context";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useReveal } from "@/hooks/useReveal";
@@ -30,6 +34,9 @@ import {
   animateProductToCart,
   captureCartAnimationSource,
 } from "@/lib/cart-animation";
+import ProductImage from "@/components/ProductImage";
+import { extractState } from "@/lib/livestock-data";
+import { recentPageOr } from "@/lib/navigation";
 
 function AvailabilityModal({ state, onClose, onBrowse, backLabel }) {
   if (!state) return null;
@@ -81,7 +88,11 @@ function AvailabilityModal({ state, onClose, onBrowse, backLabel }) {
 
 export default function LivestockDetail() {
   const { id } = useParams();
-  const { navigateWithTransition, completeProductTransition } = useHeaderTransition();
+  const {
+    navigateWithTransition,
+    navigateFromProductCard,
+    completeProductTransition,
+  } = useHeaderTransition();
   const [searchParams] = useSearchParams();
   const openedFromCart = searchParams.get("from") === "cart";
   const openedFromOrders = ["order", "orders"].includes(searchParams.get("from"));
@@ -109,6 +120,7 @@ export default function LivestockDetail() {
   const requireAuth = useRequireAuth();
   const { reveal } = useReveal();
   const [livestock, setLivestock] = useState(null);
+  const [relatedLivestock, setRelatedLivestock] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeImage, setActiveImage] = useState(0);
@@ -121,7 +133,31 @@ export default function LivestockDetail() {
     setLivestock(null);
     setError(null);
     loadLivestockById(id)
-      .then(setLivestock)
+      .then(async (selected) => {
+        setLivestock(selected);
+        try {
+          const allLivestock = await loadLivestockWithFarmers();
+          const selectedBreed = String(selected?.breed || "")
+            .trim()
+            .toLowerCase();
+          setRelatedLivestock(
+            (allLivestock || [])
+              .filter(
+                (candidate) =>
+                  String(candidate.id) !== String(selected?.id) &&
+                  selectedBreed &&
+                  String(candidate.breed || "").trim().toLowerCase() ===
+                    selectedBreed &&
+                  !["reserved", "sold", "unavailable"].includes(
+                    String(candidate.status || "").toLowerCase(),
+                  ),
+              )
+              .slice(0, 10),
+          );
+        } catch {
+          setRelatedLivestock([]);
+        }
+      })
       .catch((e) => setError(e.message || "Failed to load livestock"))
       .finally(() => setLoading(false));
   };
@@ -152,11 +188,15 @@ export default function LivestockDetail() {
     weight_max: livestock.weight ? Number(livestock.weight) : 0,
     farmer_id: livestock.ownerId || livestock.created_by_id || "",
     farmer_name: livestock.farmer_name || "Unknown Farmer",
+    farm_name: livestock.farm_name || livestock.farmName || "",
     farm_location:
       livestock.farm_location ||
       livestock.farmLocation ||
       livestock.farm_address ||
+      livestock.farm_state ||
       "",
+    farm_state: livestock.farm_state || livestock.state || "",
+    state: livestock.state || livestock.farm_state || "",
     image: livestock.coverImage || livestock.images?.[0] || "",
     created_date: livestock.created_date || "",
     listingPublishedAt: livestock.listingPublishedAt || "",
@@ -224,7 +264,7 @@ export default function LivestockDetail() {
       }
       buyNow(buildCartItem());
       animateProductToCart(animationSource);
-      navigateWithTransition("/payment");
+      navigateWithTransition("/payment?source=buy-now");
     });
   };
 
@@ -291,6 +331,14 @@ export default function LivestockDetail() {
     { label: "Ear Tag", value: livestock.earTag },
     { label: "RFID", value: livestock.rfid },
   ].filter((i) => i.value);
+  const farmState =
+    livestock.state ||
+    extractState(
+      livestock.farmLocation ||
+        livestock.farm_location ||
+        livestock.farm_address ||
+        "",
+    );
 
   return (
     <div
@@ -303,14 +351,17 @@ export default function LivestockDetail() {
       >
         <button
           type="button"
-          onClick={() => navigateWithTransition(returnPath)}
+          onClick={() => navigateWithTransition(recentPageOr(returnPath))}
           aria-label={returnLabel}
           className="absolute left-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-xl border border-[#F7EDE2]/60 bg-[#41362D]/80 text-white shadow-lg backdrop-blur-sm active:scale-95"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <div className="pointer-events-none absolute inset-x-0 top-4 z-10 text-center">
-          <p className="text-[15px] font-bold uppercase tracking-[0.3em] text-white drop-shadow">
+        <div className="pointer-events-none absolute inset-x-0 top-4 z-10 flex items-center justify-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#F7EDE2]/70 bg-[#41362D]/55 shadow-sm backdrop-blur-sm">
+            <Leaf className="h-3.5 w-3.5 text-white" />
+          </span>
+          <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white drop-shadow">
             QURBI
           </p>
         </div>
@@ -418,7 +469,7 @@ export default function LivestockDetail() {
         </div>
 
         {/* Location */}
-        {livestock.farmLocation && <LightDetailCard title="Location" className={reveal()}>
+        {farmState && <LightDetailCard title="Location" className={reveal()}>
           <div className="space-y-4" style={{ animationDelay: "140ms" }}>
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-[#F7EDE2]/60 bg-gradient-to-br from-[#41362D] to-[#6B594A]">
@@ -429,7 +480,7 @@ export default function LivestockDetail() {
                     Farm Location
                   </p>
                   <p className="text-base font-bold text-black">
-                    {livestock.farmLocation}
+                    {farmState}
                   </p>
                 </div>
               </div>
@@ -497,6 +548,67 @@ export default function LivestockDetail() {
               </div>
             )}
           </div>
+        )}
+
+        {relatedLivestock.length > 0 && (
+          <section
+            className={`${reveal()} mt-6 border-t border-white/20 pt-5`}
+            aria-labelledby="related-products-title"
+          >
+            <div className="mb-3 flex items-end justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#E3C19F]">
+                  Same breed
+                </p>
+                <h2
+                  id="related-products-title"
+                  className="text-xl font-extrabold text-white"
+                >
+                  Add item
+                </h2>
+              </div>
+              <span className="text-xs font-semibold text-white/60">
+                Swipe to explore
+              </span>
+            </div>
+            <div className="no-scrollbar -mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-3">
+              {relatedLivestock.map((item) => {
+                const image = item.coverImage || item.images?.[0] || "";
+                const label = item.breed || item.species || "Livestock";
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={(event) =>
+                      navigateFromProductCard(
+                        `/livestock/${encodeURIComponent(item.id)}`,
+                        event.currentTarget,
+                        { image, label },
+                      )
+                    }
+                    className="w-40 flex-none snap-start overflow-hidden rounded-2xl border border-[#E3C19F]/55 bg-gradient-to-br from-[#41362D] to-[#6B594A] text-left shadow-lg shadow-black/20 transition-transform duration-200 active:scale-[0.98] sm:w-48"
+                  >
+                    <ProductImage
+                      src={image}
+                      alt={label}
+                      className="h-28 w-full rounded-none border-0 sm:h-32"
+                    />
+                    <div className="p-3">
+                      <p className="truncate text-sm font-extrabold text-white">
+                        {label}
+                      </p>
+                      <p className="mt-1 text-base font-extrabold text-[#F7EDE2]">
+                        RM {Number(item.price || 0).toLocaleString()}
+                      </p>
+                      <span className="mt-2 inline-flex rounded-lg border border-[#F7EDE2]/70 bg-white/10 px-2.5 py-1 text-[11px] font-bold text-white">
+                        View item
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
         )}
       </DetailOuterSheet>
 

@@ -20,7 +20,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useAuthPrompt } from "@/lib/auth-prompt-context";
 
 const EMPTY = {
-  label: "",
+  label: "home",
   name: "",
   email: "",
   phone: "",
@@ -78,12 +78,15 @@ function AddressForm({ initial, onSave, onCancel }) {
           <label className="text-gray-500 text-xs font-semibold mb-1.5 block">
             ADDRESS LABEL
           </label>
-          <input
+          <select
             value={form.label}
             onChange={set("label")}
-            placeholder='e.g. "Home", "Office", "Farm"'
             className={inputCls}
-          />
+          >
+            <option value="home">Home</option>
+            <option value="work">Work</option>
+            <option value="other">Other</option>
+          </select>
         </div>
 
         {/* Contact Info Section */}
@@ -230,7 +233,7 @@ function AddressCard({
       <div className="flex items-center justify-between rounded-t-2xl bg-white/10 px-4 py-2.5">
         <div className="flex items-center gap-2">
           {addr.label ? (
-            <span className="text-sm font-bold text-white">{addr.label}</span>
+            <span className="text-sm font-bold capitalize text-white">{addr.label}</span>
           ) : (
             <span className="text-sm text-white/70">No label</span>
           )}

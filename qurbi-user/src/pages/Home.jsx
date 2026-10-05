@@ -5,6 +5,7 @@ import {
   Leaf,
   ShoppingCart,
   Package,
+  ReceiptText,
   User,
   ChevronRight,
 } from "lucide-react";
@@ -21,7 +22,8 @@ const QUICK_ACTIONS = [
   { icon: Leaf, label: "Browse", path: "/browse" },
   { icon: Boxes, label: "Bulk Buy", path: "/bulk-buy" },
   { icon: ShoppingCart, label: "Cart", path: "/cart" },
-  { icon: Package, label: "Orders", path: "/history" },
+  { icon: Package, label: "Orders", path: "/orders" },
+  { icon: ReceiptText, label: "Transaction", path: "/history" },
   { icon: User, label: "Profile", path: "/profile" },
 ];
 
@@ -62,7 +64,12 @@ export default function Home() {
 
   const { reveal } = useReveal();
 
-  const { authChecked, isLoadingAuth, isLoadingPublicSettings } = useAuth();
+  const {
+    authChecked,
+    isAuthenticated,
+    isLoadingAuth,
+    isLoadingPublicSettings,
+  } = useAuth();
 
   const [showSplash, setShowSplash] = useState(
     () => !sessionStorage.getItem("gh_splash_shown"),
@@ -206,7 +213,9 @@ export default function Home() {
           </div>
 
           <div className="no-scrollbar flex gap-4 overflow-x-auto pb-2">
-            {QUICK_ACTIONS.map(({ icon: Icon, label, path }, i) => (
+            {QUICK_ACTIONS.filter(
+              (action) => action.label !== "Transaction" || isAuthenticated,
+            ).map(({ icon: Icon, label, path }, i) => (
               <Link
                 key={label}
                 to={path}
