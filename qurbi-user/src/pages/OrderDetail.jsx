@@ -1,9 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import {
   Camera,
   Check,
+  ChevronRight,
   CircleAlert,
   Clock3,
   ImagePlus,
@@ -18,9 +25,12 @@ import { useAuth } from "@/lib/AuthContext";
 import { useAuthPrompt } from "@/lib/auth-prompt-context";
 import { formatOrderDateTime } from "@/lib/order-date";
 import { formatRM } from "@/lib/format";
+import { extractState } from "@/lib/livestock-data";
+import { combineOrders, groupedOrderQuery } from "@/lib/order-groups";
 import ImageLightbox from "@/components/ImageLightbox";
 import AppHeader from "@/components/AppHeader";
 import PageLoading from "@/components/PageLoading";
+import PaymentErrorModal from "@/components/PaymentErrorModal";
 import StatusChip from "@/components/account/StatusChip";
 import StickyActionBar from "@/components/account/StickyActionBar";
 import {
@@ -559,9 +569,14 @@ export default function OrderDetail() {
   const { t } = useTranslation("orders");
   const { t: ta } = useTranslation("account");
   const { orderId } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const groupOrderParam = searchParams.get("group_ids") || orderId || "";
-  const detailOrderIds = groupOrderParam.split(",").map((id) => id.trim()).filter(Boolean);
+  const detailOrderIds = groupOrderParam
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
 
   const { user, isAuthenticated, authChecked } = useAuth();
   const { requestSignIn } = useAuthPrompt();
@@ -597,6 +612,7 @@ export default function OrderDetail() {
           qurbiApi.functions.invoke("fetchMyOrders", { orderId: id }),
         ),
       );
+
       setOrder(combineOrders(responses.map((response) => response.data?.order)));
     } catch (error) {
       setLoadError(
@@ -831,6 +847,18 @@ export default function OrderDetail() {
   const returnTab =
     searchParams.get("fromTab") || TAB_FOR_STATUS[order.status] || status.tab || "to-pay";
 
+  const returnPath =
+    returnTab === "history"
+      ? "/history"
+      : `/orders?tab=${encodeURIComponent(returnTab)}`;
+  const isAwaitingPayment =
+    status.next === "pay" ||
+    [order.status, order.payment_status, order.paymentStatus].some((value) =>
+      ["pending", "pending_payment", "to_pay"].includes(
+        String(value || "").toLowerCase(),
+      ),
+    );
+
   const refundStatus = orderRefundStatus(order);
   const isRefundRejected = refundStatus === "rejected";
   const hasRefund =
@@ -846,9 +874,9 @@ export default function OrderDetail() {
 
   // Exactly one primary action, pinned above the bottom navigation.
   let stickyAction = null;
-  if (status.next === "pay") {
+  if (isAwaitingPayment) {
     stickyAction = (
-      <Link to={`/payment?order_id=${encodeURIComponent(order.id)}`} className={`${primaryBtn} w-full`}>
+      <Link to={`/payment?${groupedOrderQuery(order)}`} className={`${primaryBtn} w-full`}>
         {t("orders.completePayment")}
       </Link>
     );
@@ -883,7 +911,7 @@ export default function OrderDetail() {
     <div className={`aisyah-page ${stickyAction ? "pb-[calc(11rem+env(safe-area-inset-bottom))]" : ""}`}>
       <AppHeader
         title={t("orderDetail.title")}
-        backTo={`/orders?tab=${encodeURIComponent(returnTab)}`}
+        backTo={returnPath}
         subtitle={`${order.order_number} · ${formatOrderDateTime(order.created_date)}`}
       />
 
@@ -1036,7 +1064,7 @@ export default function OrderDetail() {
 
         <ProgressTimeline order={order} />
 
-        {(isPaid || Object.keys(photos).length > 0) && (
+        {!isAwaitingPayment && (isPaid || Object.keys(photos).length > 0) && (
           <OrderTracking
             order={order}
             photos={photos}
@@ -1044,7 +1072,7 @@ export default function OrderDetail() {
           />
         )}
 
-        {progressImages.length > 0 && (
+        {!isAwaitingPayment && progressImages.length > 0 && (
           <section className="qurbi-photo-area rounded-2xl border p-4 shadow-sm">
             <h2 className="text-base font-bold text-[#41362D]">{t("orderDetail.progress.title")}</h2>
 
@@ -1146,32 +1174,90 @@ export default function OrderDetail() {
         )}
 
         <section className={cardCls} aria-labelledby="items-title">
-          <h2 id="items-title" className="mb-1 text-base font-bold text-white">
+          <h2 id="items-title" className="text-base font-bold text-white">
             {t("orderDetail.items.title")}
           </h2>
+          <p className="mb-2 text-xs font-medium text-white/65">
+            {t("orderDetail.items.tapHint")}
+          </p>
 
-          {order.items?.map((item, index) => (
-            <div
-              key={item.id || index}
-              className="flex items-center gap-3 border-b border-white/15 py-3 last:border-0"
-            >
-              <ItemImage src={item.image} />
-              <div className="min-w-0 flex-1">
-                <p className="break-words text-[15px] font-semibold text-white">
-                  {item.breed || item.listing_name || t("orders.fallbackItemName")}
-                </p>
-                <p className="mt-0.5 text-[13px] text-white/75">
-                  {item.quantity} × {formatRM(item.price_per_head)}
-                  {item.animal ? ` · ${item.animal}` : ""}
-                  {item.grade
-                    ? t("orderDetail.items.gradeSuffix", { grade: item.grade })
-                    : ""}
-                </p>
-              </div>
-              <p className="whitespace-nowrap text-[15px] font-bold text-white">
-                {formatRM(item.total)}
-              </p>
-            </div>
+          <div className="space-y-2">
+            {order.items?.map((item, index) => {
+              const productPath =
+                item.item_type === "bulk"
+                  ? item.bulk_listing_id
+                    ? `/bulk-buy/${encodeURIComponent(item.bulk_listing_id)}?from=order`
+                    : ""
+                  : item.livestock_id
+                    ? `/livestock/${encodeURIComponent(item.livestock_id)}?from=order`
+                    : "";
+              const ItemContainer = productPath ? Link : "div";
+              const itemName =
+                item.breed || item.listing_name || t("orders.fallbackItemName");
+              const itemLocation =
+                extractState(
+                  item.farm_location ||
+                    item.farmLocation ||
+                    item.farm_address ||
+                    item.farm_state ||
+                    item.state ||
+                    order.farm_location ||
+                    order.farm_state ||
+                    "",
+                ) ||
+                item.farm_state ||
+                item.state ||
+                order.farm_state ||
+                t("orderDetail.items.stateUnavailable");
+
+              return (
+                <ItemContainer
+                  key={item.id || `${itemName}-${index}`}
+                  {...(productPath ? { to: productPath } : {})}
+                  className={`flex w-full items-center gap-3 rounded-xl border border-white/20 bg-white/5 p-3 text-left ${productPath ? "cursor-pointer transition-colors hover:border-[#F7EDE2] hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E3C19F] active:scale-[0.99]" : ""}`}
+                  aria-label={
+                    productPath
+                      ? t("orderDetail.items.viewItemAria", { name: itemName })
+                      : undefined
+                  }
+                >
+                  <ItemImage src={item.image} />
+                  <div className="min-w-0 flex-1">
+                    <p className="break-words text-[15px] font-semibold text-white">
+                      {itemName}
+                    </p>
+                    <p className="mt-0.5 flex min-w-0 items-center gap-1 text-xs font-medium text-white/65">
+                      <MapPin aria-hidden="true" className="h-3 w-3 flex-none text-[#E3C19F]" />
+                      <span className="truncate">{itemLocation}</span>
+                    </p>
+                    <p className="mt-0.5 text-[13px] text-white/75">
+                      {item.quantity} × {formatRM(item.price_per_head)}
+                      {item.animal ? ` · ${item.animal}` : ""}
+                      {item.grade
+                        ? t("orderDetail.items.gradeSuffix", { grade: item.grade })
+                        : ""}
+                    </p>
+                  </div>
+                  <div className="flex flex-none items-center gap-2">
+                    <div className="text-right">
+                      <p className="whitespace-nowrap text-[15px] font-bold text-white">
+                        {formatRM(item.total)}
+                      </p>
+                      {productPath && (
+                        <p className="text-[10px] font-semibold text-white/60">
+                          {t("orderDetail.items.viewDetails")}
+                        </p>
+                      )}
+                    </div>
+                    {productPath && (
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#F7EDE2] bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] text-[#41362D] shadow-md shadow-black/20">
+                        <ChevronRight aria-hidden="true" className="h-5 w-5" strokeWidth={3} />
+                      </span>
+                    )}
+                  </div>
+                </ItemContainer>
+              );
+            })}
           </div>
 
           <dl className="mt-1 space-y-1.5 border-t border-white/25 pt-3 text-[15px]">
@@ -1224,7 +1310,7 @@ export default function OrderDetail() {
       />
       <PaymentErrorModal
         error={paymentError}
-        viewOrderLabel="Stay on To Pay Order"
+        viewOrderLabel={t("orderDetail.paymentError.stayOnOrder")}
         onClose={() => {
           setPaymentError(null);
           navigate(`${location.pathname}${location.search}`, {

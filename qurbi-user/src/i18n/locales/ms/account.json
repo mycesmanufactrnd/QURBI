@@ -84,7 +84,8 @@
       "to-receive": "Pesanan yang sedang dihantar kepada anda akan dipaparkan di sini.",
       "completed": "Pesanan yang telah anda terima akan dipaparkan di sini.",
       "return-refund": "Permohonan pemulangan dan bayaran balik akan dipaparkan di sini."
-    }
+    },
+    "moreFarmers": "{{name}} + {{count}} lagi ladang"
   },
   "orderDetail": {
     "reservedUntil": "Ditempah untuk anda sehingga {{time}}",
@@ -168,6 +169,11 @@
     "optional": "(pilihan)",
     "labelField": "Nama alamat",
     "labelPlaceholder": "Rumah",
+    "labelOptions": {
+      "home": "Rumah",
+      "work": "Tempat kerja",
+      "other": "Lain-lain"
+    },
     "contactHeading": "Siapa yang akan menerima?",
     "nameField": "Nama penuh",
     "namePlaceholder": "Nama orang yang menerima",

@@ -23,6 +23,8 @@
     "bulkLotPlaceholder": "Lot pukal"
   },
   "bulkListingDetail": {
+    "backToOrders": "Kembali ke Pesanan",
+    "backToPayment": "Kembali ke Pembayaran",
     "backToCart": "Kembali ke Troli",
     "backToBulkBuy": "Kembali ke Beli Pukal",
     "loadError": "Tidak dapat memuatkan lot pukal ini.",
@@ -61,6 +63,16 @@
     "bulkLotPlaceholder": "Lot pukal"
   },
   "livestockDetail": {
+    "reservedTitle": "Ternakan Ditempah",
+    "reservedMessage": "Ternakan ini sedang ditempah dan tidak boleh ditambah ke troli. Sila pilih ternakan lain yang tersedia.",
+    "reservedByYouMessage": "Ternakan ini sudah ditempah dalam pesanan anda yang sedia ada. Teruskan pembayaran dari Pesanan Saya dan bukannya menambahnya ke troli semula.",
+    "viewMyOrders": "Lihat Pesanan Saya",
+    "backToOrders": "Kembali ke Pesanan",
+    "backToPayment": "Kembali ke Pembayaran",
+    "sameBreed": "Baka yang sama",
+    "relatedTitle": "Tambah item",
+    "swipeToExplore": "Leret untuk meneroka",
+    "viewItem": "Lihat item",
     "unavailableTitle": "Ternakan Tidak Tersedia",
     "verifyFailTitle": "Tidak Dapat Mengesahkan Ketersediaan",
     "unavailableMessage": "Ternakan ini tidak lagi tersedia untuk dibeli. Sila lihat ternakan lain yang tersedia.",

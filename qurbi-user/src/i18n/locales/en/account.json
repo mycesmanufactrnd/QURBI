@@ -84,7 +84,8 @@
       "to-receive": "Orders on the way to you will appear here.",
       "completed": "Orders you have received will appear here.",
       "return-refund": "Return and refund requests will appear here."
-    }
+    },
+    "moreFarmers": "{{name}} + {{count}} more farms"
   },
   "orderDetail": {
     "reservedUntil": "Reserved for you until {{time}}",
@@ -168,6 +169,11 @@
     "optional": "(optional)",
     "labelField": "Address name",
     "labelPlaceholder": "Home",
+    "labelOptions": {
+      "home": "Home",
+      "work": "Work",
+      "other": "Other"
+    },
     "contactHeading": "Who will receive it?",
     "nameField": "Full name",
     "namePlaceholder": "Name of the person receiving",

@@ -13,17 +13,15 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import { qurbiApi } from "@/api/qurbiClient";
-import AppHeader from "@/components/AppHeader";
-import CancelOrderModal from "@/components/CancelOrderModal";
-import PageLoading from "@/components/PageLoading";
-import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
 import { useAuth } from "@/lib/AuthContext";
 import { useAuthPrompt } from "@/lib/auth-prompt-context";
 import { useReveal } from "@/hooks/useReveal";
 import CancelOrderModal from "@/components/CancelOrderModal";
 import AppHeader from "@/components/AppHeader";
+import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
 import { orderDateKey, orderTimestamp } from "@/lib/order-date";
 import { formatRM } from "@/lib/format";
+import { groupedOrderQuery, groupOrdersByCheckout } from "@/lib/order-groups";
 import PageLoading from "@/components/PageLoading";
 import StatusChip from "@/components/account/StatusChip";
 import { ORDER_TABS, orderStatusInfo } from "@/components/account/orderStatus";
@@ -80,12 +78,36 @@ function orderTitle(order, t, ta) {
   return extra > 0 ? ta("orders.titleMore", { name, count: extra }) : name;
 }
 
-function farmerName(order) {
+function farmerName(order, t) {
+  const names = [
+    ...new Set(
+      (order.items || []).map((item) => item.farmer_name).filter(Boolean),
+    ),
+  ];
+  if (names.length > 1) {
+    return names.length <= 2
+      ? names.join(" & ")
+      : t("orders.moreFarmers", { name: names[0], count: names.length - 1 });
+  }
   return (
     order.farmer?.fullName ||
     order.farmer_name ||
     order.items?.[0]?.farmer_name ||
     ""
+  );
+}
+
+function TransactionHeaderButton({ onOpen }) {
+  const { t } = useTranslation("orders");
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={t("orders.openTransactionHistory")}
+      className="flex min-h-11 items-center justify-center rounded-xl border border-[#F7EDE2]/60 bg-white/10 px-3 text-xs font-bold text-white transition-transform active:scale-90"
+    >
+      {t("orders.transaction")}
+    </button>
   );
 }
 
@@ -139,12 +161,17 @@ function OrderCard({
   const reservedUntil = isPending ? reservationLabel(order, t) : "";
   const isHistory = HISTORY_STATUSES.includes(order.status);
   const originTab = sessionStorage.getItem("gh_orders_active_tab") || "";
-  const detailsPath = `/orders/${encodeURIComponent(order.id)}${originTab ? `?fromTab=${encodeURIComponent(originTab)}` : ""}`;
-  const paymentPath = `/payment?order_id=${encodeURIComponent(order.id)}`;
+  const groupIds = order.order_ids || [order.id];
+  const groupSuffix =
+    groupIds.length > 1
+      ? `${originTab ? "&" : "?"}group_ids=${encodeURIComponent(groupIds.join(","))}`
+      : "";
+  const detailsPath = `/orders/${encodeURIComponent(order.id)}${originTab ? `?fromTab=${encodeURIComponent(originTab)}` : ""}${groupSuffix}`;
+  const paymentPath = `/payment?${groupedOrderQuery(order)}`;
   const receiptPath = `/receipt?order_id=${encodeURIComponent(order.id)}`;
   const cardDestination = isPending ? paymentPath : detailsPath;
   const title = orderTitle(order, t, ta);
-  const farmer = farmerName(order);
+  const farmer = farmerName(order, ta);
   const selectable = selecting && isHistory;
 
   const primary =
@@ -356,21 +383,29 @@ export default function Orders() {
   const { t } = useTranslation("orders");
   const { t: ta } = useTranslation("account");
   const { user, isAuthenticated, authChecked } = useAuth();
-  const { requestSignIn } = useAuthPrompt();
-  const { navigateWithTransition } = useHeaderTransition();
   const navigate = useNavigate();
+  const { navigateWithTransition } = useHeaderTransition();
+  const { reveal } = useReveal();
   const [activeTab, setActiveTab] = useState(() => {
     const queryTab = new URLSearchParams(window.location.search).get("tab");
     const savedTab = sessionStorage.getItem("gh_orders_active_tab");
     if (ORDER_TABS.some((tab) => tab.key === queryTab)) return queryTab;
     return ORDER_TABS.some((tab) => tab.key === savedTab) ? savedTab : "to-pay";
   });
+  const [view, setView] = useState(
+    () => sessionStorage.getItem("gh_orders_view") || "current",
+  );
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [cancelCandidate, setCancelCandidate] = useState(null);
-  const [cancelError, setCancelError] = useState("");
   const [cancellingOrderId, setCancellingOrderId] = useState("");
+  const [cancelCandidate, setCancelCandidate] = useState(null);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [cancelError, setCancelError] = useState("");
+  const [selectingHistory, setSelectingHistory] = useState(false);
+  const [historyIds, setHistoryIds] = useState([]);
+  const [deletingHistory, setDeletingHistory] = useState(false);
+  const [showDeleteHistory, setShowDeleteHistory] = useState(false);
 
   const loadOrders = useCallback(async () => {
     if (!authChecked) return;
@@ -391,32 +426,41 @@ export default function Orders() {
     }
   }, [authChecked, isAuthenticated, user?.id]);
 
-  useEffect(() => { loadOrders(); }, [loadOrders]);
-  useEffect(() => { sessionStorage.setItem("gh_orders_active_tab", activeTab); }, [activeTab]);
+  useEffect(() => {
+    loadOrders();
+  }, [loadOrders]);
   useEffect(() => {
     const queryTab = new URLSearchParams(window.location.search).get("tab");
     if (ORDER_TABS.some((tab) => tab.key === queryTab))
       navigate("/orders", { replace: true });
   }, [navigate]);
-
-  const active = TABS.find((tab) => tab.key === activeTab) || TABS[0];
-  const groupedOrders = useMemo(
-    () => groupOrdersByDay(groupOrdersByCheckout(
-      orders.filter((order) => active.statuses.includes(order.status)),
-    )),
-    [active, orders],
-  );
+  useEffect(() => {
+    sessionStorage.setItem("gh_orders_active_tab", activeTab);
+  }, [activeTab]);
+  useEffect(() => {
+    sessionStorage.setItem("gh_orders_view", view);
+  }, [view]);
 
   const cancelOrder = async () => {
     const orderId = cancelCandidate?.id;
     if (!orderId || cancellingOrderId) return;
+    const cancelIds = cancelCandidate.order_ids || [orderId];
     setCancellingOrderId(orderId);
     setCancelError("");
     try {
-      await Promise.all(
-        (cancelCandidate.order_ids || [orderId]).map((id) =>
+      const responses = await Promise.all(
+        cancelIds.map((id) =>
           qurbiApi.functions.invoke("cancelMyOrder", { orderId: id }),
         ),
+      );
+      const cancelledOrders = responses.map((response) => response.data?.order);
+      setOrders((current) =>
+        current.map((order) => {
+          const index = cancelIds.indexOf(order.id);
+          return index >= 0
+            ? { ...order, ...cancelledOrders[index], status: "cancelled" }
+            : order;
+        }),
       );
       setCancelCandidate(null);
       setSuccessMessage(t("orders.cancelSuccess"));
@@ -430,8 +474,6 @@ export default function Orders() {
       );
       // The server may have detected a stock change while cancellation was open.
       await loadOrders();
-    } catch (cancelFailure) {
-      setCancelError(cancelFailure.data?.error || cancelFailure.message || "We couldn't cancel this order. Please try again.");
     } finally {
       setCancellingOrderId("");
     }
@@ -444,11 +486,14 @@ export default function Orders() {
     if (!historyIds.length || deletingHistory) return;
     setDeletingHistory(true);
     try {
+      const hiddenIds = visibleOrders
+        .filter((order) => historyIds.includes(order.id))
+        .flatMap((order) => order.order_ids || [order.id]);
       await qurbiApi.functions.invoke("hideMyOrderHistory", {
-        orderIds: historyIds,
+        orderIds: hiddenIds,
       });
       setOrders((current) =>
-        current.filter((order) => !historyIds.includes(order.id)),
+        current.filter((order) => !hiddenIds.includes(order.id)),
       );
       setHistoryIds([]);
       setSelectingHistory(false);
@@ -462,18 +507,28 @@ export default function Orders() {
     }
   };
 
-  const tabCounts = useMemo(() => {
-    const counts = {};
+  const ordersByTab = useMemo(() => {
+    const byTab = {};
     for (const order of orders) {
       const tab = orderStatusInfo(order).tab;
-      counts[tab] = (counts[tab] || 0) + 1;
+      (byTab[tab] ||= []).push(order);
     }
-    return counts;
+    // Orders created by one multi-farmer checkout are shown as one entry.
+    return Object.fromEntries(
+      Object.entries(byTab).map(([tab, list]) => [tab, groupOrdersByCheckout(list)]),
+    );
   }, [orders]);
+  const tabCounts = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(ordersByTab).map(([tab, list]) => [tab, list.length]),
+      ),
+    [ordersByTab],
+  );
   const active = ORDER_TABS.find((tab) => tab.key === activeTab) || ORDER_TABS[0];
   const visibleOrders = useMemo(
-    () => orders.filter((order) => orderStatusInfo(order).tab === active.key),
-    [active, orders],
+    () => ordersByTab[active.key] || [],
+    [active, ordersByTab],
   );
   const selectableHistoryIds = useMemo(
     () =>
@@ -493,10 +548,6 @@ export default function Orders() {
   );
 
   if (!authChecked) {
-    return <div className="aisyah-page"><AppHeader title="My Orders" /><PageLoading contentOnly message="Loading orders..." /></div>;
-  }
-
-  if (!isAuthenticated) {
     return (
       <div className="aisyah-page">
         <AppHeader title={t("orders.title")} subtitle={t("orders.subtitle")} />
@@ -530,6 +581,9 @@ export default function Orders() {
         sticky
         title={t("orders.title")}
         subtitle={t("orders.subtitle")}
+        leftAction={
+          <TransactionHeaderButton onOpen={() => navigateWithTransition("/history")} />
+        }
       >
         <div className="flex w-full min-w-0 items-center gap-2">
           <div
@@ -697,7 +751,22 @@ export default function Orders() {
           </>
         )}
       </main>
-      <CancelOrderModal order={cancelCandidate} loading={Boolean(cancellingOrderId)} error={cancelError} onConfirm={cancelOrder} onClose={() => { setCancelError(""); setCancelCandidate(null); }} />
+      <DeleteHistoryModal
+        count={showDeleteHistory ? historyIds.length : 0}
+        loading={deletingHistory}
+        onConfirm={deleteHistory}
+        onClose={() => setShowDeleteHistory(false)}
+      />
+      <CancelOrderModal
+        order={cancelCandidate}
+        loading={!!cancellingOrderId}
+        error={cancelError}
+        onConfirm={cancelOrder}
+        onClose={() => {
+          setCancelError("");
+          setCancelCandidate(null);
+        }}
+      />
     </div>
   );
 }

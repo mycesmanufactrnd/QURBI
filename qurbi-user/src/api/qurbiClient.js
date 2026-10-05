@@ -1,8 +1,11 @@
 import apiClient, { getAccessToken, uploadApi } from "@/api/apiClient";
+import { checkoutGroupFromOrder, checkoutGroupNote } from "@/lib/order-groups";
 
 const API_ORIGIN = new URL(
   import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api",
-  window.location.origin,
+  // No window during the build-time prerender; the base is only used to
+  // resolve a relative API URL, which production configures as absolute.
+  typeof window === "undefined" ? "http://localhost" : window.location.origin,
 ).origin;
 
 const toSnake = (key) => key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);

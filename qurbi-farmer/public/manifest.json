@@ -4,5 +4,15 @@
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f7ede2",
-  "theme_color": "#4c333b"
+  "theme_color": "#4c333b",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "description": "Portal penternak QURBI untuk mengurus ternakan dan pesanan.",
+  "lang": "ms"
 }

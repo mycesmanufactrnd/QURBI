@@ -68,7 +68,11 @@ export default function Profile() {
   };
 
   const inputCls =
-    "mt-1.5 w-full min-h-12 rounded-xl border-2 border-[#E3C19F] bg-[#FFFFFF] px-4 py-3 text-base text-[#41362D] placeholder:text-[#6B594A]/60 outline-none focus:border-[#6B594A]";
+    "w-full min-h-12 bg-transparent py-3.5 pl-11 pr-4 text-base font-medium text-white placeholder:text-white/60 outline-none";
+  const inputWrapCls =
+    "relative mt-1.5 overflow-hidden rounded-2xl border border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] shadow-md shadow-[#41362D]/15 transition focus-within:border-white/80 focus-within:ring-2 focus-within:ring-[#41362D]/20";
+  const inputIconCls =
+    "pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#E3C19F]";
   const labelCls = "block text-sm font-bold text-[#41362D]";
   const errorCls = "mt-1 text-sm font-semibold text-[#9A2E0C]";
 
@@ -213,7 +217,7 @@ export default function Profile() {
         {showEdit && (
           <>
             <div
-              className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm profile-backdrop"
+              className="fixed inset-0 z-40 bg-[#241D18]/55 backdrop-blur-[3px] profile-backdrop"
               onClick={() => !saving && setShowEdit(false)}
             />
             <div className="fixed inset-0 z-50 flex items-center justify-center p-5 pointer-events-none">
@@ -221,23 +225,36 @@ export default function Profile() {
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="edit-profile-title"
-                className="w-full max-w-sm rounded-3xl border border-[#E3C19F] bg-[#FFFDF9] shadow-2xl pointer-events-auto profile-modal"
+                className="w-full max-w-sm overflow-hidden rounded-[28px] border border-[#E3C19F]/70 bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] shadow-[0_24px_70px_rgba(34,27,22,0.42)] pointer-events-auto profile-modal"
               >
-                <div className="flex items-center justify-between border-b border-[#E3C19F] px-5 py-3">
-                  <h3 id="edit-profile-title" className="text-lg font-bold text-[#41362D]">
-                    {t("profile.editModal.title")}
-                  </h3>
+                <div className="flex items-center justify-between bg-gradient-to-br from-[#41362D] to-[#6B594A] px-5 py-5">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-11 w-11 flex-none items-center justify-center rounded-2xl border border-[#F7EDE2]/50 bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] shadow-lg">
+                      <Pencil className="h-5 w-5 text-[#41362D]" aria-hidden="true" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3
+                        id="edit-profile-title"
+                        className="text-lg font-bold leading-tight text-white"
+                      >
+                        {t("profile.editModal.title")}
+                      </h3>
+                      <p className="mt-1 text-xs text-white/75">
+                        {t("profile.editModal.subtitle")}
+                      </p>
+                    </div>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setShowEdit(false)}
                     aria-label={ta("profile.closeEdit")}
-                    className="-mr-2 flex h-11 w-11 items-center justify-center rounded-full text-[#41362D] hover:bg-[#F7EDE2]"
+                    className="flex h-11 w-11 flex-none items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition-all hover:bg-white/20 active:scale-90"
                   >
-                    <X className="h-5 w-5" />
+                    <X className="h-4 w-4" />
                   </button>
                 </div>
                 <form
-                  className="space-y-4 p-5"
+                  className="space-y-5 p-5"
                   noValidate
                   onSubmit={(event) => {
                     event.preventDefault();
@@ -248,6 +265,8 @@ export default function Profile() {
                     <label htmlFor="profile-name" className={labelCls}>
                       {t("profile.accountInfo.name")} <span className="text-[#9A2E0C]">*</span>
                     </label>
+                    <div className={inputWrapCls}>
+                      <User className={inputIconCls} aria-hidden="true" />
                     <input
                       id="profile-name"
                       value={form.name}
@@ -259,12 +278,15 @@ export default function Profile() {
                       aria-invalid={Boolean(fieldErrors.name)}
                       className={inputCls}
                     />
+                    </div>
                     {fieldErrors.name && <p className={errorCls}>{fieldErrors.name}</p>}
                   </div>
                   <div>
                     <label htmlFor="profile-email" className={labelCls}>
                       {t("profile.accountInfo.email")}
                     </label>
+                    <div className={inputWrapCls}>
+                      <Mail className={inputIconCls} aria-hidden="true" />
                     <input
                       id="profile-email"
                       value={profile.email}
@@ -273,8 +295,9 @@ export default function Profile() {
                       readOnly
                       aria-readonly="true"
                       aria-describedby="profile-email-help"
-                      className="mt-1.5 w-full min-h-12 cursor-not-allowed rounded-xl border-2 border-[#E3C19F] bg-[#F7EDE2] px-4 py-3 text-base text-[#41362D]/80"
+                      className={`${inputCls} cursor-not-allowed text-white/75`}
                     />
+                    </div>
                     <p id="profile-email-help" className="mt-1 text-[13px] text-[#5A493C]">
                       {ta("profile.emailLocked")}
                     </p>
@@ -283,6 +306,8 @@ export default function Profile() {
                     <label htmlFor="profile-phone" className={labelCls}>
                       {t("profile.accountInfo.phone")}
                     </label>
+                    <div className={inputWrapCls}>
+                      <Phone className={inputIconCls} aria-hidden="true" />
                     <input
                       id="profile-phone"
                       value={form.phone}
@@ -296,6 +321,7 @@ export default function Profile() {
                       aria-invalid={Boolean(fieldErrors.phone)}
                       className={inputCls}
                     />
+                    </div>
                     {fieldErrors.phone && <p className={errorCls}>{fieldErrors.phone}</p>}
                   </div>
                   {saveError && (

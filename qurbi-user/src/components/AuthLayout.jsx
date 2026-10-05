@@ -17,7 +17,10 @@ export default function AuthLayout({
   const { t } = useTranslation("auth");
   const isRegister = mode === "register";
   return (
-    <div className="relative isolate min-h-screen overflow-x-hidden flex flex-col items-center justify-center px-4 py-10 pb-[max(2.5rem,env(safe-area-inset-bottom))] bg-[#F7EDE2]">
+    <div
+      data-page-description={subtitle || undefined}
+      className="relative isolate min-h-screen overflow-x-hidden flex flex-col items-center justify-center px-4 py-10 pb-[max(2.5rem,env(safe-area-inset-bottom))] bg-[#F7EDE2]"
+    >
       <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] transition-opacity duration-500 ${isRegister ? "opacity-0" : "opacity-100"}`} />
       <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br from-[#E8C7A5] to-[#F7EDE2] transition-opacity duration-500 ${isRegister ? "opacity-100" : "opacity-0"}`} />
       {/* Brand */}

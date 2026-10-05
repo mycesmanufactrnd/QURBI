@@ -5,13 +5,6 @@ import {
 } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, FindOptionsWhere, Repository } from 'typeorm';
-import {
-  Breed,
-  BreedRequest,
-  Livestock,
-  RequestStatus,
-  UserRole,
-} from '../entities';
 import { Breed, BreedRequest, Livestock, LivestockStatus, RequestStatus, UserRole } from '../entities';
 import { BaseCrudService } from '../common/base-crud.service';
 import { slugify } from '../common/slugify';
@@ -115,11 +108,6 @@ export class BreedRequestsService extends BaseCrudService<BreedRequest> {
         );
         request.status = RequestStatus.APPROVED;
         request.createdBreedId = breed.id;
-        await manager.update(
-          Livestock,
-          { breedId: breed.id },
-          { breedApprovalStatus: RequestStatus.APPROVED },
-        );
         for (const listing of waitingListings) {
           const attributes = listing.attributes ?? {};
           const originalStatus = String(attributes.originalStatus ?? '').toLowerCase();

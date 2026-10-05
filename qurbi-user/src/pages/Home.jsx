@@ -1,3 +1,4 @@
+import { useMounted } from "@/hooks/useMounted";
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -22,8 +23,8 @@ import ViewCartCard from "@/components/ViewCartCard";
 import LivestockCard from "@/components/shop/LivestockCard";
 import { loadLivestockWithFarmers } from "@/lib/farmerClient";
 import { isProductExpired } from "@/lib/product-expiry";
-import cowImage from "@/assets/home-categories/Lembu-white.png";
-import goatImage from "@/assets/home-categories/Kambing-white.png";
+import cowImage from "@/assets/home-categories/Lembu-white.webp";
+import goatImage from "@/assets/home-categories/Kambing-white.webp";
 
 // Shortcuts: each one carries a hint so it adds information the bottom nav
 // does not (what is inside, how many), instead of repeating it.
@@ -31,7 +32,8 @@ const QUICK_ACTIONS = [
   { icon: Leaf, label: "browse", path: "/browse" },
   { icon: Boxes, label: "bulkBuy", path: "/bulk-buy" },
   { icon: ShoppingCart, label: "cart", path: "/cart" },
-  { icon: Package, label: "orders", path: "/history" },
+  { icon: Package, label: "orders", path: "/orders" },
+  { icon: ReceiptText, label: "transaction", path: "/history" },
   { icon: User, label: "profile", path: "/profile" },
   { icon: MapPin, label: "addresses", path: "/address-book" },
 ];
@@ -79,6 +81,7 @@ function FeaturedSkeleton() {
 export default function Home() {
   const { t } = useTranslation("shop");
   const { t: tf } = useTranslation("shopflow");
+  const { t: tseo } = useTranslation("seo");
   const navigate = useNavigate();
 
   const { totalItems, totalPrice } = useCart();
@@ -92,9 +95,14 @@ export default function Home() {
     isLoadingPublicSettings,
   } = useAuth();
 
-  const [showSplash, setShowSplash] = useState(
-    () => !sessionStorage.getItem("gh_splash_shown"),
-  );
+  // The splash is browser-only. The prerendered HTML (and the first client
+  // render that hydrates it) show the real page content; right after mount
+  // the splash is shown exactly as before.
+  const mounted = useMounted();
+  const [showSplash, setShowSplash] = useState(false);
+  useEffect(() => {
+    setShowSplash(!sessionStorage.getItem("gh_splash_shown"));
+  }, []);
   const [splashAnimationDone, setSplashAnimationDone] = useState(false);
   const [bootstrapReleased, setBootstrapReleased] = useState(false);
   const [activeHighlight, setActiveHighlight] = useState(0);
@@ -236,7 +244,7 @@ export default function Home() {
 
   // Keep the existing launch/transition splash on screen until both the
   // minimum animation and authentication bootstrap have completed.
-  if (showSplash || (!sessionReady && !bootstrapReleased)) {
+  if (mounted && (showSplash || (!sessionReady && !bootstrapReleased))) {
     return (
       <SplashScreen
         duration={SPLASH_DURATION_MS}
@@ -248,10 +256,11 @@ export default function Home() {
   }
 
   return (
-    <div className="aisyah-page">
+    <main className="aisyah-page">
       <AppHeader
         eyebrow=""
         title="QURBI"
+        subtitle={tseo("home.tagline")}
         titleClassName="text-2xl sm:text-3xl"
         subtitleClassName="text-base"
         search={
@@ -320,6 +329,9 @@ export default function Home() {
                   data-no-contrast-outline
                   src={HOME_SPECIES_IMAGES[label]}
                   alt=""
+                  width={44}
+                  height={44}
+                  decoding="async"
                   className="h-11 w-11 flex-none object-contain"
                 />
                 <span className="text-lg font-bold text-white">
@@ -485,7 +497,9 @@ export default function Home() {
             {t("home.quickActionsTitle")}
           </h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {QUICK_ACTIONS.map(({ icon: Icon, label, path }) => (
+            {QUICK_ACTIONS.filter(
+              (action) => action.label !== "transaction" || isAuthenticated,
+            ).map(({ icon: Icon, label, path }) => (
               <Link
                 key={label}
                 to={path}
@@ -508,6 +522,6 @@ export default function Home() {
           </div>
         </section>
       </div>
-    </div>
+    </main>
   );
 }

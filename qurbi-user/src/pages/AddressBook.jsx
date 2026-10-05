@@ -28,6 +28,8 @@ import {
   secondaryBtn,
 } from "@/components/account/buttons";
 
+const ADDRESS_LABELS = ["home", "work", "other"];
+
 const EMPTY = {
   label: "home",
   name: "",
@@ -154,15 +156,22 @@ function AddressForm({ initial, error = "", onSave, onCancel }) {
         <Field
           id="address-label"
           label={ta("address.labelField")}
-          help={t("addressBook.form.labelPlaceholder")}
         >
-          <input
+          <select
             id="address-label"
             value={form.label}
             onChange={set("label")}
-            placeholder={ta("address.labelPlaceholder")}
             className={`${inputCls} border-[#E3C19F]`}
-          />
+          >
+            {form.label && !ADDRESS_LABELS.includes(form.label) && (
+              <option value={form.label}>{form.label}</option>
+            )}
+            {ADDRESS_LABELS.map((value) => (
+              <option key={value} value={value}>
+                {ta(`address.labelOptions.${value}`)}
+              </option>
+            ))}
+          </select>
         </Field>
 
         <fieldset className="space-y-4">
@@ -332,7 +341,9 @@ function AddressCard({
 }) {
   const { t } = useTranslation("profile");
   const { t: ta } = useTranslation("account");
-  const name = addr.label || t("addressBook.card.noLabel");
+  const name = ADDRESS_LABELS.includes(addr.label)
+    ? ta(`address.labelOptions.${addr.label}`)
+    : addr.label || t("addressBook.card.noLabel");
   return (
     <article
       className={`aisyah-card overflow-hidden rounded-2xl border-2 ${addr.isDefault ? "border-[#E3C19F]" : isSelected ? "border-[#E3C19F]/70" : "border-transparent"}`}

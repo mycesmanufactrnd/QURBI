@@ -199,22 +199,23 @@ export default function AdminBreeds() {
         {loading ? <ListSkeleton rows={3} /> : loadError ? null : tab !== "master" ? (
           shownRequests.length ? <div className="grid items-start gap-3 lg:grid-cols-2">
             {shownRequests.map((request) => (
-              <div key={request.id} className="overflow-hidden rounded-2xl border border-border bg-card">
-                {request.referenceImage && (
-                  <a
-                    href={resolveApiAssetUrl(request.referenceImage)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex h-52 w-full items-center justify-center border-b border-border bg-muted/40 p-3"
-                    title="Open full image"
-                  >
-                    <img src={resolveApiAssetUrl(request.referenceImage)} alt={request.proposedName} className="h-full w-full object-contain" />
-                  </a>
-                )}
-                <div className="p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <div><p className="font-extrabold">{request.proposedName}</p><p className="text-xs text-muted-foreground">{request.species}</p></div>
-                    <StatusBadge tone={request.status === "Pending" ? "warning" : request.status === "Approved" ? "success" : "danger"} dot>{request.status}</StatusBadge>
+              <article key={request.id} className={cn("soft-card overflow-hidden", request.status === "Pending" && "border-amber-300/80")}>
+                <div className="flex gap-3 p-4">
+                  {request.referenceImage && (
+                    <a href={resolveApiAssetUrl(request.referenceImage)} target="_blank" rel="noreferrer" className="group relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl border border-border bg-muted/40" title="Open full image" aria-label={`Open reference photo of ${request.proposedName}`}>
+                      <img src={resolveApiAssetUrl(request.referenceImage)} alt={request.proposedName} className="h-full w-full object-cover" />
+                      <span className="absolute bottom-1 right-1 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white"><ExternalLink className="h-3.5 w-3.5" /></span>
+                    </a>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="break-words text-base font-extrabold">{request.proposedName}</p>
+                        <p className="text-sm text-muted-foreground">{request.species || "Species not set"}{request.created_date ? ` · ${formatDate(request.created_date)}` : ""}</p>
+                      </div>
+                      <StatusBadge tone={REQUEST_TONE[request.status] || "muted"} dot>{REQUEST_LABEL[request.status] || request.status}</StatusBadge>
+                    </div>
+                    {request.description && <p className="mt-2 break-words text-sm text-foreground/80">{request.description}</p>}
                   </div>
                 </div>
                 {request.adminReason && <div className="mx-4 mb-4 rounded-xl bg-muted p-3"><p className="text-xs font-bold text-muted-foreground">Admin reason</p><p className="mt-1 text-sm">{request.adminReason}</p></div>}
@@ -233,12 +234,35 @@ export default function AdminBreeds() {
             />
           )
         ) : breeds.length ? (
-          <div className="overflow-hidden rounded-2xl border border-border bg-card divide-y divide-border">
-            {breeds.map((breed) => (
-              <div key={breed.id} className="flex items-center gap-3 p-3.5">
-                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-muted">{breed.image && <img src={resolveApiAssetUrl(breed.image)} alt="" className="h-full w-full object-cover" />}</div>
-                <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{breed.name}</p><p className="text-xs text-muted-foreground">{breed.species}</p></div>
-                <Button variant="outline" size="sm" onClick={() => toggleBreed(breed)} disabled={processing === breed.id}>{breed.status === "Inactive" ? "Activate" : "Deactivate"}</Button>
+          <>
+            <div className="mb-3 grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_12rem]">
+              <SearchField id="breed-search" label="Search breeds" value={breedSearch} onChange={setBreedSearch} placeholder="Search breed name" />
+              <Select value={speciesFilter} onValueChange={setSpeciesFilter}><SelectTrigger aria-label="Filter by species" className="h-12 rounded-2xl bg-card"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="All">All species</SelectItem>{breedSpecies.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select>
+            </div>
+            <div className="mb-3"><ResultCount shown={shownBreeds.length} total={breeds.length} noun="breed" /></div>
+            {shownBreeds.length ? (
+              <div className="soft-card grid overflow-hidden lg:grid-cols-2 lg:gap-px lg:bg-border/60">
+                {shownBreeds.map((breed) => {
+                  const inactive = breed.status === "Inactive";
+                  return (
+                    <div key={breed.id} className="flex min-w-0 items-center gap-3 border-b border-border/60 bg-card p-3.5 last:border-b-0 lg:border-b-0">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted text-muted-foreground">{breed.image ? <img src={resolveApiAssetUrl(breed.image)} alt="" className="h-full w-full object-cover" /> : <CowSilhouetteIcon className="h-6 w-6" />}</div>
+                      <div className="min-w-0 flex-1">
+                        <p className={cn("truncate text-sm font-extrabold", inactive && "text-muted-foreground")}>{breed.name}</p>
+                        <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">{breed.species}<StatusBadge tone={inactive ? "muted" : "success"} className="px-2 py-0.5 text-[11px]">{inactive ? "Inactive" : "Active"}</StatusBadge></p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={() => (inactive ? toggleBreed(breed) : setConfirmDeactivate(breed))}
+                        disabled={processing === breed.id}
+                        className={cn("shrink-0 px-3.5", !inactive && "text-destructive hover:text-destructive")}
+                      >
+                        {processing === breed.id && <Loader2 className="h-4 w-4 animate-spin" />}
+                        {inactive ? "Activate" : "Deactivate"}
+                      </Button>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <EmptyState icon={CowSilhouetteIcon} title="No matching breeds" description="Try another name or species." action={<Button variant="outline" onClick={() => { setBreedSearch(""); setSpeciesFilter("All"); }}>Clear filters</Button>} />

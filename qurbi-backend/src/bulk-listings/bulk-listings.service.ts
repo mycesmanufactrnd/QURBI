@@ -5,19 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import {
-  DataSource,
-  DeepPartial,
-  EntityManager,
-  FindOptionsWhere,
-  Repository,
-} from 'typeorm';
-import {
-  BulkListing,
-  BulkListingStatus,
-  OrderItem,
-  UserRole,
-} from '../entities';
+import { DataSource, DeepPartial, EntityManager, FindOptionsWhere, Repository } from 'typeorm';
+import { BulkListing, BulkListingStatus, OrderItem, UserRole } from '../entities';
 import { BaseCrudService } from '../common/base-crud.service';
 import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 

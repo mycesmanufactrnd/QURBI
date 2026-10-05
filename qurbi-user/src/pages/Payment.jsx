@@ -8,7 +8,10 @@ import {
   Phone,
   Mail,
   CreditCard,
+  Star,
   Lock,
+  Package,
+  Check,
 } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
 import { useUserProfile } from "@/lib/user-profile-context";
@@ -31,6 +34,8 @@ import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
 import AppHeader from "@/components/AppHeader";
 import StickyActionBar from "@/components/shop/StickyActionBar";
 import { formatRM } from "@/lib/format";
+import { extractState } from "@/lib/livestock-data";
+import { combineOrders, groupedOrderQuery } from "@/lib/order-groups";
 
 const DELIVERY_FEE_PER_FARMER = 10;
 const PAYMENT_CARD_SHADOW = "shadow-[0_12px_28px_rgba(65,54,45,0.18)]";
@@ -50,7 +55,7 @@ function friendlyPaymentError(error, reservationAlreadyExists = false, t) {
     return {
       title: t("payment.errorDeclinedTitle"),
       message: t("payment.errorDeclinedMessage"),
-      reserved: true,
+      reserved: reservationAlreadyExists,
     };
   }
   if (status === 409 || /reserved|no longer available/.test(rawMessage)) {
@@ -81,10 +86,8 @@ function friendlyPaymentError(error, reservationAlreadyExists = false, t) {
   };
 }
 
-function PaymentItemImage({ item, product }) {
-  const { t } = useTranslation("cart");
-  const [imageFailed, setImageFailed] = useState(false);
-  const imageUrl =
+function paymentItemImageUrl(item, product) {
+  return (
     item.image ||
     item.coverImage ||
     item.cover_image ||
@@ -112,25 +115,83 @@ function paymentItemLocation(item, product) {
     product?.state ||
     "";
   return (
-    <div
-      className={`flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl shadow-md shadow-black/15 ${
-        imageUrl && !imageFailed
-          ? ""
-          : "border-2 border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A]"
-      }`}
-    >
-      {imageUrl && !imageFailed ? (
-        <img
-          src={imageUrl}
-          alt=""
-          className="h-full w-full object-cover"
-          onError={() => setImageFailed(true)}
-        />
-      ) : (
-        <span className="px-1 text-center text-[11px] font-bold leading-tight text-white">
-          {t("payment.noImage")}
-        </span>
-      )}
+    extractState(location) ||
+    item.farm_state ||
+    item.state ||
+    product?.farm_state ||
+    product?.state ||
+    ""
+  );
+}
+
+function productForPaymentItem(item, productDetails) {
+  const productId = item.item_type === "bulk"
+    ? item.bulk_listing_id || item.id
+    : item.livestock_id || item.id;
+  return productDetails[productId];
+}
+
+function deliveryAddressLines(address) {
+  if (!address) return [];
+
+  const street = String(address.street || address.addressLine1 || "").trim();
+  const streetTwo = String(address.addressLine2 || "").trim();
+  const postcode = String(address.postcode || address.postalCode || "").trim();
+  const city = String(address.city || "").trim();
+  const state = String(address.state || "").trim();
+  const country = String(address.country || "").trim();
+  const locality = [postcode, city].filter(Boolean).join(" ");
+
+  return [street, streetTwo, locality, state, country].filter(Boolean);
+}
+
+function PaymentStepper({ currentStep, onStepChange }) {
+  const { t } = useTranslation("cart");
+  const steps = [
+    t("payment.stepReview"),
+    t("payment.stepDelivery"),
+    t("payment.stepPayment"),
+  ];
+  return (
+    <div className="mx-auto w-full max-w-2xl px-4 pt-5" aria-label={t("payment.stepperAria")}>
+      <div className="rounded-2xl border border-[#E3C19F]/70 bg-white/75 px-4 py-4 shadow-sm backdrop-blur-sm">
+        <div className="flex items-start">
+          {steps.map((label, index) => {
+            const step = index + 1;
+            const completed = step < currentStep;
+            const active = step === currentStep;
+            return (
+              <React.Fragment key={label}>
+                <button
+                  type="button"
+                  onClick={() => step < currentStep && onStepChange(step)}
+                  disabled={step >= currentStep}
+                  className="flex min-w-0 flex-1 flex-col items-center text-center disabled:cursor-default"
+                  aria-current={active ? "step" : undefined}
+                >
+                  <span
+                    className={`flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-extrabold [text-shadow:0_1px_2px_rgba(65,54,45,0.85)] ${
+                      completed
+                        ? "border-[#15803D] bg-gradient-to-br from-[#22C55E] to-[#15803D] text-white shadow-sm"
+                        : active
+                          ? "border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white shadow-md"
+                          : "border-[#6B594A] bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] text-white"
+                    }`}
+                  >
+                    {completed ? <Check className="h-4 w-4" strokeWidth={3} /> : step}
+                  </span>
+                  <span className={`mt-1 text-[11px] font-bold text-white`}>
+                    {label}
+                  </span>
+                </button>
+                {index < steps.length - 1 && (
+                  <span className={`mt-4 h-0.5 flex-1 ${step < currentStep ? "bg-[#16A34A]" : "bg-[#D5B18D]/60"}`} />
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
@@ -199,12 +260,15 @@ export default function Payment() {
       setLoadingOrder(true);
       setResumeError("");
       try {
-        const response = await qurbiApi.functions.invoke("fetchMyOrders", {
-          orderId: resumeOrderId,
-        });
-        const order = response.data?.order;
-        if (!order || !["pending", "pending_payment", "to_pay"].includes(order.status)) {
-          if (order?.cancellationReason === "Payment reservation expired") {
+        const responses = await Promise.all(
+          resumeOrderIds.map((orderId) =>
+            qurbiApi.functions.invoke("fetchMyOrders", { orderId }),
+          ),
+        );
+        const orders = responses.map((response) => response.data?.order).filter(Boolean);
+        const order = combineOrders(orders);
+        if (!order || orders.some((item) => !["pending", "pending_payment", "to_pay"].includes(item.status))) {
+          if (orders.some((item) => item?.cancellationReason === "Payment reservation expired")) {
             throw new Error(t("payment.reservationExpiredError"));
           }
           throw new Error(t("payment.orderNoLongerAwaitingPayment"));
@@ -404,14 +468,6 @@ export default function Payment() {
       setCheckoutError(friendlyPaymentError(error, isResumingOrder, t));
       return;
     }
-    if (window.self !== window.top) {
-      setCheckoutError({
-        title: t("payment.iframeTitle"),
-        message: t("payment.iframeMessage"),
-        reserved: isResumingOrder,
-      });
-      return;
-    }
     setLoading(true);
     let checkoutOrder = resumedOrder;
     try {
@@ -484,7 +540,7 @@ export default function Payment() {
           navigateOptions: { replace: true },
         });
       } else {
-        setCheckoutError({
+        const paymentFailure = {
           title: t("payment.paymentCouldNotStartTitle"),
           message: t("payment.paymentCouldNotStartMessage"),
           reserved: true,
@@ -495,7 +551,18 @@ export default function Payment() {
         });
       }
     } catch (err) {
-      setCheckoutError(friendlyPaymentError(err, isResumingOrder, t));
+      const reservedOrder = checkoutOrder?.id ? checkoutOrder : await findReservedOrder();
+      const paymentFailure = {
+        ...friendlyPaymentError(err, Boolean(reservedOrder), t),
+        orderId: reservedOrder?.id || "",
+      };
+      if (reservedOrder?.id) {
+        navigateWithTransition(`/orders/${encodeURIComponent(reservedOrder.id)}?fromTab=to-pay`, {
+          navigateOptions: { replace: true, state: { paymentError: paymentFailure } },
+        });
+      } else {
+        setCheckoutError(paymentFailure);
+      }
     } finally {
       setLoading(false);
     }
@@ -591,9 +658,129 @@ export default function Payment() {
         }
       />
 
+      <PaymentStepper
+        currentStep={checkoutStep}
+        onStepChange={setCheckoutStep}
+      />
+
       <div className="aisyah-content max-w-2xl">
-        {/* Delivery Address + Buyer Info */}
-        {!isResumingOrder && (
+        {/* Step 1: order items (read-only) */}
+        {checkoutStep === 1 && (
+          <>
+            <section
+              aria-labelledby="payment-items-title"
+              className={`rounded-2xl border border-[#E3C19F]/60 bg-gradient-to-br from-[#41362D] to-[#6B594A] p-4 shadow-lg shadow-[#41362D]/20 ${reveal()}`}
+              style={{ animationDelay: "80ms" }}
+            >
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-10 w-10 flex-none items-center justify-center rounded-xl border border-[#F7EDE2] bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] text-[#41362D] shadow-sm">
+                  <Package aria-hidden="true" className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 id="payment-items-title" className="font-bold text-white">
+                    {tf("payment.orderItemsCount", { count: paymentItems.length })}
+                  </h2>
+                  <p className="text-xs font-medium text-white/65">
+                    {t("payment.tapProductHint")}
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {paymentItems.map((item) => {
+                  const productId =
+                    item.item_type === "bulk"
+                      ? item.bulk_listing_id || item.id
+                      : item.livestock_id || item.id;
+                  const returnTo = isResumingOrder
+                    ? `/payment?${groupedOrderQuery(resumedOrder)}`
+                    : isBuyNowCheckout
+                      ? "/payment?source=buy-now"
+                      : "/payment";
+                  const productPath = productId
+                    ? `${item.item_type === "bulk" ? "/bulk-buy" : "/livestock"}/${encodeURIComponent(productId)}?from=payment&returnTo=${encodeURIComponent(returnTo)}`
+                    : "";
+                  const ItemContainer = productPath ? "button" : "div";
+                  const product = productForPaymentItem(item, productDetails);
+                  const productLabel =
+                    (item.item_type === "bulk" ? item.listing_name : item.breed) ||
+                    t("payment.productDetailsFallback");
+                  const farmerLocation =
+                    paymentItemLocation(item, product) || t("payment.stateUnavailable");
+
+                  return (
+                    <ItemContainer
+                      key={item.key}
+                      type={productPath ? "button" : undefined}
+                      onClick={
+                        productPath
+                          ? (event) =>
+                              navigateFromProductCard(
+                                productPath,
+                                event.currentTarget,
+                                {
+                                  image: paymentItemImageUrl(item, product),
+                                  label: productLabel,
+                                },
+                              )
+                          : undefined
+                      }
+                      className={`flex w-full items-center justify-between gap-3 rounded-xl border border-[#E3C19F]/35 bg-[rgba(255,255,255,0.08)] p-3 text-left shadow-sm transition-all duration-200 ${productPath ? "cursor-pointer hover:border-[#F7EDE2] hover:bg-[rgba(255,255,255,0.14)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E3C19F] active:scale-[0.99]" : ""}`}
+                      aria-label={
+                        productPath
+                          ? t("payment.viewProductAria", { name: productLabel })
+                          : undefined
+                      }
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <ProductImage
+                          src={paymentItemImageUrl(item, product)}
+                          alt={productLabel}
+                          className="h-12 w-12 shadow-md shadow-black/15"
+                        />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold text-white">
+                            {itemTitle(item)}
+                          </p>
+                          <p className="flex min-w-0 items-center gap-1 truncate text-xs font-medium text-white/65">
+                            <MapPin aria-hidden="true" className="h-3 w-3 flex-none text-[#E3C19F]" />
+                            <span className="truncate">{farmerLocation}</span>
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-none items-center gap-2">
+                        <div className="text-right">
+                          <p className="whitespace-nowrap text-sm font-extrabold text-white">
+                            {formatRM(item.total)}
+                          </p>
+                          {productPath && (
+                            <p className="text-[10px] font-semibold text-white/60">
+                              {t("payment.viewDetails")}
+                            </p>
+                          )}
+                        </div>
+                        {productPath && (
+                          <span className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#F7EDE2] bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] text-[#41362D] shadow-md shadow-black/20">
+                            <ChevronRight aria-hidden="true" className="h-5 w-5" strokeWidth={3} />
+                          </span>
+                        )}
+                      </div>
+                    </ItemContainer>
+                  );
+                })}
+              </div>
+            </section>
+            <button
+              type="button"
+              onClick={() => setCheckoutStep(2)}
+              className="mt-4 min-h-12 w-full rounded-2xl border-2 border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] py-3.5 text-sm font-extrabold text-white shadow-md shadow-black/20"
+            >
+              {t("payment.continueToDelivery")}
+            </button>
+          </>
+        )}
+
+        {/* Step 2: delivery address + buyer info */}
+        {checkoutStep === 2 && !isResumingOrder && (
           <>
             <section
               aria-labelledby="payment-address-title"
@@ -635,11 +822,13 @@ export default function Payment() {
                       {selectedAddress.phone ? ` · ${selectedAddress.phone}` : ""}
                     </p>
                   )}
-                  <p className="mt-0.5 break-words text-sm text-[#6B594A]">
-                    {[selectedAddress.street, selectedAddress.city, selectedAddress.state, selectedAddress.postcode]
-                      .filter(Boolean)
-                      .join(", ")}
-                  </p>
+                  <address className="mt-0.5 space-y-0.5 text-sm not-italic text-[#6B594A]">
+                    {deliveryAddressLines(selectedAddress).map((line, index) => (
+                      <span key={`${line}-${index}`} className="block break-words">
+                        {line}
+                      </span>
+                    ))}
+                  </address>
                 </div>
               ) : (
                 <button
@@ -705,127 +894,132 @@ export default function Payment() {
                 </ul>
               )}
             </section>
+
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => setCheckoutStep(1)}
+                className="min-h-12 rounded-2xl border-2 border-[#41362D] bg-white py-3 text-sm font-extrabold text-[#41362D]"
+              >
+                {t("payment.backToReview")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setCheckoutStep(3)}
+                disabled={!canCheckout}
+                className="min-h-12 rounded-2xl border-2 border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] py-3 text-sm font-extrabold text-white shadow-md shadow-black/20 disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                {t("payment.continueToPayment")}
+              </button>
+            </div>
           </>
         )}
 
-        {/* Order items (read-only) */}
-        <section
-          aria-labelledby="payment-items-title"
-          className={`rounded-2xl border border-[#41362D]/15 bg-[#F7EDE2] p-4 ${PAYMENT_CARD_SHADOW} ${reveal()}`}
-          style={{ animationDelay: "140ms" }}
-        >
-          <h2 id="payment-items-title" className="mb-2 text-base font-bold text-[#41362D]">
-            {tf("payment.orderItemsCount", { count: paymentItems.length })}
-          </h2>
-          <ul className="divide-y divide-[#41362D]/10">
-            {paymentItems.map((item) => (
-              <li
-                key={item.key}
-                className="flex min-w-0 items-center justify-between gap-3 py-2.5"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <PaymentItemImage
-                    item={item}
-                    product={productDetails[item.livestock_id]}
-                  />
-                  <div className="min-w-0">
-                    <p className="break-words text-sm font-bold leading-snug text-[#41362D]">
-                      {itemTitle(item)}
-                    </p>
-                    <p className="break-words text-sm text-[#6B594A]">
-                      {item.farmer_name || t("payment.unknownFarmer")}
-                      {" · "}
-                      {item.item_type === "bulk" ? t("payment.oneLot") : tf("payment.headCount", { count: item.quantity || 1 })}
-                      {item.grade ? ` · ${tf("card.grade", { grade: item.grade })}` : ""}
-                    </p>
-                  </div>
+        {/* Step 3: payment summary */}
+        {checkoutStep === 3 && (
+          <section
+            aria-labelledby="payment-summary-title"
+            className={`rounded-2xl border-2 border-[#41362D]/70 bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] p-4 shadow-xl shadow-black/15 ${reveal()}`}
+            style={{ animationDelay: "180ms" }}
+          >
+            <h2 id="payment-summary-title" className="text-base font-bold text-black">{t("payment.paymentSummaryHeading")}</h2>
+            <dl className="mt-2 space-y-2 text-sm">
+              {paymentItems.map((item) => (
+                <div key={item.key} className="flex justify-between gap-3">
+                  <dt className="min-w-0 break-words text-black/75">
+                    {itemTitle(item)}
+                    {item.grade ? ` (${item.grade})` : ""}
+                    {" × "}
+                    {item.item_type === "bulk"
+                      ? t("payment.oneLot")
+                      : item.quantity || 1}
+                  </dt>
+                  <dd className="flex-none font-semibold text-black">{formatRM(item.total)}</dd>
                 </div>
-                <span className="flex-none text-sm font-bold text-[#41362D]">
-                  {formatRM(item.total)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        {/* Payment summary */}
-        <section
-          aria-labelledby="payment-summary-title"
-          className={`rounded-2xl border-2 border-[#41362D]/70 bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] p-4 shadow-xl shadow-black/15 ${reveal()}`}
-          style={{ animationDelay: "180ms" }}
-        >
-          <h2 id="payment-summary-title" className="text-base font-bold text-black">{t("payment.paymentSummaryHeading")}</h2>
-          <dl className="mt-2 space-y-2 text-sm">
-            <div className="flex justify-between gap-3">
-              <dt className="text-black/75">{t("payment.subtotalLabel")}</dt>
-              <dd className="font-semibold text-black">{formatRM(paymentSubtotal)}</dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="min-w-0 text-black/75">
-                {tf("payment.deliveryFee", {
-                  count: farmerCount,
-                  fee: formatRM(DUMMY_DELIVERY_FEE_PER_FARMER),
-                })}
-              </dt>
-              <dd className="flex-none font-semibold text-black">{formatRM(deliveryFee)}</dd>
-            </div>
-            <div className="flex items-end justify-between gap-3 border-t border-[#41362D]/20 pt-3">
-              <dt className="text-base font-bold text-black">{tf("payment.total")}</dt>
-              <dd className="text-2xl font-extrabold text-black">{formatRM(grandTotal)}</dd>
-            </div>
-          </dl>
-          <p className="mt-3 flex items-center gap-1.5 text-sm text-black/75">
-            <Lock aria-hidden="true" className="h-4 w-4" />
-            {t("payment.secureCheckoutLabel")}
-          </p>
-          {missingReason && (
-            <p className="mt-2 rounded-xl bg-[#FEF3C7] px-3 py-2 text-sm font-semibold text-[#78350F]" role="status">
-              {missingReason}
+              ))}
+              <div className="flex justify-between gap-3 border-t border-[#41362D]/20 pt-2">
+                <dt className="text-black/75">{t("payment.subtotalLabel")}</dt>
+                <dd className="font-semibold text-black">{formatRM(paymentSubtotal)}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="min-w-0 text-black/75">
+                  {tf("payment.deliveryFee", {
+                    count: farmerCount,
+                    fee: formatRM(DELIVERY_FEE_PER_FARMER),
+                  })}
+                </dt>
+                <dd className="flex-none font-semibold text-black">{formatRM(deliveryFee)}</dd>
+              </div>
+              <div className="flex items-end justify-between gap-3 border-t border-[#41362D]/20 pt-3">
+                <dt className="text-base font-bold text-black">{tf("payment.total")}</dt>
+                <dd className="text-2xl font-extrabold text-black">{formatRM(grandTotal)}</dd>
+              </div>
+            </dl>
+            <p className="mt-3 flex items-center gap-1.5 text-sm text-black/75">
+              <Lock aria-hidden="true" className="h-4 w-4" />
+              {t("payment.secureCheckoutLabel")}
             </p>
-          )}
-          {isResumingOrder &&
-            ["pending", "pending_payment", "to_pay"].includes(resumedOrder?.status) && (
+            {missingReason && (
+              <p className="mt-2 rounded-xl bg-[#FEF3C7] px-3 py-2 text-sm font-semibold text-[#78350F]" role="status">
+                {missingReason}
+              </p>
+            )}
+            {isResumingOrder &&
+              ["pending", "pending_payment", "to_pay"].includes(resumedOrder?.status) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCancelError("");
+                    setCancelCandidate(resumedOrder);
+                  }}
+                  disabled={loading}
+                  className="mt-4 min-h-12 w-full rounded-xl border-2 border-[#7F1D1D]/50 bg-transparent text-sm font-bold text-[#7F1D1D] disabled:opacity-50"
+                >
+                  {t("payment.cancelPaymentButton")}
+                </button>
+              )}
+            {!isResumingOrder && (
               <button
                 type="button"
-                onClick={() => {
-                  setCancelError("");
-                  setCancelCandidate(resumedOrder);
-                }}
+                onClick={() => setCheckoutStep(2)}
                 disabled={loading}
-                className="mt-4 min-h-12 w-full rounded-xl border-2 border-[#7F1D1D]/50 bg-transparent text-sm font-bold text-[#7F1D1D] disabled:opacity-50"
+                className="mt-3 min-h-12 w-full rounded-xl border-2 border-[#41362D] bg-white py-3 text-sm font-bold text-[#41362D] disabled:opacity-50"
               >
-                {t("payment.cancelPaymentButton")}
+                {t("payment.backToDelivery")}
               </button>
             )}
-        </section>
+          </section>
+        )}
       </div>
 
-      {/* One primary action, always reachable */}
-      <StickyActionBar tone="dark" label={tf("payment.payBarLabel")}>
-        <div className="min-w-0 flex-none">
-          <p className="text-sm text-white/80">{tf("payment.total")}</p>
-          <p className="whitespace-nowrap text-xl font-extrabold leading-tight text-white">{formatRM(grandTotal)}</p>
-        </div>
-        <button
-          type="button"
-          onClick={handleCheckout}
-          disabled={loading || !canCheckout}
-          aria-busy={loading || undefined}
-          className="flex min-h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] px-4 text-base font-bold text-[#41362D] transition-all duration-200 ease-out active:scale-[0.98] disabled:opacity-60"
-        >
-          {loading ? (
-            <>
-              <span aria-hidden="true" className="h-5 w-5 animate-spin rounded-full border-2 border-[#41362D] border-t-transparent" />
-              {t("payment.processingLabel")}
-            </>
-          ) : (
-            <>
-              <CreditCard aria-hidden="true" className="h-5 w-5 flex-none" />
-              <span className="truncate">{tf("payment.payAmount", { amount: formatRM(grandTotal) })}</span>
-            </>
-          )}
-        </button>
-      </StickyActionBar>
+      {/* One primary action, always reachable on the payment step */}
+      {checkoutStep === 3 && (
+        <StickyActionBar tone="dark" label={tf("payment.payBarLabel")}>
+          <div className="min-w-0 flex-none">
+            <p className="text-sm text-white/80">{tf("payment.total")}</p>
+            <p className="whitespace-nowrap text-xl font-extrabold leading-tight text-white">{formatRM(grandTotal)}</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleCheckout}
+            disabled={loading || !canCheckout}
+            aria-busy={loading || undefined}
+            className="flex min-h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] px-4 text-base font-bold text-[#41362D] transition-all duration-200 ease-out active:scale-[0.98] disabled:opacity-60"
+          >
+            {loading ? (
+              <>
+                <span aria-hidden="true" className="h-5 w-5 animate-spin rounded-full border-2 border-[#41362D] border-t-transparent" />
+                {t("payment.processingLabel")}
+              </>
+            ) : (
+              <>
+                <CreditCard aria-hidden="true" className="h-5 w-5 flex-none" />
+                <span className="truncate">{tf("payment.payAmount", { amount: formatRM(grandTotal) })}</span>
+              </>
+            )}
+          </button>
+        </StickyActionBar>
+      )}
 
       <CancelOrderModal
         order={cancelCandidate}

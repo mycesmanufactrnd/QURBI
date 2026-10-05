@@ -68,7 +68,9 @@
       "paymentFailedPrefix": "Pembayaran gagal · ",
       "reservedUntil": "Ditempah sehingga {{time}}",
       "retryHint": "Anda boleh cuba bayar semula daripada pesanan ini."
-    }
+    },
+    "transaction": "Transaksi",
+    "openTransactionHistory": "Buka sejarah transaksi"
   },
   "orderDetail": {
     "title": "Butiran Pesanan",
@@ -124,7 +126,11 @@
     "items": {
       "title": "Item",
       "gradeSuffix": " · Gred {{grade}}",
-      "total": "Jumlah"
+      "total": "Jumlah",
+      "tapHint": "Ketik produk untuk melihat butirannya",
+      "viewDetails": "Lihat butiran",
+      "viewItemAria": "Lihat butiran {{name}}",
+      "stateUnavailable": "Negeri tidak tersedia"
     },
     "refundSheet": {
       "title": "Mohon bayaran balik",
@@ -164,7 +170,10 @@
     },
     "signInPrompt": "Log masuk untuk melihat pesanan ini.",
     "signInMessage": "Log masuk untuk melihat pesanan ini dan kemajuan penghantarannya.",
-    "signIn": "Log Masuk"
+    "signIn": "Log Masuk",
+    "paymentError": {
+      "stayOnOrder": "Kekal di Pesanan Perlu Bayar"
+    }
   },
   "notifications": {
     "title": "Notifikasi",

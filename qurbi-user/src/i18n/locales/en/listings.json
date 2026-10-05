@@ -23,6 +23,8 @@
     "bulkLotPlaceholder": "Bulk lot"
   },
   "bulkListingDetail": {
+    "backToOrders": "Back to Orders",
+    "backToPayment": "Back to Payment",
     "backToCart": "Back to Cart",
     "backToBulkBuy": "Back to Bulk Buy",
     "loadError": "Unable to load this bulk lot.",
@@ -61,6 +63,16 @@
     "bulkLotPlaceholder": "Bulk lot"
   },
   "livestockDetail": {
+    "reservedTitle": "Livestock Reserved",
+    "reservedMessage": "This livestock is currently reserved and cannot be added to the cart. Please choose another available livestock.",
+    "reservedByYouMessage": "This livestock is already reserved in your existing order. Continue payment from My Orders instead of adding it to the cart again.",
+    "viewMyOrders": "View My Orders",
+    "backToOrders": "Back to Orders",
+    "backToPayment": "Back to Payment",
+    "sameBreed": "Same breed",
+    "relatedTitle": "Add item",
+    "swipeToExplore": "Swipe to explore",
+    "viewItem": "View item",
     "unavailableTitle": "Livestock Unavailable",
     "verifyFailTitle": "Unable to Verify Availability",
     "unavailableMessage": "This livestock is no longer available for purchase. Please browse other available livestock.",

@@ -119,7 +119,14 @@ export default function Cart() {
     if (!removed.length) return;
 
     removed.forEach((item) => removeFromCart(item.key));
-    setAvailabilityNotice(t("cart.reservedRemovedNotice"));
+    const reservedByCurrentUser = removed.some(
+      (item) => availability[item.key]?.state === "reserved_by_you",
+    );
+    setAvailabilityNotice(
+      reservedByCurrentUser
+        ? t("cart.reservedForYouRemovedNotice")
+        : t("cart.reservedRemovedNotice"),
+    );
   }, [availability, cartItems, removeFromCart, t]);
 
   const proceedToPayment = async () => {
@@ -147,8 +154,10 @@ export default function Cart() {
           )
           .forEach((item) => removeFromCart(item.key));
         setAvailabilityNotice(
-          reserved
-            ? t("cart.reservedRemovedNotice")
+          reservedByCurrentUser
+            ? t("cart.reservedForYouRemovedNotice")
+            : reserved
+              ? t("cart.reservedRemovedNotice")
             : expired
               ? t("cart.expiredListingNotice")
               : t("cart.unobtainableNotice"),
@@ -284,6 +293,8 @@ export default function Cart() {
           <ul className="space-y-3 animate-content-ready" aria-label={t("cart.title")}>
             {cartItems.map((item, idx) => {
               const availabilityResult = availability[item.key];
+              const reservedByYou =
+                availabilityResult?.state === "reserved_by_you";
               const expired =
                 item.item_type !== "bulk" &&
                 (availabilityResult?.state === "expired" ||

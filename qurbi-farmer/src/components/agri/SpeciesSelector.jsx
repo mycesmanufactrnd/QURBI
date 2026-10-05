@@ -33,16 +33,11 @@ export default function SpeciesSelector({ value, onChange }) {
                   : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground",
               )}
             >
-              {species}
+              {speciesLabel(species)}
             </button>
           );
         })}
-      >
-        <SelectTrigger className="h-12"><SelectValue placeholder={t("speciesSelector.placeholder")} /></SelectTrigger>
-        <SelectContent>
-          {SPECIES.map((species) => <SelectItem key={species} value={species}>{speciesLabel(species)}</SelectItem>)}
-        </SelectContent>
-      </Select>
+      </div>
       <p className="text-xs text-muted-foreground">{t("speciesSelector.supportedNote")}</p>
       {value && !supportedValue && (
         <p className="text-xs font-medium text-destructive">{t("speciesSelector.legacyNote")}</p>

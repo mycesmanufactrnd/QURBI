@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useMounted } from "@/hooks/useMounted";
 import { X, SlidersHorizontal, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import FilterDropdown from "@/components/FilterDropdown";
@@ -11,6 +12,7 @@ const SORT_OPTIONS = [
 ];
 
 export default function FilterSidebar({ open, onClose, filters, options, resultCount }) {
+  const mounted = useMounted();
   const { t } = useTranslation("shop");
   const { t: tf } = useTranslation("shopflow");
   const {
@@ -51,6 +53,8 @@ export default function FilterSidebar({ open, onClose, filters, options, resultC
     };
   }, [open, onClose]);
 
+  // Portals are browser-only: skip them on the server and during hydration.
+  if (!mounted) return null;
   return createPortal(
     <>
       {/* Backdrop */}
@@ -156,12 +160,6 @@ export default function FilterSidebar({ open, onClose, filters, options, resultC
             options={options.ageOptions}
             value={filterAge}
             onSelect={setFilterAge}
-          />
-          <FilterDropdown
-            title={t("filterSidebar.filterLabels.status")}
-            options={options.statusOptions}
-            value={filterStatus}
-            onSelect={setFilterStatus}
           />
           <FilterDropdown
             title={t("filterSidebar.filterLabels.location")}

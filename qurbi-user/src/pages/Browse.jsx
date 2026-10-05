@@ -19,7 +19,6 @@ import { isProductExpired } from "@/lib/product-expiry";
 import {
   genderLabel,
   listingState,
-  statusLabel,
 } from "@/lib/listing-display";
 
 export default function Browse() {
@@ -162,20 +161,6 @@ export default function Browse() {
         ),
       ].sort(),
     [livestock],
-  );
-
-  const statusOptions = useMemo(
-    () =>
-      [
-        ...new Set(
-          livestock
-            .map((l) => l.status)
-            .filter(Boolean),
-        ),
-      ]
-        .sort()
-        .map((value) => ({ value, label: statusLabel(tf, value) })),
-    [livestock, tf],
   );
 
   const locationOptions = useMemo(
@@ -468,7 +453,7 @@ export default function Browse() {
    */
 
   return (
-    <div className="aisyah-page pb-32">
+    <main className="aisyah-page pb-32">
       {sharedStyles}
 
       <AppHeader
@@ -647,6 +632,6 @@ export default function Browse() {
           locationOptions,
         }}
       />
-    </div>
+    </main>
   );
 }

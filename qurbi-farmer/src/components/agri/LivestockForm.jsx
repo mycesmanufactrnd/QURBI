@@ -197,9 +197,9 @@ const LivestockForm = forwardRef(
                   value={form.species}
                   onChange={changeSpecies}
                 />
-              </Field>
-              <Field label="Gender" required>
-                <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Gender">
+              </FormField>
+              <FormField id="gender" label={t("form.fields.gender")} required error={errorFor("gender")}>
+                <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t("form.fields.gender")}>
                   {GENDERS.map((gender) => {
                     const selected = form.gender === gender;
                     return (
@@ -216,12 +216,12 @@ const LivestockForm = forwardRef(
                             : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground",
                         )}
                       >
-                        {gender}
+                        {display.gender(gender)}
                       </button>
                     );
                   })}
                 </div>
-              </Field>
+              </FormField>
             </Grid>
 
             <FormField id="breed" label={t("form.fields.breed")} required error={errorFor("breed")} hint={!form.species ? t("form.fields.breedHint") : undefined}>

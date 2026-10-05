@@ -1,7 +1,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClientInstance } from "@/lib/query-client";
-import { BrowserRouter as Router, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import PageNotFound from "./lib/PageNotFound";
 import { AuthProvider } from "@/lib/AuthContext";
 import { CartProvider } from "@/lib/cart-context";
@@ -35,6 +35,7 @@ import Notifications from "@/pages/Notifications";
 import AdminTest from "@/pages/AdminTest";
 import { AuthPromptProvider } from "@/lib/auth-prompt-context";
 import AppErrorBoundary from "@/components/AppErrorBoundary";
+import RouteSeo from "@/components/RouteSeo";
 
 function LegacyAuthRedirect({ mode }) {
   const location = useLocation();
@@ -43,13 +44,16 @@ function LegacyAuthRedirect({ mode }) {
   return <Navigate to={`/auth?${params.toString()}`} replace />;
 }
 
-function App() {
+// `Router`/`routerProps` let the build-time prerenderer supply a StaticRouter;
+// in the browser it is always the normal BrowserRouter.
+function App({ Router = BrowserRouter, routerProps = {} }) {
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         <UserProfileProvider>
           <CartProvider>
-            <Router>
+            <Router {...routerProps}>
+              <RouteSeo />
               <AuthPromptProvider>
                 <NotificationProvider>
                   <HeaderTransitionProvider>

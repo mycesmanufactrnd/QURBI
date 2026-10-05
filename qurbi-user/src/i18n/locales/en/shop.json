@@ -9,6 +9,7 @@
       "bulkBuy": "Bulk Buy",
       "cart": "Cart",
       "orders": "Orders",
+      "transaction": "Transaction",
       "profile": "Profile"
     },
     "categoriesTitle": "Categories",

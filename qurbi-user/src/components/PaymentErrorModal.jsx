@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { CircleAlert, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-export default function PaymentErrorModal({ error, onClose, onViewOrders }) {
+export default function PaymentErrorModal({ error, onClose, onViewOrders, viewOrderLabel }) {
   const { t } = useTranslation("shopflow");
   useEffect(() => {
     if (!error) return undefined;
@@ -16,6 +16,8 @@ export default function PaymentErrorModal({ error, onClose, onViewOrders }) {
 
   if (!error) return null;
 
+  // No document during the build-time prerender; portals are browser-only UI.
+  if (typeof document === "undefined") return null;
   return createPortal(
     <div
       className="fixed inset-0 z-[120] flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm"
@@ -68,7 +70,7 @@ export default function PaymentErrorModal({ error, onClose, onViewOrders }) {
                 onClick={onViewOrders}
                 className="min-h-12 rounded-xl border border-[#E3C19F] text-sm font-bold text-white"
               >
-                {t("paymentError.myOrders")}
+                {viewOrderLabel || t("paymentError.myOrders")}
               </button>
             )}
             <button

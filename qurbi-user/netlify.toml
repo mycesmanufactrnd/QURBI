@@ -1,0 +1,53 @@
+# Netlify settings for the buyer app (qurbi-user).
+# If this repo is deployed as a monorepo, set "Base directory" to qurbi-user.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Old auth URLs -> the single sign-in page.
+[[redirects]]
+  from = "/login"
+  to = "/auth?mode=login"
+  status = 301
+
+[[redirects]]
+  from = "/register"
+  to = "/auth?mode=register"
+  status = 301
+
+# Anything that is not a real file (prerendered page, asset, sitemap...) gets
+# the empty app shell, so client-side routes such as /orders and /livestock/123
+# keep working. Real files always win over this rule.
+[[redirects]]
+  from = "/*"
+  to = "/app-shell.html"
+  status = 200
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Belt and braces for private areas (robots.txt blocks them too).
+[[headers]]
+  for = "/cart"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/orders/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/profile"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/payment"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"

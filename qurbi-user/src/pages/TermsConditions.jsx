@@ -11,7 +11,7 @@ export default function TermsConditions() {
     t("termsConditions.sections", { returnObjects: true })
   );
   return (
-    <div className="aisyah-page">
+    <main className="aisyah-page">
       <AppHeader
         title={t("termsConditions.pageTitle")}
         backTo="/profile"
@@ -52,6 +52,6 @@ export default function TermsConditions() {
           </a>
         </p>
       </div>
-    </div>
+    </main>
   );
 }

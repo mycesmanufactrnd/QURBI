@@ -1,5 +1,6 @@
 import React from "react";
 import { createPortal } from "react-dom";
+import { useMounted } from "@/hooks/useMounted";
 
 const TONES = {
   // Cream bar: stands out on the dark detail sheets.
@@ -15,6 +16,9 @@ const TONES = {
  * @param {{ children: React.ReactNode, tone?: "light" | "dark", label?: string, className?: string }} props
  */
 export default function StickyActionBar({ children, tone = "dark", label, className = "" }) {
+  const mounted = useMounted();
+  // Portals are browser-only: skip them on the server and during hydration.
+  if (!mounted) return null;
   return createPortal(
     <div
       className="qurbi-above-nav pointer-events-none fixed inset-x-0 z-40 px-3 sm:px-4 lg:left-[260px]"

@@ -11,7 +11,7 @@ export default function PrivacyPolicy() {
     t("privacyPolicy.sections", { returnObjects: true })
   );
   return (
-    <div className="aisyah-page">
+    <main className="aisyah-page">
       <AppHeader
         title={t("privacyPolicy.pageTitle")}
         backTo="/profile"
@@ -52,6 +52,6 @@ export default function PrivacyPolicy() {
           </a>
         </p>
       </div>
-    </div>
+    </main>
   );
 }

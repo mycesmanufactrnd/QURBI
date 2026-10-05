@@ -31,7 +31,6 @@ export class JwtAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -45,15 +44,6 @@ export class JwtAuthGuard implements CanActivate {
       // token just means the request is treated as a guest.
       if (token) {
         request.user = (await this.verify(token)) ?? undefined;
-    const token = extractBearerToken(request.headers.authorization);
-    if (isPublic) {
-      if (!token) return true;
-      try {
-        const payload = await this.jwtService.verifyAsync(token, { secret: jwtConstants.secret });
-        request.user = { id: payload.sub, role: payload.role };
-      } catch {
-        // Public routes remain public when an expired/invalid optional token
-        // is present; they simply continue without a viewer identity.
       }
       return true;
     }

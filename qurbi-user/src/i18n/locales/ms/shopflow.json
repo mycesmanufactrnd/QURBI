@@ -51,6 +51,7 @@
       "cartCount_one": "{{count}} item menunggu",
       "cartCount_other": "{{count}} item menunggu",
       "orders": "Jejak & resit",
+      "transaction": "Sejarah pembayaran",
       "profile": "Akaun & bahasa",
       "addresses": "Alamat penghantaran"
     }

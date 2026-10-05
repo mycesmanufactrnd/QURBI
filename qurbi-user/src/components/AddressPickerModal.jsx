@@ -88,5 +88,7 @@ export default function AddressPickerModal({ addresses, selectedId, onSelect, on
     </div>
   );
 
+  // No document during the build-time prerender; portals are browser-only UI.
+  if (typeof document === "undefined") return null;
   return createPortal(modal, document.body);
 }

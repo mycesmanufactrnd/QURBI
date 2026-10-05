@@ -29,6 +29,8 @@ export default function ImageLightbox({ image, alt, onClose }) {
   }, [image]);
 
   if (!image) return null;
+  // No document during the build-time prerender; portals are browser-only UI.
+  if (typeof document === "undefined") return null;
   return createPortal(
     <div
       className="fixed inset-0 z-[80] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"

@@ -15,7 +15,7 @@ import {
   Zap,
   Home,
   User,
-  Navigation,
+  Leaf,
 } from "lucide-react";
 import {
   loadLivestockById,
@@ -47,7 +47,6 @@ import {
   captureCartAnimationSource,
 } from "@/lib/cart-animation";
 import ProductImage from "@/components/ProductImage";
-import { extractState } from "@/lib/livestock-data";
 import { recentPageOr } from "@/lib/navigation";
 
 function AvailabilityModal({ state, onClose, onBrowse, backLabel }) {
@@ -68,21 +67,31 @@ function AvailabilityModal({ state, onClose, onBrowse, backLabel }) {
         onClick={(event) => event.stopPropagation()}
       >
         <h2 className="text-lg font-bold text-gray-900">
-          {unavailable
-            ? t("livestockDetail.unavailableTitle")
-            : t("livestockDetail.verifyFailTitle")}
+          {reserved
+            ? t("livestockDetail.reservedTitle")
+            : unavailable
+              ? t("livestockDetail.unavailableTitle")
+              : t("livestockDetail.verifyFailTitle")}
         </h2>
         <p className="mt-2 text-sm leading-6 text-gray-500">
-          {unavailable
-            ? t("livestockDetail.unavailableMessage")
-            : t("livestockDetail.verifyFailMessage")}
+          {reserved
+            ? returnToOrders
+              ? t("livestockDetail.reservedByYouMessage")
+              : t("livestockDetail.reservedMessage")
+            : unavailable
+              ? t("livestockDetail.unavailableMessage")
+              : t("livestockDetail.verifyFailMessage")}
         </p>
         <button
           type="button"
-          onClick={unavailable ? onBrowse : onClose}
+          onClick={reserved || unavailable ? onBrowse : onClose}
           className="aisyah-primary-button mt-5 min-h-12 w-full"
         >
-          {unavailable ? backLabel : t("livestockDetail.close")}
+          {returnToOrders
+            ? t("livestockDetail.viewMyOrders")
+            : reserved || unavailable
+              ? backLabel
+              : t("livestockDetail.close")}
         </button>
       </div>
     </div>
@@ -100,10 +109,27 @@ export default function LivestockDetail() {
   } = useHeaderTransition();
   const [searchParams] = useSearchParams();
   const openedFromCart = searchParams.get("from") === "cart";
-  const returnPath = openedFromCart ? "/cart" : "/browse";
+  const openedFromOrders = ["order", "orders"].includes(searchParams.get("from"));
+  const openedFromPayment = searchParams.get("from") === "payment";
+  const requestedReturnTo = searchParams.get("returnTo");
+  const paymentReturnPath =
+    requestedReturnTo?.startsWith("/") && !requestedReturnTo.startsWith("//")
+      ? requestedReturnTo
+      : "/payment";
+  const returnPath = openedFromCart
+    ? "/cart"
+    : openedFromPayment
+      ? paymentReturnPath
+      : openedFromOrders
+        ? "/orders"
+        : "/browse";
   const returnLabel = openedFromCart
     ? t("livestockDetail.backToCart")
-    : t("livestockDetail.backToBrowse");
+    : openedFromPayment
+      ? t("livestockDetail.backToPayment")
+      : openedFromOrders
+        ? t("livestockDetail.backToOrders")
+        : t("livestockDetail.backToBrowse");
   const { addToCart, buyNow, cartItems } = useCart();
   const requireAuth = useRequireAuth();
   const { reveal } = useReveal();
@@ -121,7 +147,31 @@ export default function LivestockDetail() {
     setLivestock(null);
     setError(null);
     loadLivestockById(id)
-      .then(setLivestock)
+      .then(async (selected) => {
+        setLivestock(selected);
+        try {
+          const allLivestock = await loadLivestockWithFarmers();
+          const selectedBreed = String(selected?.breed || "")
+            .trim()
+            .toLowerCase();
+          setRelatedLivestock(
+            (allLivestock || [])
+              .filter(
+                (candidate) =>
+                  String(candidate.id) !== String(selected?.id) &&
+                  selectedBreed &&
+                  String(candidate.breed || "").trim().toLowerCase() ===
+                    selectedBreed &&
+                  !["reserved", "sold", "unavailable"].includes(
+                    String(candidate.status || "").toLowerCase(),
+                  ),
+              )
+              .slice(0, 10),
+          );
+        } catch {
+          setRelatedLivestock([]);
+        }
+      })
       .catch((e) => setError(e.message || t("livestockDetail.loadError")))
       .finally(() => setLoading(false));
   };
@@ -308,20 +358,11 @@ export default function LivestockDetail() {
     { label: t("livestockDetail.earTag"), value: livestock.earTag },
     { label: t("livestockDetail.rfid"), value: livestock.rfid },
   ].filter((i) => i.value);
-  const farmState =
-    livestock.state ||
-    extractState(
-      livestock.farmLocation ||
-        livestock.farm_location ||
-        livestock.farm_address ||
-        "",
-    );
 
   const farmRows = [
     { icon: MapPin, label: tf("detail.listedIn"), value: listedState },
     { icon: Home, label: tf("detail.farm"), value: livestock.farm_name },
     { icon: User, label: t("livestockDetail.farmer"), value: livestock.farmer_name === "Unknown Farmer" ? "" : livestock.farmer_name },
-    { icon: Navigation, label: tf("detail.farmAddress"), value: livestock.farmLocation },
   ].filter((row) => row.value);
 
   return (
@@ -341,8 +382,11 @@ export default function LivestockDetail() {
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <div className="pointer-events-none absolute inset-x-0 top-6 z-10 text-center">
-          <p className="text-[15px] font-bold uppercase tracking-[0.3em] text-white drop-shadow">
+        <div className="pointer-events-none absolute inset-x-0 top-5 z-10 flex items-center justify-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#F7EDE2]/70 bg-[#41362D]/55 shadow-sm backdrop-blur-sm">
+            <Leaf aria-hidden="true" className="h-3.5 w-3.5 text-white" />
+          </span>
+          <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white drop-shadow">
             QURBI
           </p>
         </div>
@@ -512,23 +556,23 @@ export default function LivestockDetail() {
             <div className="mb-3 flex items-end justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#E3C19F]">
-                  Same breed
+                  {t("livestockDetail.sameBreed")}
                 </p>
                 <h2
                   id="related-products-title"
                   className="text-xl font-extrabold text-white"
                 >
-                  Add item
+                  {t("livestockDetail.relatedTitle")}
                 </h2>
               </div>
               <span className="text-xs font-semibold text-white/60">
-                Swipe to explore
+                {t("livestockDetail.swipeToExplore")}
               </span>
             </div>
             <div className="no-scrollbar -mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-3">
               {relatedLivestock.map((item) => {
                 const image = item.coverImage || item.images?.[0] || "";
-                const label = item.breed || item.species || "Livestock";
+                const label = item.breed || item.species || t("livestockDetail.livestockFallback");
                 return (
                   <button
                     key={item.id}
@@ -552,10 +596,10 @@ export default function LivestockDetail() {
                         {label}
                       </p>
                       <p className="mt-1 text-base font-extrabold text-[#F7EDE2]">
-                        RM {Number(item.price || 0).toLocaleString()}
+                        {formatRM(item.price)}
                       </p>
                       <span className="mt-2 inline-flex rounded-lg border border-[#F7EDE2]/70 bg-white/10 px-2.5 py-1 text-[11px] font-bold text-white">
-                        View item
+                        {t("livestockDetail.viewItem")}
                       </span>
                     </div>
                   </button>

@@ -19,7 +19,7 @@ export default function CustomerSupport() {
     t("customerSupport.faqs", { returnObjects: true })
   );
   return (
-    <div className="aisyah-page">
+    <main className="aisyah-page">
       <AppHeader
         title={t("customerSupport.pageTitle")}
         backTo="/profile"
@@ -72,6 +72,6 @@ export default function CustomerSupport() {
           </Accordion>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

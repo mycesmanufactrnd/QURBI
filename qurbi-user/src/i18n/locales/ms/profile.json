@@ -20,6 +20,7 @@
     },
     "editModal": {
       "title": "Sunting Maklumat Peribadi",
+      "subtitle": "Pastikan butiran hubungan anda sentiasa terkini",
       "fullNamePlaceholder": "Nama Penuh",
       "emailPlaceholder": "Alamat E-mel",
       "phonePlaceholder": "Nombor Telefon",

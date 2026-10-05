@@ -30,6 +30,8 @@ export default function SplashScreen({ duration = 3200, onDone }) {
     };
   }, [duration, exitDuration, timingScale]);
 
+  // No document during the build-time prerender; portals are browser-only UI.
+  if (typeof document === "undefined") return null;
   return createPortal(
     <div
       className={`qurbi-splash-background fixed inset-0 z-[9999] isolate flex h-[100dvh] w-screen overflow-hidden flex-col items-center justify-center bg-[#41362D] px-6 transition-opacity ${

@@ -14,7 +14,7 @@ import {
   Zap,
   Home,
   User,
-  Navigation,
+  Leaf,
 } from "lucide-react";
 import { loadBulkListingById } from "@/lib/farmerClient";
 import { checkBulkListingAvailability } from "@/lib/livestock-availability";
@@ -35,7 +35,8 @@ import { resolvedBreakdown, useBreedNames } from "@/lib/breed-names";
 import StickyActionBar from "@/components/shop/StickyActionBar";
 import StatusChip from "@/components/shop/StatusChip";
 import { formatRM } from "@/lib/format";
-import { statusLabel } from "@/lib/listing-display";
+import { extractState } from "@/lib/livestock-data";
+import { recentPageOr } from "@/lib/navigation";
 
 export default function BulkListingDetail() {
   const { t } = useTranslation("listings");
@@ -45,10 +46,27 @@ export default function BulkListingDetail() {
     useHeaderTransition();
   const [searchParams] = useSearchParams();
   const openedFromCart = searchParams.get("from") === "cart";
-  const returnPath = openedFromCart ? "/cart" : "/bulk-buy";
+  const openedFromOrders = ["order", "orders"].includes(searchParams.get("from"));
+  const openedFromPayment = searchParams.get("from") === "payment";
+  const requestedReturnTo = searchParams.get("returnTo");
+  const paymentReturnPath =
+    requestedReturnTo?.startsWith("/") && !requestedReturnTo.startsWith("//")
+      ? requestedReturnTo
+      : "/payment";
+  const returnPath = openedFromCart
+    ? "/cart"
+    : openedFromPayment
+      ? paymentReturnPath
+      : openedFromOrders
+        ? "/orders"
+        : "/bulk-buy";
   const returnLabel = openedFromCart
     ? t("bulkListingDetail.backToCart")
-    : t("bulkListingDetail.backToBulkBuy");
+    : openedFromPayment
+      ? t("bulkListingDetail.backToPayment")
+      : openedFromOrders
+        ? t("bulkListingDetail.backToOrders")
+        : t("bulkListingDetail.backToBulkBuy");
   const requireAuth = useRequireAuth();
   const { addToCart, buyNow, cartItems } = useCart();
   const [listing, setListing] = useState(null);
@@ -169,10 +187,6 @@ export default function BulkListingDetail() {
   };
 
   const detailItems = [
-    {
-      label: t("bulkListingDetail.availabilityLabel"),
-      value: statusLabel(tf, listing.status) || t("bulkListingDetail.available"),
-    },
     { label: t("bulkListingDetail.totalAnimalsLabel"), value: total },
     {
       label: t("bulkListingDetail.maleCountLabel"),
@@ -202,15 +216,10 @@ export default function BulkListingDetail() {
     );
 
   const farmRows = [
-    { icon: MapPin, label: tf("detail.lotLocation"), value: listing.state },
+    { icon: MapPin, label: tf("detail.lotLocation"), value: farmState },
     { icon: Home, label: tf("detail.farm"), value: listing.farm_name },
     // The bulk-listing API does not return the farmer yet; skip the placeholder.
     { icon: User, label: tf("detail.farmer"), value: listing.farmer_name === "Unknown Farmer" ? "" : listing.farmer_name },
-    {
-      icon: Navigation,
-      label: tf("detail.farmAddress"),
-      value: listing.farm_location || listing.farm_address || listing.farm_state,
-    },
   ].filter((row) => row.value);
   const price = formatRM(listing.totalPrice);
 

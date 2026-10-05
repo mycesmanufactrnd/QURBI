@@ -51,6 +51,7 @@
       "cartCount_one": "{{count}} item waiting",
       "cartCount_other": "{{count}} items waiting",
       "orders": "Track & receipts",
+      "transaction": "Payment history",
       "profile": "Account & language",
       "addresses": "Delivery addresses"
     }

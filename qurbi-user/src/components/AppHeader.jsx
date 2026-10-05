@@ -152,27 +152,6 @@ export default function AppHeader({
         className={`relative z-10 flex origin-top flex-col items-center text-center transition-transform duration-500 ease-in-out ${headerExpanded ? "scale-100" : "scale-[0.96]"}`}
       >
         <div className="absolute left-0 top-0 z-20 flex flex-row items-center gap-1.5">
-          {isAuthenticated && (
-            <Link
-              to="/notifications"
-              onClick={(event) =>
-                beginIconTransition("notification", event.currentTarget)
-              }
-              aria-label={
-                unreadCount
-                  ? t("appHeader.notificationsUnread", { count: unreadCount })
-                  : t("appHeader.notifications")
-              }
-              className="relative flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/10 text-white transition-transform active:scale-90"
-            >
-              <Bell className="h-5 w-5" />
-              {unreadCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-white bg-[#DC2626] px-1 text-[11px] font-bold leading-none text-white">
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </span>
-              )}
-            </Link>
-          )}
           {!isAuthenticated && guestActionsOnLeft && (
             <>
               <Link
@@ -192,7 +171,7 @@ export default function AppHeader({
           {backTo && (
             <button
               type="button"
-              onClick={() => navigateWithTransition(backTo)}
+              onClick={() => navigateWithTransition(recentPageOr(backTo))}
               aria-label={t("appHeader.goBack")}
               className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#F7EDE2]/60 bg-white/10 text-white transition-transform active:scale-90"
             >
@@ -227,14 +206,14 @@ export default function AppHeader({
               }
               aria-label={
                 unreadCount
-                  ? `Open notifications, ${unreadCount} unread`
-                  : "Open notifications"
+                  ? t("appHeader.notificationsUnread", { count: unreadCount })
+                  : t("appHeader.notifications")
               }
-              className="relative flex h-10 w-10 items-center justify-center rounded-full bg-transparent text-white transition-transform active:scale-90"
+              className="relative flex h-11 w-11 items-center justify-center rounded-full bg-transparent text-white transition-transform active:scale-90"
             >
               <Bell className="h-5 w-5" />
               {unreadCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full border border-white bg-red-500 px-1 text-[9px] font-bold leading-none text-white">
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-white bg-[#DC2626] px-1 text-[11px] font-bold leading-none text-white">
                   {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               )}
@@ -276,9 +255,11 @@ export default function AppHeader({
             )}
           </div>
           {eyebrow && (
-            <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.28em] text-white/75">
-              {eyebrow}
-            </p>
+            <h1
+              className={`mt-1 max-w-[65%] text-xl font-bold leading-tight tracking-tight text-white sm:max-w-none ${titleClassName}`}
+            >
+              {title}
+            </h1>
           )}
         </div>
       </div>

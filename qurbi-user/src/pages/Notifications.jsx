@@ -282,16 +282,21 @@ export default function Notifications() {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => navigateFromIconPage(-1)}
+            onClick={() => navigateFromIconPage(recentPageOr("/"))}
             aria-label={t("notifications.goBackAria")}
             className="flex h-11 w-11 flex-none items-center justify-center rounded-xl border border-[#F7EDE2]/60 bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white transition-transform active:scale-90"
           >
             <ArrowLeft className="h-5 w-5 text-white" />
           </button>
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-bold uppercase tracking-[0.4em] text-[#41362D]/70">
-              QURBI
-            </p>
+            <div className="flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] shadow-sm">
+                <Leaf className="h-3.5 w-3.5 text-white" />
+              </span>
+              <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-[#41362D]/70">
+                QURBI
+              </p>
+            </div>
             <h1 className="text-2xl font-bold leading-tight text-[#41362D]">
               {t("notifications.title")}
             </h1>

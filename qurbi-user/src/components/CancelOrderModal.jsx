@@ -19,6 +19,8 @@ export default function CancelOrderModal({ order, loading, error, onConfirm, onC
 
   if (!order) return null;
 
+  // No document during the build-time prerender; portals are browser-only UI.
+  if (typeof document === "undefined") return null;
   return createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"

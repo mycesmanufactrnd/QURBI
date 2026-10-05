@@ -20,6 +20,7 @@
     },
     "editModal": {
       "title": "Edit Personal Info",
+      "subtitle": "Keep your contact details up to date",
       "fullNamePlaceholder": "Full Name",
       "emailPlaceholder": "Email Address",
       "phonePlaceholder": "Phone Number",

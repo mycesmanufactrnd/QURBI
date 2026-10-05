@@ -97,13 +97,6 @@ export class OrdersService {
   ) {}
 
   async findAllForBuyer(buyerId: string): Promise<Order[]> {
-    await this.dataSource.transaction((manager) =>
-      this.reservationsService.expireDue(manager),
-    );
-    return this.repository.find({
-      where: { buyerId, hiddenFromBuyerHistory: false },
-      relations: { items: true, reservations: true },
-      order: { createdAt: 'DESC' },
     return this.dataSource.transaction(async (manager) => {
       await this.reservationsService.expireDue(manager);
       const orders = await manager.find(Order, {
@@ -150,12 +143,6 @@ export class OrdersService {
   }
 
   async findOne(id: string, actor: Actor): Promise<Order> {
-    await this.dataSource.transaction((manager) =>
-      this.reservationsService.expireDue(manager),
-    );
-    const order = await this.repository.findOne({
-      where: { id },
-      relations: { items: true, trackingEvents: true, reservations: true },
     return this.dataSource.transaction(async (manager) => {
       await this.reservationsService.expireDue(manager);
       const order = await manager.findOne(Order, {
@@ -247,11 +234,6 @@ export class OrdersService {
         return await this.dataSource.transaction(async (manager) => {
           await this.reservationsService.expireDue(manager);
           const existingOrder = await manager.findOne(Order, {
-            where: {
-              checkoutKey,
-              buyerId,
-              status: OrderStatus.PENDING_PAYMENT,
-            },
             where: { checkoutKey, buyerId },
             relations: { items: true },
           });
@@ -265,10 +247,6 @@ export class OrdersService {
               existingOrder.paymentStatus = PaymentStatus.UNPAID;
               await manager.save(existingOrder);
             }
-            await manager.delete(
-              CartItem,
-              items.map((item) => item.id),
-            );
             await this.ensurePendingDeliveryFee(manager, existingOrder);
             await manager.delete(CartItem, items.map((item) => item.id));
             return existingOrder;

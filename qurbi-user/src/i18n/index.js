@@ -18,7 +18,9 @@ const buildResources = (modules) => {
 };
 
 export const STORAGE_KEY = "qurbi_lang";
-export const SUPPORTED_LANGUAGES = ["en", "ms"];
+export const SUPPORTED_LANGUAGES = ["ms", "en"];
+// Malay is the first language; English is the alternative and the fallback.
+export const DEFAULT_LANGUAGE = "ms";
 
 const storedLanguage = (() => {
   try {
@@ -35,7 +37,7 @@ i18n.use(initReactI18next).init({
     en: enResources,
     ms: buildResources(msModules),
   },
-  lng: SUPPORTED_LANGUAGES.includes(storedLanguage) ? storedLanguage : "en",
+  lng: SUPPORTED_LANGUAGES.includes(storedLanguage) ? storedLanguage : DEFAULT_LANGUAGE,
   fallbackLng: "en",
   ns: Object.keys(enResources),
   defaultNS: "common",
@@ -44,6 +46,7 @@ i18n.use(initReactI18next).init({
 });
 
 i18n.on("languageChanged", (lng) => {
+  if (typeof document !== "undefined") document.documentElement.lang = lng;
   try {
     localStorage.setItem(STORAGE_KEY, lng);
   } catch {
