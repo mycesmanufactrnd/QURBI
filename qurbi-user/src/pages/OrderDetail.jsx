@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Link,
   useLocation,
@@ -6,18 +7,20 @@ import {
   useParams,
   useSearchParams,
 } from "react-router-dom";
-import { Camera, Check, ChevronRight, MapPin, Package } from "lucide-react";
+import { Camera, Check, ChevronRight, CircleAlert, MapPin, Package, Truck } from "lucide-react";
 import { qurbiApi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
 import { useAuthPrompt } from "@/lib/auth-prompt-context";
 import { formatOrderDateTime } from "@/lib/order-date";
-import { formatRM } from "@/lib/format";
 import { extractState } from "@/lib/livestock-data";
 import { combineOrders, groupedOrderQuery } from "@/lib/order-groups";
 import ImageLightbox from "@/components/ImageLightbox";
 import AppHeader from "@/components/AppHeader";
 import PageLoading from "@/components/PageLoading";
 import PaymentErrorModal from "@/components/PaymentErrorModal";
+import ProductImage from "@/components/ProductImage";
+import StickyActionBar from "@/components/account/StickyActionBar";
+import { primaryBtn, secondaryBtn } from "@/components/account/buttons";
 
 const RECEIVABLE_STATUSES = ["in_transit", "shipped", "to_receive", "delivering", "delivered"];
 
@@ -68,6 +71,7 @@ const TAB_FOR_STATUS = {
 };
 
 function LegacyOrderTracking({ order, onPreview }) {
+  const { t } = useTranslation("orders");
   const tracking = order.tracking_photos || {};
 
   return (
@@ -182,6 +186,8 @@ function LegacyOrderTracking({ order, onPreview }) {
 }
 
 function OrderTracking({ order, onPreview }) {
+  const { t } = useTranslation("orders");
+  const { t: ta } = useTranslation("account");
   const tracking = order.tracking_photos || {};
 
   const proofs = TRACKING_STAGES.map((stage) => ({
@@ -230,7 +236,7 @@ function OrderTracking({ order, onPreview }) {
           <button
             type="button"
             onClick={() =>
-              onPreview(selected.image, `${selected.label} order proof`)
+              onPreview(selected.image, `${t(selected.labelKey)} order proof`)
             }
             aria-label={ta("orderDetail.proof.open", { stage: t(selected.labelKey) })}
             className="mt-4 flex h-56 w-full items-center justify-center overflow-hidden rounded-2xl bg-black/20"
@@ -256,12 +262,12 @@ function OrderTracking({ order, onPreview }) {
               >
                 <img
                   src={proof.image}
-                  alt={proof.label}
+                  alt={t(proof.labelKey)}
                   className="h-16 w-16 object-cover"
                 />
 
                 <span className="block px-1 pb-1 pt-0.5 text-[10px] font-bold text-gray-600">
-                  {proof.label}
+                  {t(proof.labelKey)}
                 </span>
               </button>
             ))}
@@ -304,24 +310,48 @@ function statusLabel(order) {
   return order.status?.replaceAll("_", " ");
 }
 
+function DeliveryCard({ order }) {
+  const address = order.deliveryAddress || order.delivery_address || null;
+  const lines = address
+    ? [
+        address.addressLine1,
+        address.addressLine2,
+        [address.postcode, address.city].filter(Boolean).join(" "),
+        [address.state, address.country].filter(Boolean).join(", "),
+      ].filter(Boolean)
+    : [];
+
+  if (!lines.length) return null;
+
+  return (
+    <section className="rounded-2xl border border-[#E3C19F]/60 bg-gradient-to-br from-[#41362D] to-[#6B594A] p-4 shadow-lg shadow-[#41362D]/20">
+      <h2 className="flex items-center gap-2 text-base font-bold text-white">
+        <Truck className="h-5 w-5" aria-hidden="true" />
+        Delivery Address
+      </h2>
+      <p className="mt-3 break-words text-sm leading-relaxed text-white/85">
+        {lines.join(", ")}
+      </p>
+    </section>
+  );
+}
+
 /* =========================================================
    REFUND SHEET
 ========================================================= */
 
 function RefundRequestSheet({ order, loading, error, onClose, onSubmit }) {
+  const { t } = useTranslation("orders");
+  const { t: ta } = useTranslation("account");
   const [reason, setReason] = useState("");
   const [evidenceFiles, setEvidenceFiles] = useState([]);
 
   useEffect(() => {
     setReason("");
     setEvidenceFiles([]);
-    setTouched(false);
   }, [order?.id]);
 
   if (!order) return null;
-
-  const reasonMissing = touched && !reason.trim();
-  const photosMissing = touched && !evidenceFiles.length;
 
   return (
     <div
@@ -795,6 +825,11 @@ export default function OrderDetail() {
   );
 
   const isRefundRejected = order.refund_status?.toLowerCase() === "rejected";
+  const stickyAction = isAwaitingPayment ? (
+    <Link to={`/payment?${groupedOrderQuery(order)}`} className={`${primaryBtn} w-full`}>
+      Continue Payment
+    </Link>
+  ) : null;
 
   return (
     <div className={`aisyah-page ${stickyAction ? "pb-[calc(11rem+env(safe-area-inset-bottom))]" : ""}`}>
@@ -852,9 +887,7 @@ export default function OrderDetail() {
           </section>
         )}
 
-        <ProgressTimeline order={order} />
-
-        {!isAwaitingPayment && (isPaid || Object.keys(photos).length > 0) && (
+        {!isAwaitingPayment && (
           <OrderTracking
             order={order}
             onPreview={(image, alt) => setPreviewImage({ image, alt })}
@@ -985,6 +1018,7 @@ export default function OrderDetail() {
               : item.livestock_id
                 ? `/livestock/${encodeURIComponent(item.livestock_id)}?from=order`
                 : "";
+            /** @type {React.ElementType} */
             const ItemContainer = productPath ? Link : "div";
             const itemName = item.breed || item.listing_name || "Order item";
             const itemLocation =
@@ -1144,7 +1178,7 @@ export default function OrderDetail() {
                 {actionLoading ? "Updating..." : "Approve Receive"}
               </button>
             </div>
-        </section>
+          </section>
         )}
 
         <DeliveryCard order={order} />
