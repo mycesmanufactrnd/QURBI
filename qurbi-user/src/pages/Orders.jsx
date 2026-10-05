@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Clock3, Package, ReceiptText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { qurbiApi } from "@/api/qurbiClient";
@@ -39,6 +39,43 @@ const STATUS_LABELS = {
   refund_requested: "Refund Requested",
   return_refund: "Return / Refund",
 };
+
+function ScrollingFarmName({ children, className = "" }) {
+  const containerRef = useRef(null);
+  const textRef = useRef(null);
+  const [scrollDistance, setScrollDistance] = useState(0);
+
+  useEffect(() => {
+    const measure = () => {
+      const containerWidth = containerRef.current?.clientWidth || 0;
+      const textWidth = textRef.current?.scrollWidth || 0;
+      setScrollDistance(Math.max(0, textWidth - containerWidth));
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    if (containerRef.current) observer.observe(containerRef.current);
+    if (textRef.current) observer.observe(textRef.current);
+    window.addEventListener("resize", measure);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [children]);
+
+  return (
+    <span ref={containerRef} className={`block min-w-0 overflow-hidden whitespace-nowrap ${className}`}>
+      <span
+        ref={textRef}
+        className={`inline-block whitespace-nowrap ${scrollDistance > 2 ? "product-name-scroll" : ""}`}
+        style={scrollDistance > 2 ? { "--scroll-distance": `-${scrollDistance}px` } : undefined}
+      >
+        {children}
+      </span>
+    </span>
+  );
+}
 
 function groupOrdersByDay(orders) {
   return [...orders]
@@ -83,10 +120,10 @@ function OrderTable({ group, onOpen, onCancel, cancellingOrderId }) {
         {group.label}
       </h2>
       <div className="overflow-hidden rounded-2xl border border-[#E3C19F]/60 bg-gradient-to-br from-[#41362D] to-[#6B594A] shadow-lg shadow-[#41362D]/20">
-        <div className="grid grid-cols-[minmax(0,1fr)_5rem_6.5rem] items-center gap-2 border-b border-white/15 px-4 py-2 text-right text-[10px] font-bold uppercase tracking-[0.12em] text-white/55">
+        <div className="grid grid-cols-[minmax(0,1fr)_4.25rem_minmax(6.25rem,auto)] items-center gap-2 border-b border-white/15 px-4 py-2 text-right text-[10px] font-bold uppercase tracking-[0.12em] text-white/55">
           <span className="text-left">Farm</span>
           <span className="text-center">Status</span>
-          <span>Total</span>
+          <span className="justify-self-end">Total</span>
         </div>
         {group.orders.map((order) => {
           const isPending = ["pending", "pending_payment", "to_pay"].includes(order.status);
@@ -96,35 +133,48 @@ function OrderTable({ group, onOpen, onCancel, cancellingOrderId }) {
           const groupSuffix = groupIds.length > 1
             ? `&group_ids=${encodeURIComponent(groupIds.join(","))}`
             : "";
+          const itemCount = (order.items || []).reduce(
+            (total, item) => total + Math.max(1, Number(item.quantity || 1)),
+            0,
+          );
           const detailsPath = `/orders/${encodeURIComponent(order.id)}?fromTab=${encodeURIComponent(sourceTab)}${groupSuffix}`;
           return (
             <div key={order.id} className="border-b border-white/10 px-4 py-3 last:border-b-0">
               <button
                 type="button"
                 onClick={() => onOpen(detailsPath)}
-                className="grid w-full grid-cols-[minmax(0,1fr)_5rem_6.5rem] items-center gap-2 text-right transition-opacity hover:opacity-90"
+                className="grid w-full grid-cols-[minmax(0,1fr)_4.25rem_minmax(6.25rem,auto)] items-center gap-2 text-right transition-opacity hover:opacity-90"
               >
                 <span className="min-w-0 text-left">
-                  <span className="block truncate text-sm font-extrabold text-white">
+                  <ScrollingFarmName className="text-sm font-extrabold text-white">
                     {orderFarmName(order)}
-                  </span>
-                  <span className="mt-0.5 block text-xs font-semibold text-white/60">
-                    {formatOrderTime(order.created_date)}
-                  </span>
+                  </ScrollingFarmName>
                 </span>
-                <span className="w-full break-words rounded-full bg-[#F7EDE2] px-1.5 py-1 text-center text-[10px] font-bold leading-tight text-[#41362D] sm:text-[11px]">
+                <span className="max-w-full justify-self-center rounded-full bg-[#F7EDE2] px-1.5 py-1 text-center text-[10px] font-extrabold leading-tight text-[#41362D] sm:text-[11px]">
                   {STATUS_LABELS[order.status] || order.status}
                 </span>
-                <span className="min-w-0 break-words text-[11px] font-extrabold leading-tight text-white sm:text-sm">
+                <span className="min-w-0 justify-self-end whitespace-nowrap text-sm font-extrabold leading-tight text-white">
                   RM {Number(order.total || 0).toLocaleString()}
                 </span>
               </button>
-              {reservedUntil && (
-                <div className="mt-2 flex items-center justify-end gap-1.5 text-xs font-semibold text-[#F7EDE2]">
-                  <Clock3 className="h-3.5 w-3.5" />
-                  <span>{reservedUntil}</span>
+              <div className="mt-2 flex items-end justify-between gap-3 text-xs font-semibold">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-left text-white/65">
+                  <span className="flex items-center gap-1.5">
+                    <Clock3 className="h-3.5 w-3.5 flex-none" />
+                    {formatOrderTime(order.created_date)}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Package className="h-3.5 w-3.5 flex-none" />
+                    {itemCount} {itemCount === 1 ? "item" : "items"}
+                  </span>
                 </div>
-              )}
+
+                {reservedUntil && (
+                  <span className="text-right text-[#F7EDE2]">
+                    {reservedUntil}
+                  </span>
+                )}
+              </div>
               <div className={`mt-3 border-t border-white/10 pt-3 ${isPending ? "grid grid-cols-2 gap-2" : "flex justify-end"}`}>
                 {isPending && (
                   <button

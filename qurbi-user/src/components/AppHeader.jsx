@@ -24,6 +24,7 @@ export default function AppHeader({
   thresholdShrink = false,
   titleClassName = "",
   subtitleClassName = "",
+  preferRecentBack = true,
 }) {
   const location = useLocation();
   const { isAuthenticated } = useAuth();
@@ -169,7 +170,9 @@ export default function AppHeader({
           {backTo && (
             <button
               type="button"
-              onClick={() => navigateWithTransition(recentPageOr(backTo))}
+              onClick={() =>
+                navigateWithTransition(preferRecentBack ? recentPageOr(backTo) : backTo)
+              }
               aria-label="Go back"
               className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#F7EDE2]/60 bg-white/10 text-white transition-transform active:scale-90"
             >

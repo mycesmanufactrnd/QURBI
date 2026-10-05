@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import {
   MapPin,
   ChevronRight,
@@ -9,6 +9,7 @@ import {
   CreditCard,
   Package,
   Check,
+  Store,
 } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
 import { useUserProfile } from "@/lib/user-profile-context";
@@ -30,7 +31,7 @@ import AuthRequiredState from "@/components/AuthRequiredState";
 import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
 import AppHeader from "@/components/AppHeader";
 import { extractState } from "@/lib/livestock-data";
-import { combineOrders, groupedOrderQuery } from "@/lib/order-groups";
+import { combineOrders, groupItemsByFarm } from "@/lib/order-groups";
 
 const DELIVERY_FEE_PER_FARMER = 10;
 const PAYMENT_CARD_SHADOW = "shadow-[0_12px_28px_rgba(65,54,45,0.18)]";
@@ -210,12 +211,18 @@ export default function Payment() {
   } = useUserProfile();
   const { navigateWithTransition, navigateFromProductCard } =
     useHeaderTransition();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { reveal } = useReveal();
   const resumeOrderParam = searchParams.get("order_ids") || searchParams.get("order_id") || "";
   const resumeOrderIds = resumeOrderParam.split(",").map((id) => id.trim()).filter(Boolean);
   const resumeOrderId = resumeOrderIds[0] || "";
   const isBuyNowCheckout = searchParams.get("source") === "buy-now";
+  const requestedCheckoutStep = Number(searchParams.get("step"));
+  const initialCheckoutStep = resumeOrderId
+    ? 3
+    : [1, 2, 3].includes(requestedCheckoutStep)
+      ? requestedCheckoutStep
+      : 1;
   const [resumedOrder, setResumedOrder] = useState(null);
   const [loadingOrder, setLoadingOrder] = useState(Boolean(resumeOrderId));
   const [resumeError, setResumeError] = useState("");
@@ -227,15 +234,28 @@ export default function Payment() {
   const [loading, setLoading] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [checkoutError, setCheckoutError] = useState(null);
-  const [checkoutStep, setCheckoutStep] = useState(resumeOrderId ? 3 : 1);
+  const [checkoutStep, setCheckoutStep] = useState(initialCheckoutStep);
   const [newCheckoutGroupId] = useState(() =>
     globalThis.crypto?.randomUUID?.() || `checkout-${Date.now()}-${Math.random().toString(36).slice(2)}`,
   );
   const fulfillmentMethod = "delivery";
 
   useEffect(() => {
-    setCheckoutStep(resumeOrderId ? 3 : 1);
-  }, [resumeOrderId]);
+    if (resumeOrderId) {
+      setCheckoutStep(3);
+      return;
+    }
+    if ([1, 2, 3].includes(requestedCheckoutStep)) {
+      setCheckoutStep(requestedCheckoutStep);
+    }
+  }, [requestedCheckoutStep, resumeOrderId]);
+
+  const changeCheckoutStep = (step) => {
+    setCheckoutStep(step);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("step", String(step));
+    setSearchParams(nextParams, { replace: true });
+  };
 
   useEffect(() => {
     if (!resumeOrderId) return;
@@ -331,6 +351,16 @@ export default function Payment() {
   const paymentSubtotal = resumedOrder?.subtotal ?? (
     isBuyNowCheckout ? Number(buyNowItem?.total || 0) : selectedSubtotal
   );
+  const paymentFarmGroups = groupItemsByFarm(
+    paymentItems,
+    (item) => productForPaymentItem(item, productDetails),
+  );
+  const paymentReturnParams = new URLSearchParams(searchParams);
+  paymentReturnParams.set("step", String(checkoutStep));
+  const currentPaymentReturnTo = `/payment?${paymentReturnParams.toString()}`;
+  const deliveryReturnParams = new URLSearchParams(searchParams);
+  deliveryReturnParams.set("step", "2");
+  const deliveryReturnTo = `/payment?${deliveryReturnParams.toString()}`;
 
   const buyerName = isResumingOrder
     ? resumedOrder?.buyer_name || ""
@@ -623,7 +653,11 @@ export default function Payment() {
           addresses={addresses}
           selectedId={selectedAddressId}
           onSelect={setSelectedAddressId}
-          onAddNew={() => navigateWithTransition("/address-book?new=1&returnTo=%2Fpayment")}
+          onAddNew={() =>
+            navigateWithTransition(
+              `/address-book?new=1&returnTo=${encodeURIComponent(deliveryReturnTo)}`,
+            )
+          }
           onClose={() => setShowPicker(false)}
         />
       )}
@@ -631,11 +665,12 @@ export default function Payment() {
       <AppHeader
         title="Payment"
         backTo={isResumingOrder ? "/orders" : "/cart"}
+        preferRecentBack={false}
       />
 
       <PaymentStepper
         currentStep={checkoutStep}
-        onStepChange={setCheckoutStep}
+        onStepChange={changeCheckoutStep}
       />
 
       <div className="aisyah-content">
@@ -658,16 +693,21 @@ export default function Payment() {
             </div>
           </div>
           <div className="space-y-3">
-            {paymentItems.map((item) => {
+            {paymentFarmGroups.map((farmGroup) => (
+              <div key={farmGroup.key} className="space-y-2">
+                <div className="flex items-center gap-2 border-b border-white/15 px-1 pb-2">
+                  <Store className="h-4 w-4 flex-none text-[#E3C19F]" />
+                  <p className="min-w-0 truncate text-sm font-extrabold text-white">
+                    {farmGroup.name}
+                  </p>
+                </div>
+                <div className="space-y-2">
+            {farmGroup.items.map((item) => {
               const productId =
                 item.item_type === "bulk"
                   ? item.bulk_listing_id || item.id
                   : item.livestock_id || item.id;
-              const returnTo = isResumingOrder
-                ? `/payment?${groupedOrderQuery(resumedOrder)}`
-                : isBuyNowCheckout
-                  ? "/payment?source=buy-now"
-                  : "/payment";
+              const returnTo = currentPaymentReturnTo;
               const productPath = productId
                 ? `${item.item_type === "bulk" ? "/bulk-buy" : "/livestock"}/${encodeURIComponent(productId)}?from=payment&returnTo=${encodeURIComponent(returnTo)}`
                 : "";
@@ -741,11 +781,14 @@ export default function Payment() {
                 </ItemContainer>
               );
             })}
+                </div>
+              </div>
+            ))}
           </div>
         </section>
         <button
           type="button"
-          onClick={() => setCheckoutStep(2)}
+          onClick={() => changeCheckoutStep(2)}
           className="mt-4 w-full rounded-2xl border-2 border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] py-3.5 text-sm font-extrabold text-white shadow-md shadow-black/20"
         >
           Continue to Delivery
@@ -813,12 +856,6 @@ export default function Payment() {
                 <h3 className="text-gray-800 font-bold text-sm">
                   Buyer Information
                 </h3>
-                <Link
-                  to="/address-book"
-                  className="flex items-center gap-0.5 text-xs font-semibold text-white"
-                >
-                  Edit <ChevronRight className="w-3 h-3" />
-                </Link>
               </div>
               {!selectedAddress ? (
                 <p className="text-gray-400 text-xs italic">
@@ -863,14 +900,14 @@ export default function Payment() {
             <div className="grid grid-cols-2 gap-3 pt-1">
               <button
                 type="button"
-                onClick={() => setCheckoutStep(1)}
+                onClick={() => changeCheckoutStep(1)}
                 className="rounded-2xl border-2 border-[#41362D] bg-white py-3 text-sm font-extrabold text-[#41362D]"
               >
                 Back to Review
               </button>
               <button
                 type="button"
-                onClick={() => setCheckoutStep(3)}
+                onClick={() => changeCheckoutStep(3)}
                 disabled={!canCheckout}
                 className="rounded-2xl border-2 border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] py-3 text-sm font-extrabold text-white shadow-md shadow-black/20 disabled:cursor-not-allowed disabled:opacity-45"
               >
@@ -979,7 +1016,7 @@ export default function Payment() {
           {!isResumingOrder && (
             <button
               type="button"
-              onClick={() => setCheckoutStep(2)}
+              onClick={() => changeCheckoutStep(2)}
               disabled={loading}
               className="mt-2 w-full rounded-xl border-2 border-[#41362D] bg-white py-3 text-sm font-bold text-[#41362D] disabled:opacity-50"
             >

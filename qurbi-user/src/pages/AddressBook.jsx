@@ -405,7 +405,9 @@ export default function AddressBook() {
         if (openedFromPayment) setSelectedAddressId(newAddress.id);
         setShowForm(false);
       }
-      if (isOnboarding) navigate(returnTo, { replace: true });
+      if (isOnboarding || openedFromPayment) {
+        navigate(returnTo, { replace: true });
+      }
     } catch (error) {
       alert(error.data?.error || error.message || "Contact information could not be saved.");
     }
@@ -423,6 +425,7 @@ export default function AddressBook() {
         <AppHeader
           title="Address Book"
           backTo={returnTo}
+          preferRecentBack={false}
           subtitle="Manage your delivery addresses"
         />
         <PageLoading contentOnly message="Loading your address book..." />
@@ -433,7 +436,12 @@ export default function AddressBook() {
   if (!isAuthenticated) {
     return (
       <div className="aisyah-page min-h-screen pb-10">
-        <AppHeader title="Address Book" backTo={returnTo} subtitle="Manage your delivery addresses" />
+        <AppHeader
+          title="Address Book"
+          backTo={returnTo}
+          preferRecentBack={false}
+          subtitle="Manage your delivery addresses"
+        />
         <div className="aisyah-content flex flex-col items-center justify-center gap-3 py-20 text-center">
           <MapPin className="h-12 w-12 text-[#41362D]/35" />
           <p className="text-sm text-[#41362D]/65">Sign in to manage your saved delivery addresses.</p>
@@ -454,6 +462,7 @@ export default function AddressBook() {
       <AppHeader
         title="Address Book"
         backTo={returnTo}
+        preferRecentBack={false}
         subtitle={isOnboarding
           ? "Add your delivery address or skip for now"
           : `${addresses.length} saved address${addresses.length !== 1 ? "es" : ""}`}

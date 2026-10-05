@@ -1071,3 +1071,25 @@ html {
     #86efac 100%
   ) !important;
 }
+
+@keyframes product-name-scroll {
+  0% {
+    transform: translateX(0);
+  }
+
+  20% {
+    transform: translateX(0);
+  }
+
+  80% {
+    transform: translateX(var(--scroll-distance));
+  }
+
+  100% {
+    transform: translateX(var(--scroll-distance));
+  }
+}
+
+.product-name-scroll {
+  animation: product-name-scroll 10s ease-in-out infinite;
+}

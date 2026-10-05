@@ -60,3 +60,28 @@ export function groupedOrderQuery(order) {
   if (ids.length <= 1) return `order_id=${encodeURIComponent(ids[0] || "")}`;
   return `order_ids=${encodeURIComponent(ids.join(","))}`;
 }
+
+export function groupItemsByFarm(items = [], resolveProduct = () => null) {
+  const grouped = new Map();
+  items.forEach((item, index) => {
+    const product = resolveProduct(item);
+    const farmName =
+      item.farm_name ||
+      item.farmName ||
+      product?.farm_name ||
+      product?.farmName ||
+      item.farmer_name ||
+      product?.farmer_name ||
+      "Farm unavailable";
+    const farmKey =
+      item.farmer_id ||
+      item.ownerId ||
+      product?.ownerId ||
+      `farm:${String(farmName).toLowerCase() || index}`;
+    if (!grouped.has(farmKey)) {
+      grouped.set(farmKey, { key: farmKey, name: farmName, items: [] });
+    }
+    grouped.get(farmKey).items.push(item);
+  });
+  return [...grouped.values()];
+}
