@@ -68,7 +68,8 @@ function normalizeBulk(item, breeds = []) {
 
 function normalizeNotification(item) {
   if (!item) return item;
-  return { ...item, message: item.body, orderId: item.relatedType === "order" ? item.relatedId : null, livestockId: item.relatedType === "livestock" ? item.relatedId : null, created_date: item.createdAt, priority: item.type === "refund" ? "Important" : "Normal", type: titleCase(item.type) };
+  const isNewPaidOrder = item.audience === "farmer" && item.type === "payment" && item.relatedType === "order";
+  return { ...item, message: item.body, orderId: item.relatedType === "order" ? item.relatedId : null, livestockId: item.relatedType === "livestock" ? item.relatedId : null, created_date: item.createdAt, priority: item.type === "refund" ? "Important" : "Normal", type: isNewPaidOrder ? "New Order" : titleCase(item.type) };
 }
 
 function normalizeOrderItem(orderItem) {
@@ -238,7 +239,16 @@ function requestEntity(path, isBreed) {
 
 const FarmerNotification = {
   /** @type {ListFn} */ list: async () => (await data(apiClient.get("/notifications", { params: { audience: "farmer" } }))).map(normalizeNotification), update: async (id, input) => input.isRead ? normalizeNotification(await data(apiClient.patch(`/notifications/${id}/read`))) : null, create: async (input) => normalizeNotification(await data(apiClient.post("/notifications", { userId: input.userId || input.farmerId, audience: "farmer", type: "request_update", title: input.title || "QURBI update", body: input.message || input.body || "", linkUrl: input.linkUrl || undefined, relatedType: input.orderId ? "order" : input.livestockId ? "livestock" : undefined, relatedId: input.orderId || input.livestockId || undefined }))),
-  /** @type {SubscribeFn} */ subscribe: () => () => {} };
+  /** @type {SubscribeFn} */ subscribe: (callback) => {
+    if (typeof window === "undefined" || !callback) return () => {};
+    const refresh = () => callback();
+    const timer = window.setInterval(refresh, 15_000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+    };
+  } };
 const User = {
   /** @type {ListFn} */ list: async () => (await data(apiClient.get("/users", { params: { page: 1, limit: 100 } }))).data.map(normalizeUser),
   /** @type {FilterFn} */ filter: async (where = {}) => (await data(apiClient.get("/users", { params: { role: where.role, status: where.status, page: 1, limit: 100 } }))).data.map(normalizeUser), get: async (id) => normalizeUser(await data(apiClient.get(`/users/${id}`))), update: async (id, input) => normalizeUser(await data(apiClient.patch(`/users/${id}`, input))) };
