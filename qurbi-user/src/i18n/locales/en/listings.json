@@ -82,6 +82,8 @@
     "backToBrowse": "Back to Browse",
     "loadError": "Failed to load livestock",
     "alreadyInCart": "This item is already in your cart.",
+    "checkingOrders": "Checking your orders...",
+    "alreadyOrdered": "Already Ordered",
     "loading": "Loading livestock details...",
     "retry": "Retry",
     "species": "Species",

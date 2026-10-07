@@ -65,7 +65,7 @@
   "orders": {
     "titleMore": "{{name}} + {{count}} more",
     "fromFarmer": "From {{name}}",
-    "orderNumber": "Order {{number}}",
+    "orderNumber": "Order",
     "total": "Total",
     "guestTitle": "Your orders",
     "viewToggle": "Choose how orders are shown",

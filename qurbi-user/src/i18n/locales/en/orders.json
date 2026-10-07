@@ -25,7 +25,7 @@
     "aria": {
       "selectOrder": "Select order",
       "deselectOrder": "Deselect order",
-      "viewOrder": "View order {{orderNumber}}",
+      "viewOrder": "View order",
       "currentView": "Current order view",
       "listView": "List order view"
     },
@@ -64,10 +64,10 @@
     "completePayment": "Complete Payment",
     "signInMessage": "Sign in to view and manage your orders.",
     "reservation": {
-      "reservedFor24h": "Reserved for 24 hours",
+      "reservedFor24h": "Reserved 24h",
       "paymentFailedPrefix": "Payment failed · ",
       "reservedUntil": "Reserved until {{time}}",
-      "retryHint": "You can retry payment from this order."
+      "retryHint": "Retry payment."
     },
     "transaction": "Transaction",
     "openTransactionHistory": "Open transaction history"
@@ -134,7 +134,7 @@
     },
     "refundSheet": {
       "title": "Request a refund",
-      "subtitle": "Tell us why you are requesting a refund for {{orderNumber}}.",
+      "subtitle": "Tell us why you are requesting a refund.",
       "reasonPlaceholder": "Enter your reason",
       "uploadLabel": "Upload refund photo evidence",
       "uploadHint": "At least one photo is required (up to 5)",

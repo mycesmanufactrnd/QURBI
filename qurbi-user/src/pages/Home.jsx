@@ -258,10 +258,9 @@ export default function Home() {
   return (
     <main className="aisyah-page">
       <AppHeader
-        eyebrow=""
-        title="QURBI"
+        eyebrow="QURBI"
+        title=""
         subtitle={tseo("home.tagline")}
-        titleClassName="text-2xl sm:text-3xl"
         subtitleClassName="text-base"
         search={
           <form role="search" onSubmit={submitSearch} className="flex gap-2">

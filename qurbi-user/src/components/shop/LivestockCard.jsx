@@ -12,7 +12,7 @@ import {
 } from "@/lib/listing-display";
 
 /** Marketplace card for one animal (Browse grid + Home featured row). */
-export default function LivestockCard({ livestock, index = 0, className = "", showFeatured = false }) {
+export default function LivestockCard({ livestock, index = 0, className = "", showFeatured = false, inCart = false }) {
   const { t } = useTranslation("shop");
   const { t: tf } = useTranslation("shopflow");
   const { navigateFromProductCard } = useHeaderTransition();
@@ -72,6 +72,11 @@ export default function LivestockCard({ livestock, index = 0, className = "", sh
           <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-[#41362D]/90 px-2 py-1 text-xs font-bold leading-none text-[#F7EDE2]">
             <Star aria-hidden="true" className="h-3 w-3 fill-current" />
             {tf("card.featured")}
+          </span>
+        )}
+        {inCart && (
+          <span className="absolute right-2 top-2 rounded-full border border-[#E3C19F] bg-[#41362D]/95 px-2.5 py-1.5 text-xs font-bold text-white shadow-sm">
+            {t("listings:livestockDetail.inCart")}
           </span>
         )}
       </span>

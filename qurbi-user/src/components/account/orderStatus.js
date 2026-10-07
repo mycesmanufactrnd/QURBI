@@ -92,6 +92,30 @@ export function orderStatusInfo(order) {
   return info("unknown", "muted", "to-pay", "details");
 }
 
+/**
+ * Whether an order still owns/reserves its products and should prevent a
+ * second purchase. Released and expired orders must not block the product.
+ */
+export function orderBlocksRepurchase(order) {
+  const status = orderStatusInfo(order);
+  if (["cancelled", "outOfStock", "refunded"].includes(status.key)) return false;
+
+  if (["awaitingPayment", "paymentFailed"].includes(status.key)) {
+    const reservationStatus = String(
+      order?.reservation_status ?? order?.reservationStatus ?? "",
+    ).toLowerCase();
+    if (reservationStatus && reservationStatus !== "active") return false;
+
+    const expiry = order?.reservation_expires_at ?? order?.reservationExpiresAt;
+    if (expiry) {
+      const expiresAt = new Date(expiry).getTime();
+      if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) return false;
+    }
+  }
+
+  return true;
+}
+
 /** Chip colours per tone. Hex values on purpose: the global stylesheet remaps
  * Tailwind's named red/amber/gray utilities to the brand palette. */
 export const TONE_CLASSES = {

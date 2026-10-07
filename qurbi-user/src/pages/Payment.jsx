@@ -577,7 +577,7 @@ export default function Payment() {
           orderId: order.id,
         };
         navigateWithTransition(`/orders/${encodeURIComponent(order.id)}?fromTab=to-pay`, {
-          navigateOptions: { replace: true, state: { paymentError: paymentFailure } },
+          navigateOptions: { replace: true, state: { paymentError: paymentFailure, returnTo: "/orders?tab=to-pay" } },
         });
       }
     } catch (err) {
@@ -588,7 +588,7 @@ export default function Payment() {
       };
       if (reservedOrder?.id) {
         navigateWithTransition(`/orders/${encodeURIComponent(reservedOrder.id)}?fromTab=to-pay`, {
-          navigateOptions: { replace: true, state: { paymentError: paymentFailure } },
+          navigateOptions: { replace: true, state: { paymentError: paymentFailure, returnTo: "/orders?tab=to-pay" } },
         });
       } else {
         setCheckoutError(paymentFailure);
@@ -683,9 +683,7 @@ export default function Payment() {
         preferRecentBack={false}
         subtitle={
           isResumingOrder
-            ? t("payment.continueOrder", {
-                orderNumber: resumedOrder.order_number,
-              })
+            ? t("payment.continueOrder")
             : tf("payment.itemsSummary", {
                 count: paymentItems.length,
                 amount: formatRM(paymentSubtotal),
@@ -1080,6 +1078,9 @@ export default function Payment() {
             checkoutError?.orderId
               ? `/orders/${encodeURIComponent(checkoutError.orderId)}?fromTab=to-pay`
               : "/orders?tab=to-pay",
+            checkoutError?.orderId
+              ? { navigateOptions: { state: { returnTo: "/orders?tab=to-pay" } } }
+              : undefined,
           );
         }}
       />
