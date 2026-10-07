@@ -1,6 +1,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { join } from 'path';
+import { mkdirSync } from 'fs';
+import { getPublicUploadsDir } from './uploads/storage/local-disk-storage.service';
 
 export function configureApp(app: NestExpressApplication): void {
   const apiPrefix = process.env.API_PREFIX || 'api';
@@ -20,7 +21,9 @@ export function configureApp(app: NestExpressApplication): void {
       forbidNonWhitelisted: true,
     }),
   );
-  app.useStaticAssets(join(process.cwd(), 'uploads', 'public'), {
+  const publicUploadsDir = getPublicUploadsDir();
+  mkdirSync(publicUploadsDir, { recursive: true });
+  app.useStaticAssets(publicUploadsDir, {
     prefix: '/uploads/public/',
   });
 }

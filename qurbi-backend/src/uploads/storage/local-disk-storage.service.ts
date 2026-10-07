@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { mkdir, writeFile } from 'fs/promises';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { UploadVisibility } from '../../entities';
 import { StorageService, StoredFile } from './storage.service';
 
@@ -13,9 +13,18 @@ import { StorageService, StoredFile } from './storage.service';
 //    GET /uploads/private/:id route. This is a structural guarantee, not
 //    just an unlisted URL: the static middleware's root doesn't even cover
 //    this directory, so there's no path that reaches it unauthenticated.
-export const UPLOADS_ROOT = join(process.cwd(), 'uploads');
-export const PUBLIC_UPLOADS_DIR = join(UPLOADS_ROOT, 'public');
-export const PRIVATE_UPLOADS_DIR = join(UPLOADS_ROOT, 'private');
+export function getUploadsRoot(): string {
+  const configured = process.env.UPLOADS_ROOT?.trim();
+  return configured ? resolve(configured) : join(process.cwd(), 'uploads');
+}
+
+export function getPublicUploadsDir(): string {
+  return join(getUploadsRoot(), 'public');
+}
+
+export function getPrivateUploadsDir(): string {
+  return join(getUploadsRoot(), 'private');
+}
 
 @Injectable()
 export class LocalDiskStorageService extends StorageService {
@@ -26,8 +35,8 @@ export class LocalDiskStorageService extends StorageService {
   ): Promise<StoredFile> {
     const dir =
       visibility === UploadVisibility.PUBLIC
-        ? PUBLIC_UPLOADS_DIR
-        : PRIVATE_UPLOADS_DIR;
+        ? getPublicUploadsDir()
+        : getPrivateUploadsDir();
     await mkdir(dir, { recursive: true });
 
     // The filename is entirely server-generated — never the client's

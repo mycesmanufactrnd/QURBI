@@ -14,7 +14,7 @@ import { join } from 'path';
 import type { Response } from 'express';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
-import { PRIVATE_UPLOADS_DIR } from './storage/local-disk-storage.service';
+import { getPrivateUploadsDir } from './storage/local-disk-storage.service';
 import { MAX_UPLOAD_BYTES, UploadsService } from './uploads.service';
 
 @Controller('uploads')
@@ -53,6 +53,6 @@ export class UploadsController {
   ): Promise<void> {
     const file = await this.uploadsService.getPrivateFileForViewer(id, user);
     res.setHeader('Content-Type', file.mimeType);
-    res.sendFile(join(PRIVATE_UPLOADS_DIR, file.storageKey));
+    res.sendFile(join(getPrivateUploadsDir(), file.storageKey));
   }
 }
