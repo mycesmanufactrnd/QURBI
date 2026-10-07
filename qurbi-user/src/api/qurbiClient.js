@@ -425,6 +425,14 @@ const functionHandlers = {
       }),
     });
   },
+  async reconcileChipPaymentSession({ paymentSessionId }) {
+    return wrap({
+      payment: await request({
+        method: "post",
+        url: `/payments/chip/sessions/${paymentSessionId}/reconcile`,
+      }),
+    });
+  },
   // The backend only accepts the buyer's proof photo as part of marking the
   // order received, so hold the uploaded file's URL until the buyer confirms.
   async saveMyReceivedOrderProof({ orderId, receivedPhotoUrl, previewUrl }) {

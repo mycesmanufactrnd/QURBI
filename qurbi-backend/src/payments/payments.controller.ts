@@ -41,6 +41,13 @@ export class PaymentsController {
     return this.paymentsService.getSessionForBuyer(id, user.id);
   }
 
+  @Roles(UserRole.BUYER)
+  @UseGuards(RolesGuard)
+  @Post('sessions/:id/reconcile')
+  reconcileSession(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.paymentsService.reconcileSessionForBuyer(id, user.id);
+  }
+
   @Public()
   @Post('webhook')
   webhook(

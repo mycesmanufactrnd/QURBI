@@ -160,13 +160,20 @@ export class PaymentsService {
   }
 
   async getSessionForBuyer(id: string, buyerId: string) {
-    const session = await this.sessions.findOne({
-      where: { id },
-      relations: { orderLinks: true },
-    });
-    if (!session) throw new NotFoundException('Payment session not found');
-    if (session.buyerId !== buyerId) throw new ForbiddenException('This payment session belongs to another buyer');
+    const session = await this.loadBuyerSession(id, buyerId);
     return sessionResponse(session);
+  }
+
+  async reconcileSessionForBuyer(id: string, buyerId: string) {
+    const session = await this.loadBuyerSession(id, buyerId);
+    if (session.status === PaymentStatus.PAID || !session.providerReference) {
+      return sessionResponse(session);
+    }
+
+    const purchase = await this.chipClient.retrievePurchase(session.providerReference);
+    await this.reconcilePurchase(session, purchase);
+    const refreshed = await this.loadBuyerSession(id, buyerId);
+    return sessionResponse(refreshed);
   }
 
   async handleChipWebhook(rawBody: Buffer | undefined, signature: string | undefined, payload: ChipPurchase) {
@@ -181,34 +188,57 @@ export class PaymentsService {
     // so CHIP does not retry an event that QURBI intentionally does not own.
     if (!session) return { received: true, ignored: true };
 
-    if (payload.event_type === 'purchase.paid' || payload.status === 'paid') {
-      const purchase = await this.chipClient.retrievePurchase(payload.id);
+    const purchase = payload.event_type === 'purchase.paid' || payload.status === 'paid'
+      ? await this.chipClient.retrievePurchase(payload.id)
+      : payload;
+    const status = await this.reconcilePurchase(session, purchase);
+    return { received: true, status };
+  }
+
+  private async loadBuyerSession(id: string, buyerId: string): Promise<PaymentSession> {
+    const session = await this.sessions.findOne({
+      where: { id },
+      relations: { orderLinks: true },
+    });
+    if (!session) throw new NotFoundException('Payment session not found');
+    if (session.buyerId !== buyerId) {
+      throw new ForbiddenException('This payment session belongs to another buyer');
+    }
+    return session;
+  }
+
+  private async reconcilePurchase(
+    session: PaymentSession,
+    purchase: ChipPurchase,
+  ): Promise<PaymentStatus> {
+    if (purchase.status === 'paid') {
       this.assertPurchaseMatches(session, purchase);
       const orderIds = session.orderLinks.map((link) => link.orderId).sort();
       await this.ordersService.completePaymentsFromProvider(orderIds, purchase.id, 'chip');
-      const paidAt = new Date();
       await this.sessions.update(session.id, {
         status: PaymentStatus.PAID,
         providerStatus: purchase.status,
-        paidAt,
+        paidAt: new Date(),
         failureMessage: null,
       });
-      return { received: true, status: PaymentStatus.PAID };
+      return PaymentStatus.PAID;
     }
 
-    if (payload.event_type === 'purchase.payment_failure' || FAILED_CHIP_STATUSES.has(payload.status)) {
+    if (FAILED_CHIP_STATUSES.has(purchase.status)) {
       const orderIds = session.orderLinks.map((link) => link.orderId);
-      await this.ordersService.markPaymentsFailedFromProvider(orderIds, payload.id, 'chip');
+      await this.ordersService.markPaymentsFailedFromProvider(orderIds, purchase.id, 'chip');
       await this.sessions.update(session.id, {
         status: PaymentStatus.FAILED,
-        providerStatus: payload.status || 'failed',
+        providerStatus: purchase.status,
         failureMessage: 'Payment was not completed by CHIP',
       });
-      return { received: true, status: PaymentStatus.FAILED };
+      return PaymentStatus.FAILED;
     }
 
-    await this.sessions.update(session.id, { providerStatus: payload.status || session.providerStatus });
-    return { received: true, status: session.status };
+    await this.sessions.update(session.id, {
+      providerStatus: purchase.status || session.providerStatus,
+    });
+    return session.status;
   }
 
   private assertPurchaseMatches(session: PaymentSession, purchase: ChipPurchase): void {

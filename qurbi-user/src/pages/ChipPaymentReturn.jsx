@@ -24,7 +24,10 @@ export default function ChipPaymentReturn() {
     let timer;
     (async () => {
       try {
-        const response = await qurbiApi.functions.invoke("fetchChipPaymentSession", {
+        const functionName = result === "success" && attempt % 5 === 0
+          ? "reconcileChipPaymentSession"
+          : "fetchChipPaymentSession";
+        const response = await qurbiApi.functions.invoke(functionName, {
           paymentSessionId,
         });
         if (!active) return;
