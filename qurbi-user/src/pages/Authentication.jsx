@@ -79,7 +79,7 @@ export default function Authentication() {
   };
 
   const fieldCls =
-    "w-full min-h-12 rounded-xl border-2 border-[#E3C19F] bg-white pl-10 pr-4 py-3 text-base text-[#41362D] placeholder:text-[#6B594A]/60 outline-none focus:border-[#6B594A]";
+    "w-full min-h-12 rounded-xl border-2 border-[#E3C19F] bg-white pl-10 pr-4 py-3 text-base text-white placeholder:text-white outline-none focus:border-[#6B594A]";
 
   const handleContinueHome = () => {
     sessionStorage.removeItem("gh_splash_shown");
@@ -157,7 +157,7 @@ export default function Authentication() {
           )}
           {isRegister && (
             <div className="relative">
-              <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B594A]" aria-hidden="true" />
+              <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white" aria-hidden="true" />
               <input
                 type="text"
                 value={form.fullName}
@@ -171,7 +171,7 @@ export default function Authentication() {
             </div>
           )}
           <div className="relative">
-            <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B594A]" aria-hidden="true" />
+            <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white" aria-hidden="true" />
             <input
               type="email"
               value={form.email}
@@ -184,7 +184,7 @@ export default function Authentication() {
             />
           </div>
           <div className="relative">
-            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B594A]" aria-hidden="true" />
+            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white" aria-hidden="true" />
             <input
               type="password"
               value={form.password}

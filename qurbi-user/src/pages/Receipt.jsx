@@ -174,7 +174,6 @@ export default function Receipt() {
   const buyerEmail = order.buyer_email || user?.email || "";
   const buyerPhone = order.buyer_phone || address.recipientPhone || user?.phone || "";
   const rows = [
-    [t("receipt.orderNumberLabel"), order.order_number],
     [ta("receipt.dateLabel"), formatOrderDateTime(order.paidAt || order.created_date)],
     [t("receipt.buyerLabel"), buyerName],
     [t("receipt.emailLabel"), buyerEmail],
@@ -203,7 +202,7 @@ export default function Receipt() {
         <section
           className={`qurbi-dark-surface rounded-2xl border p-4 shadow-md ${reveal()}`}
           style={{ animationDelay: "80ms" }}
-          aria-label={t("receipt.orderNumberLabel")}
+          aria-label={t("receipt.orderInformationLabel")}
         >
           <dl className="space-y-3">
             {rows.map(([label, value]) => (

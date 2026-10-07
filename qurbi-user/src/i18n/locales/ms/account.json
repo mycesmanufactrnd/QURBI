@@ -65,7 +65,7 @@
   "orders": {
     "titleMore": "{{name}} + {{count}} lagi",
     "fromFarmer": "Daripada {{name}}",
-    "orderNumber": "Pesanan {{number}}",
+    "orderNumber": "Pesanan",
     "total": "Jumlah",
     "guestTitle": "Pesanan anda",
     "viewToggle": "Pilih cara pesanan dipaparkan",

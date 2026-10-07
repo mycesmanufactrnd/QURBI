@@ -257,7 +257,7 @@ export default function AppHeader({
               </h1>
             )}
           </div>
-          {eyebrow && (
+          {eyebrow && title && (
             <h1
               className={`mt-1 max-w-[65%] text-xl font-bold leading-tight tracking-tight text-white sm:max-w-none ${titleClassName}`}
             >

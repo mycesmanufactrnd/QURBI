@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import {
   ShoppingCart,
   Check,
+  PackageCheck,
   MapPin,
   RefreshCw,
   AlertCircle,
@@ -16,6 +17,7 @@ import {
   Home,
   User,
   Leaf,
+  Play,
 } from "lucide-react";
 import {
   loadLivestockById,
@@ -48,6 +50,9 @@ import {
 } from "@/lib/cart-animation";
 import ProductImage from "@/components/ProductImage";
 import { recentPageOr } from "@/lib/navigation";
+import { qurbiApi } from "@/api/qurbiClient";
+import { useAuth } from "@/lib/AuthContext";
+import { orderBlocksRepurchase } from "@/components/account/orderStatus";
 
 function AvailabilityModal({ state, onClose, onBrowse, backLabel }) {
   const { t } = useTranslation("listings");
@@ -131,16 +136,19 @@ export default function LivestockDetail() {
         ? t("livestockDetail.backToOrders")
         : t("livestockDetail.backToBrowse");
   const { addToCart, buyNow, cartItems } = useCart();
+  const { user, isAuthenticated, authChecked } = useAuth();
   const requireAuth = useRequireAuth();
   const { reveal } = useReveal();
   const [livestock, setLivestock] = useState(null);
   const [relatedLivestock, setRelatedLivestock] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeImage, setActiveImage] = useState(0);
+  const [activeMedia, setActiveMedia] = useState(0);
+  useEffect(() => { setActiveMedia(0); }, [id]);
   const [previewImage, setPreviewImage] = useState("");
   const [availabilityModal, setAvailabilityModal] = useState("");
   const [detailsRaised, setDetailsRaised] = useState(false);
+  const [orderCheck, setOrderCheck] = useState({ loading: false, ordered: false });
 
   const load = () => {
     setLoading(true);
@@ -179,6 +187,31 @@ export default function LivestockDetail() {
   useEffect(() => {
     load();
   }, [id]);
+
+  useEffect(() => {
+    let active = true;
+    if (!authChecked || !isAuthenticated || !user?.id) {
+      setOrderCheck({ loading: !authChecked, ordered: false });
+      return () => { active = false; };
+    }
+
+    setOrderCheck({ loading: true, ordered: false });
+    qurbiApi.functions.invoke("fetchMyOrders", {})
+      .then((response) => {
+        if (!active) return;
+        const ordered = (response.data?.orders || []).some(
+          (order) => orderBlocksRepurchase(order) && (order.items || []).some(
+            (item) => String(item.livestock_id || item.livestockId || "") === String(id),
+          ),
+        );
+        setOrderCheck({ loading: false, ordered });
+      })
+      .catch(() => {
+        if (active) setOrderCheck({ loading: false, ordered: false });
+      });
+
+    return () => { active = false; };
+  }, [authChecked, id, isAuthenticated, user?.id]);
 
   useEffect(() => {
     if (!loading && (livestock || error)) completeProductTransition();
@@ -324,7 +357,11 @@ export default function LivestockDetail() {
   const allImages = [livestock.coverImage, ...(livestock.images || [])].filter(
     (image, index, images) => image && images.indexOf(image) === index,
   );
-  const videos = livestock.videos || [];
+  const media = [
+    ...allImages.map((url) => ({ type: "image", url })),
+    ...(livestock.videos || []).filter(Boolean).map((url) => ({ type: "video", url })),
+  ];
+  const selectedMedia = media[activeMedia] || media[0];
   const price = formatRM(livestock.price);
   const listedState = listingState(livestock);
 
@@ -369,9 +406,9 @@ export default function LivestockDetail() {
       data-cart-product
       className="min-h-screen bg-gradient-to-br from-[#41362D] to-[#6B594A]"
     >
-      {/* Image gallery */}
+      {/* Shared image/video gallery. Bottom space keeps controls above the raised sheet. */}
       <div
-        className={`qurbi-page-header relative bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] ${reveal()}`}
+        className={`qurbi-page-header relative pb-24 bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] ${reveal()}`}
       >
         <button
           type="button"
@@ -389,16 +426,21 @@ export default function LivestockDetail() {
             QURBI
           </p>
         </div>
-        {allImages.length > 0 ? (
+        {selectedMedia?.type === "video" ? (
+          <video key={selectedMedia.url} src={selectedMedia.url} controls playsInline preload="metadata"
+            className="block h-72 w-full bg-[#41362D] object-contain sm:h-96">
+            {t("livestockDetail.videoUnsupported")}
+          </video>
+        ) : selectedMedia ? (
           <button
             type="button"
-            onClick={() => setPreviewImage(allImages[activeImage])}
+            onClick={() => setPreviewImage(selectedMedia.url)}
             aria-label={tf("detail.enlargePhoto")}
             className="block h-72 w-full sm:h-96"
           >
             <img
               data-cart-product-image
-              src={allImages[activeImage]}
+              src={selectedMedia.url}
               alt={title}
               className="h-full w-full object-cover"
             />
@@ -408,26 +450,22 @@ export default function LivestockDetail() {
             {livestock.species || t("livestockDetail.livestockFallback")}
           </div>
         )}
-      </div>
-
-      <DetailOuterSheet raised={detailsRaised} withActionBar>
-        {allImages.length > 1 && (
-          <div className="no-scrollbar mb-1 flex gap-2 overflow-x-auto rounded-2xl bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] p-2">
-            {allImages.map((img, idx) => (
-              <button
-                key={img}
-                type="button"
-                onClick={() => setActiveImage(idx)}
-                aria-label={tf("detail.showPhoto", { number: idx + 1, total: allImages.length })}
-                aria-pressed={activeImage === idx}
-                className={`h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border-2 transition-all duration-200 ease-out active:scale-[0.98] ${activeImage === idx ? "border-[#41362D] ring-2 ring-[#41362D]/40" : "border-[#E3C19F] opacity-80"}`}
-              >
-                <img src={img} alt="" className="h-full w-full object-cover" />
+        {media.length > 1 && (
+          <div className="no-scrollbar flex gap-2 overflow-x-auto p-3">
+            {media.map((item, index) => (
+              <button key={item.type + item.url} type="button"
+                onClick={() => setActiveMedia(index)}
+                aria-label={item.type === "video" ? t("livestockDetail.videos") + " " + (index - allImages.length + 1) : tf("detail.showPhoto", { number: index + 1, total: allImages.length })}
+                aria-pressed={selectedMedia === item}
+                className={`flex h-16 w-16 flex-none items-center justify-center overflow-hidden rounded-xl border-2 bg-[#41362D] text-white ${selectedMedia === item ? "border-[#41362D] ring-2 ring-[#41362D]/40" : "border-[#E3C19F] opacity-80"}`}>
+                {item.type === "image" ? <img src={item.url} alt="" className="h-full w-full object-cover" /> : <Play aria-hidden="true" className="h-6 w-6" />}
               </button>
             ))}
           </div>
         )}
+      </div>
 
+      <DetailOuterSheet raised={detailsRaised} withActionBar>
         {/* Title + price + status */}
         <section className={reveal()} style={{ animationDelay: "80ms" }} aria-labelledby="livestock-title">
           <p className="text-sm font-semibold uppercase tracking-[0.08em] text-white/75">
@@ -484,31 +522,6 @@ export default function LivestockDetail() {
             ))}
           </div>
         </LightDetailCard>
-
-        {videos.length > 0 && (
-          <section aria-labelledby="livestock-videos-title">
-            <h2
-              id="livestock-videos-title"
-              className="mb-3 text-lg font-extrabold text-white"
-            >
-              {t("livestockDetail.videos")}
-            </h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {videos.map((url, index) => (
-                <video
-                  key={`${url}-${index}`}
-                  src={url}
-                  controls
-                  playsInline
-                  preload="metadata"
-                  className="aspect-video w-full rounded-2xl border border-[#F7EDE2]/30 bg-black shadow-lg shadow-black/20"
-                >
-                  {t("livestockDetail.videoUnsupported")}
-                </video>
-              ))}
-            </div>
-          </section>
-        )}
 
         {/* Health records */}
         {(livestock.healthRecord || livestock.vaccinationRecord) && (
@@ -615,30 +628,47 @@ export default function LivestockDetail() {
           <p className="text-xs font-semibold text-[#6B594A]">{tf("detail.price")}</p>
           <p className="whitespace-nowrap text-lg font-extrabold leading-tight text-[#41362D]">{price}</p>
         </div>
-        <button
-          type="button"
-          onClick={isInCart ? () => navigateWithTransition("/cart") : handleAddToCart}
-          aria-label={isInCart ? tf("detail.inCartViewAria") : tf("detail.addToCartAria", { title })}
-          className="flex min-h-12 flex-none items-center justify-center gap-1.5 rounded-xl border-2 border-[#41362D] bg-[#F7EDE2] px-2.5 text-sm font-bold leading-tight text-[#41362D] transition-all duration-200 ease-out active:scale-[0.98]"
-        >
-          {isInCart ? (
-            <>
-              <Check aria-hidden="true" className="h-4 w-4" /> {t("livestockDetail.inCart")}
-            </>
-          ) : (
-            <>
-              <ShoppingCart aria-hidden="true" className="h-4 w-4" /> {t("livestockDetail.add")}
-            </>
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={handleBuyNow}
-          className="flex min-h-12 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-br from-[#41362D] to-[#6B594A] px-3 text-sm font-bold text-white shadow-md shadow-black/20 transition-all duration-200 ease-out active:scale-[0.98]"
-        >
-          <Zap aria-hidden="true" className="hidden h-4 w-4 flex-none min-[420px]:block" />
-          <span className="text-center leading-tight">{t("livestockDetail.buyNow")}</span>
-        </button>
+        {orderCheck.loading ? (
+          <div className="flex min-h-12 min-w-0 flex-1 items-center justify-center rounded-xl border-2 border-[#E3C19F] bg-[#F7EDE2] px-3 text-center text-sm font-bold text-[#41362D]">
+            {t("livestockDetail.checkingOrders")}
+          </div>
+        ) : orderCheck.ordered ? (
+          <button
+            type="button"
+            onClick={() => navigateWithTransition("/orders")}
+            className="flex min-h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] px-3 text-sm font-bold text-white"
+          >
+            <PackageCheck aria-hidden="true" className="h-4 w-4 flex-none" />
+            {t("livestockDetail.alreadyOrdered")}
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={isInCart ? () => navigateWithTransition("/cart") : handleAddToCart}
+              aria-label={isInCart ? tf("detail.inCartViewAria") : tf("detail.addToCartAria", { title })}
+              className="flex min-h-12 flex-none items-center justify-center gap-1.5 rounded-xl border-2 border-[#41362D] bg-[#F7EDE2] px-2.5 text-sm font-bold leading-tight text-[#41362D] transition-all duration-200 ease-out active:scale-[0.98]"
+            >
+              {isInCart ? (
+                <>
+                  <Check aria-hidden="true" className="h-4 w-4" /> {t("livestockDetail.inCart")}
+                </>
+              ) : (
+                <>
+                  <ShoppingCart aria-hidden="true" className="h-4 w-4" /> {t("livestockDetail.add")}
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={handleBuyNow}
+              className="flex min-h-12 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-br from-[#41362D] to-[#6B594A] px-3 text-sm font-bold text-white shadow-md shadow-black/20 transition-all duration-200 ease-out active:scale-[0.98]"
+            >
+              <Zap aria-hidden="true" className="hidden h-4 w-4 flex-none min-[420px]:block" />
+              <span className="text-center leading-tight">{t("livestockDetail.buyNow")}</span>
+            </button>
+          </>
+        )}
       </StickyActionBar>
 
       <ImageLightbox

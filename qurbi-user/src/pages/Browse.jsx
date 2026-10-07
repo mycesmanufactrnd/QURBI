@@ -15,34 +15,48 @@ import { useReveal } from "@/hooks/useReveal";
 import AppHeader from "@/components/AppHeader";
 import PageLoading from "@/components/PageLoading";
 import LivestockCard from "@/components/shop/LivestockCard";
+import { useCart } from "@/lib/cart-context";
 import { isProductExpired } from "@/lib/product-expiry";
 import {
   genderLabel,
   listingState,
 } from "@/lib/listing-display";
 
+const BROWSE_FILTERS_KEY = "qurbi_browse_filters";
+
+function readBrowseFilters() {
+  if (typeof sessionStorage === "undefined") return {};
+  try {
+    return JSON.parse(sessionStorage.getItem(BROWSE_FILTERS_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
 export default function Browse() {
+  const { cartItems } = useCart();
   const { t } = useTranslation("shop");
   const { t: tf } = useTranslation("shopflow");
   const location = useLocation();
   const searchInputRef = useRef(/** @type {HTMLInputElement | null} */ (null));
+  const [savedFilters] = useState(readBrowseFilters);
 
   const [livestock, setLivestock] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(savedFilters.searchQuery || "");
 
   // Species filter
-  const [activeSpecies, setActiveSpecies] = useState("All");
+  const [activeSpecies, setActiveSpecies] = useState(savedFilters.activeSpecies || "All");
 
-  const [filterBreed, setFilterBreed] = useState("");
-  const [filterGender, setFilterGender] = useState("");
-  const [filterAge, setFilterAge] = useState("");
-  const [filterLocation, setFilterLocation] = useState("");
-  const [priceMin, setPriceMin] = useState("");
-  const [priceMax, setPriceMax] = useState("");
-  const [sortBy, setSortBy] = useState("newest");
+  const [filterBreed, setFilterBreed] = useState(savedFilters.filterBreed || "");
+  const [filterGender, setFilterGender] = useState(savedFilters.filterGender || "");
+  const [filterAge, setFilterAge] = useState(savedFilters.filterAge || "");
+  const [filterLocation, setFilterLocation] = useState(savedFilters.filterLocation || "");
+  const [priceMin, setPriceMin] = useState(savedFilters.priceMin || "");
+  const [priceMax, setPriceMax] = useState(savedFilters.priceMax || "");
+  const [sortBy, setSortBy] = useState(savedFilters.sortBy || "newest");
   const [showFilters, setShowFilters] = useState(false);
 
   const { mounted, reveal } = useReveal();
@@ -80,8 +94,29 @@ export default function Browse() {
      * This prevents the filter from being reapplied if
      * Browse is refreshed.
      */
-    window.history.replaceState({}, document.title);
+    window.history.replaceState(
+      { ...window.history.state, usr: null },
+      document.title,
+    );
   }, [location.state]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(BROWSE_FILTERS_KEY, JSON.stringify({
+        searchQuery,
+        activeSpecies,
+        filterBreed,
+        filterGender,
+        filterAge,
+        filterLocation,
+        priceMin,
+        priceMax,
+        sortBy,
+      }));
+    } catch {
+      // Session storage may be unavailable in restricted browser contexts.
+    }
+  }, [searchQuery, activeSpecies, filterBreed, filterGender, filterAge, filterLocation, priceMin, priceMax, sortBy]);
 
   /*
    * =========================================================
@@ -592,6 +627,7 @@ export default function Browse() {
                   <LivestockCard
                     key={l.id}
                     livestock={l}
+                    inCart={cartItems.some((item) => item.item_type !== "bulk" && String(item.livestock_id || item.id) === String(l.id))}
                     index={idx}
                   />
                 ))}

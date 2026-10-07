@@ -7,7 +7,7 @@ import { formatRM } from "@/lib/format";
 export default function CancelOrderModal({ order, loading, error, onConfirm, onClose }) {
   const { t } = useTranslation("cart");
   const firstItem = order?.items?.[0];
-  const orderDisplayName = firstItem?.breed || firstItem?.listing_name || firstItem?.animal || order?.order_number || t("cancelOrderModal.orderFallback");
+  const orderDisplayName = firstItem?.breed || firstItem?.listing_name || firstItem?.animal || t("cancelOrderModal.orderFallback");
   useEffect(() => {
     if (!order) return undefined;
     const handleKeyDown = (event) => {

@@ -369,7 +369,7 @@ function RefundRequestSheet({ order, loading, error, onClose, onSubmit }) {
         <h2 className="text-lg font-bold text-gray-900">Request a refund</h2>
 
         <p className="mt-1 text-sm text-gray-500">
-          Tell us why you are requesting a refund for {order.order_number}.
+          Tell us why you are requesting a refund.
         </p>
 
         <label htmlFor="refund-reason" className="mt-4 block text-sm font-bold text-[#41362D]">
@@ -815,6 +815,7 @@ export default function OrderDetail() {
     returnTab === "history"
       ? "/history"
       : `/orders?tab=${encodeURIComponent(returnTab)}`;
+  const forcedReturnPath = location.state?.returnTo || "";
   const pendingPaymentStatuses = ["pending", "pending_payment", "to_pay"];
   const isAwaitingPayment = [
     order.status,
@@ -835,11 +836,8 @@ export default function OrderDetail() {
     <div className={`aisyah-page ${stickyAction ? "pb-[calc(11rem+env(safe-area-inset-bottom))]" : ""}`}>
       <AppHeader
         title={t("orderDetail.title")}
-        backTo={returnPath}
-        preferRecentBack={false}
-        subtitle={`${order.order_number} · ${formatOrderDateTime(
-          order.created_date,
-        )}`}
+        backTo={forcedReturnPath || returnPath}
+        preferRecentBack={!forcedReturnPath}
       />
 
       {message && (
@@ -859,33 +857,21 @@ export default function OrderDetail() {
           </p>
         )}
 
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 flex justify-between">
-          <span className="text-gray-400 text-sm">Status</span>
-
-          <span className="text-right text-sm font-bold capitalize text-white">
-            {statusLabel(order)}
-          </span>
+        <div className="rounded-2xl border border-[#E3C19F]/40 bg-gradient-to-br from-[#41362D] to-[#6B594A] p-4 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <span className="text-sm text-white/75">Status</span>
+            <span className="text-right text-sm font-bold capitalize text-white">
+              {statusLabel(order)}
+            </span>
+          </div>
+          <p className="mt-2 text-sm text-white/80">{formatOrderDateTime(order.created_date)}</p>
+          {isAwaitingPayment && (
+            <p className="mt-1 text-xs font-semibold text-white/65">
+              Your order is saved and ready for payment.
+            </p>
+          )}
         </div>
-
-        {isAwaitingPayment && (
-          <section className="rounded-2xl border border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] p-4 shadow-lg shadow-[#41362D]/20">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-extrabold text-white">Payment pending</p>
-                <p className="mt-0.5 text-xs font-semibold text-white/65">
-                  Your order is saved and ready for payment.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => navigate(`/payment?${groupedOrderQuery(order)}`)}
-                className="flex-none rounded-xl border border-[#F7EDE2]/70 bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] px-4 py-2.5 text-xs font-extrabold text-[#41362D]"
-              >
-                {t("orderDetail.confirm.returnRefund")}
-              </button>
-            </div>
-          </section>
-        )}
+        <DeliveryCard order={order} />
 
         {!isAwaitingPayment && (
           <OrderTracking
@@ -1067,14 +1053,13 @@ export default function OrderDetail() {
                       RM {Number(item.total || 0).toLocaleString()}
                     </p>
                     {productPath && (
-                      <p className="text-[10px] font-semibold text-white/60">
-                        View details
+                      <p>
                       </p>
                     )}
                   </div>
                   {productPath && (
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#F7EDE2] bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] text-[#41362D] shadow-md shadow-black/20">
-                      <ChevronRight className="h-5 w-5" strokeWidth={3} />
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#F7EDE2] bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] text-[#41362D] shadow-md shadow-black/20">
+                      <ChevronRight className="h-3 w-3" strokeWidth={3} />
                     </span>
                   )}
                 </div>
@@ -1180,8 +1165,6 @@ export default function OrderDetail() {
             </div>
           </section>
         )}
-
-        <DeliveryCard order={order} />
 
       </main>
 

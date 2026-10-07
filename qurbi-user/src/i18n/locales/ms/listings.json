@@ -82,6 +82,8 @@
     "backToBrowse": "Kembali ke Lihat",
     "loadError": "Gagal memuatkan ternakan",
     "alreadyInCart": "Item ini sudah ada dalam troli anda.",
+    "checkingOrders": "Menyemak pesanan anda...",
+    "alreadyOrdered": "Sudah Dipesan",
     "loading": "Memuatkan butiran ternakan...",
     "retry": "Cuba Lagi",
     "species": "Spesies",

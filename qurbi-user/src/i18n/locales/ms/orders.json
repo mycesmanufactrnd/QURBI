@@ -25,7 +25,7 @@
     "aria": {
       "selectOrder": "Pilih pesanan",
       "deselectOrder": "Nyahpilih pesanan",
-      "viewOrder": "Lihat pesanan {{orderNumber}}",
+      "viewOrder": "Lihat pesanan",
       "currentView": "Paparan pesanan semasa",
       "listView": "Paparan senarai pesanan"
     },
@@ -35,7 +35,7 @@
     "itemCount_other": "{{count}} item",
     "cancel": "Batal",
     "cancelling": "Membatalkan...",
-    "cancelOrder": "Batalkan Pesanan",
+    "cancelOrder": "Batal",
     "payNow": "Bayar Sekarang",
     "viewOrderLink": "Lihat pesanan",
     "selectOrderLabel": "Pilih pesanan",
@@ -61,13 +61,13 @@
     "cancelSuccess": "Pesanan berjaya dibatalkan.",
     "cancelErrorFallback": "Kami tidak dapat membatalkan pesanan ini. Sila cuba lagi.",
     "deleteHistoryError": "Kami tidak dapat mengalih keluar pesanan tersebut daripada sejarah.",
-    "completePayment": "Lengkapkan Pembayaran",
+    "completePayment": "Bayar",
     "signInMessage": "Log masuk untuk melihat dan mengurus pesanan anda.",
     "reservation": {
-      "reservedFor24h": "Ditempah selama 24 jam",
+      "reservedFor24h": "Ditempah 24 jam",
       "paymentFailedPrefix": "Pembayaran gagal · ",
-      "reservedUntil": "Ditempah sehingga {{time}}",
-      "retryHint": "Anda boleh cuba bayar semula daripada pesanan ini."
+      "reservedUntil": "Ditempah hingga {{time}}",
+      "retryHint": "Cuba bayar semula."
     },
     "transaction": "Transaksi",
     "openTransactionHistory": "Buka sejarah transaksi"
@@ -134,7 +134,7 @@
     },
     "refundSheet": {
       "title": "Mohon bayaran balik",
-      "subtitle": "Beritahu kami sebab anda memohon bayaran balik untuk {{orderNumber}}.",
+      "subtitle": "Beritahu kami sebab anda memohon bayaran balik.",
       "reasonPlaceholder": "Masukkan sebab anda",
       "uploadLabel": "Muat naik bukti foto bayaran balik",
       "uploadHint": "Sekurang-kurangnya satu foto diperlukan (sehingga 5)",
