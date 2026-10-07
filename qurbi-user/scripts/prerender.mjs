@@ -57,7 +57,7 @@ for (const route of PUBLIC_PATHS) {
 }
 
 // 3) sitemap.xml + robots.txt (indexing only when explicitly enabled)
-const privatePaths = ["/auth", "/login", "/register", "/cart", "/payment", "/orders", "/history", "/profile", "/notifications", "/address-book", "/signup-details", "/user-agreement", "/switch-session", "/receipt", "/admin"];
+const privatePaths = ["/auth", "/login", "/register", "/cart", "/payment", "/orders", "/transaction-history", "/history", "/profile", "/notifications", "/address-book", "/signup-details", "/user-agreement", "/switch-session", "/receipt", "/admin"];
 if (indexing) {
   const lastmod = new Date().toISOString().slice(0, 10);
   const urls = PUBLIC_PATHS.map((route) => {

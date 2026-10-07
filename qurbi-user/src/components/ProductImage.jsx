@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 export default function ProductImage({
   src,
   alt = "Product",
+  fallbackLabel = "No image",
   className = "h-12 w-12",
   imageClassName = "h-full w-full object-cover",
 }) {
@@ -31,7 +32,7 @@ export default function ProductImage({
         />
       ) : (
         <span className="px-1 text-center text-[9px] font-bold leading-tight text-white">
-          No image
+          {fallbackLabel}
         </span>
       )}
     </div>

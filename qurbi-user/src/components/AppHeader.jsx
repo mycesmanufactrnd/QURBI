@@ -152,18 +152,18 @@ export default function AppHeader({
       <div
         className={`relative z-10 flex origin-top flex-col items-center text-center transition-transform duration-500 ease-in-out ${headerExpanded ? "scale-100" : "scale-[0.96]"}`}
       >
-        <div className="absolute left-0 top-0 z-20 flex flex-row items-center gap-1.5">
+        <div className="absolute left-0 top-0 z-20 flex flex-row items-center gap-1">
           {!isAuthenticated && guestActionsOnLeft && (
             <>
               <Link
                 to="/auth?mode=login"
-                className="flex min-h-11 items-center rounded-lg px-2 text-[13px] font-bold text-white"
+                className="flex min-h-10 items-center rounded-md px-1.5 text-xs font-bold text-white"
               >
                 {t("appHeader.login")}
               </Link>
               <Link
                 to="/auth?mode=register"
-                className="flex min-h-11 items-center rounded-lg border border-white/30 bg-white/15 px-2.5 text-[13px] font-bold text-white"
+                className="flex min-h-10 items-center rounded-md border border-white/30 bg-white/15 px-2 text-xs font-bold text-white"
               >
                 {t("appHeader.signUp")}
               </Link>
@@ -184,18 +184,18 @@ export default function AppHeader({
           {!backTo && leftAction}
         </div>
 
-        <div className="absolute right-0 top-0 z-20 flex flex-row items-center gap-1.5">
+        <div className="absolute right-0 top-0 z-20 flex flex-row items-center gap-1">
           {!isAuthenticated && !guestActionsOnLeft && (
             <>
               <Link
                 to="/auth?mode=login"
-                className="flex min-h-11 items-center rounded-lg px-2 text-[13px] font-bold text-white"
+                className="flex min-h-10 items-center rounded-md px-1.5 text-xs font-bold text-white"
               >
                 {t("appHeader.login")}
               </Link>
               <Link
                 to="/auth?mode=register"
-                className="flex min-h-11 items-center rounded-lg border border-white/30 bg-white/15 px-2.5 text-[13px] font-bold text-white"
+                className="flex min-h-10 items-center rounded-md border border-white/30 bg-white/15 px-2 text-xs font-bold text-white"
               >
                 {t("appHeader.signUp")}
               </Link>

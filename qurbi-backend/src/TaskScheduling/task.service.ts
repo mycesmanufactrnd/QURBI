@@ -12,7 +12,7 @@ export class TasksService {
     private readonly reservationsService: ReservationsService,
   ) {}
 
-  @Cron(CronExpression.EVERY_HOUR)
+  @Cron(CronExpression.EVERY_MINUTE)
   async expirePaymentReservations(): Promise<void> {
     await this.dataSource.transaction((manager) =>
       this.reservationsService.expireDue(manager),

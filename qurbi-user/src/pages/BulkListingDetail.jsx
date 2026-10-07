@@ -33,7 +33,6 @@ import {
 } from "@/lib/cart-animation";
 import { resolvedBreakdown, useBreedNames } from "@/lib/breed-names";
 import StickyActionBar from "@/components/shop/StickyActionBar";
-import StatusChip from "@/components/shop/StatusChip";
 import { formatRM } from "@/lib/format";
 import { extractState } from "@/lib/livestock-data";
 import { recentPageOr } from "@/lib/navigation";
@@ -257,7 +256,6 @@ export default function BulkListingDetail() {
             {t("bulkListingDetail.bulkLotPlaceholder")}
           </div>
         )}
-        <StatusChip status={listing.status || "open"} className="absolute right-4 top-5 z-20 shadow-lg" />
       </div>
 
       <DetailOuterSheet raised={detailsRaised} withActionBar>

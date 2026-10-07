@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useMounted } from "@/hooks/useMounted";
-import { X, SlidersHorizontal, RotateCcw } from "lucide-react";
+import { ArrowLeft, SlidersHorizontal, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import FilterDropdown from "@/components/FilterDropdown";
 
@@ -11,7 +11,7 @@ const SORT_OPTIONS = [
   { value: "price-desc" },
 ];
 
-export default function FilterSidebar({ open, onClose, filters, options, resultCount }) {
+export default function FilterSidebar({ open, onClose, onApply, filters, options, resultCount }) {
   const mounted = useMounted();
   const { t } = useTranslation("shop");
   const { t: tf } = useTranslation("shopflow");
@@ -77,25 +77,16 @@ export default function FilterSidebar({ open, onClose, filters, options, resultC
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#E3C19F] flex-shrink-0 bg-gradient-to-br from-[#41362D] to-[#6B594A]">
           <div className="flex items-center gap-2">
-            <SlidersHorizontal className="w-5 h-5 text-white" />
-            <h2 id="filter-sidebar-title" className="text-white font-bold text-lg">{t("filterSidebar.title")}</h2>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={clearAllFilters}
-              className="px-4 h-11 rounded-full border border-[#E3C19F] bg-white/10 text-white font-bold text-sm flex items-center gap-1.5 active:scale-95 transition-all"
-            >
-              <RotateCcw className="w-3.5 h-3.5" /> {t("filterSidebar.clear")}
-            </button>
             <button
               type="button"
               onClick={onClose}
               aria-label={tf("filters.close")}
-              className="w-11 h-11 bg-white/10 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition-transform active:scale-90"
             >
-              <X className="w-5 h-5 text-white" />
+              <ArrowLeft className="h-4 w-4 text-white" />
             </button>
+            <SlidersHorizontal className="w-5 h-5 text-white" />
+            <h2 id="filter-sidebar-title" className="text-white font-bold text-lg">{t("filterSidebar.title")}</h2>
           </div>
         </div>
 
@@ -169,17 +160,27 @@ export default function FilterSidebar({ open, onClose, filters, options, resultC
           />
         </div>
 
-        {/* Footer: one clear way back to the results */}
+        {/* Footer: keep draft controls together and only apply on confirmation. */}
         <div className="flex-shrink-0 border-t border-[#41362D]/15 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="aisyah-primary-button flex min-h-12 w-full items-center justify-center text-base"
-          >
-            {typeof resultCount === "number"
-              ? tf("filters.showResults", { count: resultCount })
-              : tf("filters.done")}
-          </button>
+          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-2">
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              className="flex min-h-12 items-center justify-center gap-1.5 rounded-xl border border-[#41362D]/35 bg-[#F7EDE2]/75 px-3 text-sm font-bold text-[#41362D] transition-transform active:scale-[0.98]"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              {t("filterSidebar.clear")}
+            </button>
+            <button
+              type="button"
+              onClick={onApply}
+              className="aisyah-primary-button flex min-h-12 min-w-0 items-center justify-center px-3 text-sm sm:text-base"
+            >
+              {typeof resultCount === "number"
+                ? tf("filters.showResults", { count: resultCount })
+                : tf("filters.done")}
+            </button>
+          </div>
         </div>
       </div>
     </>,

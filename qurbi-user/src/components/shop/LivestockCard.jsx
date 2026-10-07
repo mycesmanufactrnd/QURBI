@@ -30,7 +30,6 @@ export default function LivestockCard({ livestock, index = 0, className = "", sh
   }, [livestock.id]);
 
   const title = listingTitle(livestock, t("browse.livestockFallback"));
-  const speciesLabel = [livestock.species, livestock.breed].filter(Boolean).join(" · ") || t("browse.livestockFallback");
   const gender = genderKey(livestock.gender);
   const GenderIcon = gender === "male" ? Mars : gender === "female" ? Venus : null;
   const state = listingState(livestock);
@@ -82,9 +81,6 @@ export default function LivestockCard({ livestock, index = 0, className = "", sh
       </span>
 
       <span className="flex min-w-0 flex-col gap-1 px-3 pb-3 pt-2.5 text-white sm:px-4 sm:pb-4">
-        <span className="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs font-semibold uppercase tracking-[0.08em] text-white/75">
-          {speciesLabel}
-        </span>
         <span className="line-clamp-2 min-h-[2.5rem] break-words text-base font-extrabold leading-tight sm:min-h-[3rem] sm:text-lg">
           {title}
         </span>

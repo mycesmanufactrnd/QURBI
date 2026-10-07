@@ -156,6 +156,7 @@
     "groups": {
       "account": "Akaun",
       "ordersDelivery": "Pesanan & penghantaran",
+      "farmer": "Jualan",
       "helpLegal": "Bantuan & perundangan"
     },
     "notSet": "Belum ditambah",
@@ -163,7 +164,16 @@
     "closeEdit": "Tutup",
     "emailLocked": "E-mel anda datang daripada akaun Google anda dan tidak boleh diubah di sini.",
     "nameRequired": "Sila masukkan nama anda.",
-    "phoneInvalid": "Sila masukkan nombor telefon yang sah, cth. 012-345 6789."
+    "phoneInvalid": "Sila masukkan nombor telefon yang sah, cth. 012-345 6789.",
+    "farmer": {
+      "confirm": "Daftar akaun ini sebagai penternak? Anda akan meneruskan dalam aplikasi QURBI Farmer untuk menghantar butiran ladang anda bagi pengesahan. Anda masih boleh membeli seperti biasa.",
+      "error": "Tidak dapat menukar akaun. Sila cuba lagi.",
+      "switchTitle": "Tukar ke akaun penternak",
+      "registerTitle": "Daftar sebagai penternak",
+      "opening": "Membuka aplikasi penternak...",
+      "switchSubtitle": "Urus ternakan dan pesanan anda",
+      "registerSubtitle": "Jual ternakan anda di QURBI"
+    }
   },
   "address": {
     "optional": "(pilihan)",

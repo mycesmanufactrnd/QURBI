@@ -1,0 +1,41 @@
+{
+  "title" : "Sejarah Pembayaran",
+  "date" : [  
+    {"today" : "Hari ini"},
+    {"jan" :"Januari"},
+    {"feb" : "Februari"},
+    {"march" : "Mac"},
+    {"april" : "April"},
+    {"may" : "Mei"},
+    {"june" : "Jun"},
+    {"july" : "Julai"},
+    {"aug" : "Ogos"},
+    {"sep" : "September"},
+    {"oct" : "Oktober"},
+    {"nov" : "Bday aqil"},
+    {"dec" : "Disember"}],
+
+  "loading" : "Memuatkan sejarah pembayaran",
+  "loadError" : "Sejarah pembelian gagal dimuatkan. Sila cuba lagi",
+  "signInPrompt" : "Log masuk untuk melihat transaksi anda.",
+  "signInMessage" : "Log masuk untuk melihat sejarah transaksi anda.",
+  "signIn" : "Log Masuk",
+  "retry" : "Cuba Lagi",
+  "yesterday" : "Semalam",
+  "dateUnavailable" : "Tarikh tidak tersedia",
+  "empty" : "Tiada pembelian direkodkan",
+  "farmUnavailable" : "Ladang Tidak Tersedia",
+  "moreFarms" : "{{name}} + {{count}} ladang",
+  "columns" : {
+    "farm" : "Nama Ladang",
+    "status" : "Status",
+    "total" : "Jumlah"
+  },
+  "statuses": {
+    "completed": "Selesai",
+    "refunded": "Dibayar Balik",
+    "cancelled": "Batal",
+    "outOfStock": "Kehabisan Stock"
+  }
+
+  }

@@ -37,6 +37,10 @@
       "title": "Sejarah Pesanan",
       "subtitle": "Lihat semua pesanan lepas"
     },
+    "transactionHistoryCard": {
+      "title": "Sejarah Pesanan",
+      "subtitle": "Lihat semua pesanan lepas"
+    },
     "privacyPolicyCard": {
       "title": "Dasar Privasi",
       "subtitle": "Cara kami mengumpul dan menggunakan data anda"

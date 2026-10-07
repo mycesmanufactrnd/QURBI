@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import {
   User,
@@ -28,6 +29,7 @@ import AuthRequiredState from "@/components/AuthRequiredState";
 import { SettingsGroup, SettingsRow } from "@/components/account/SettingsGroup";
 import { primaryBtn } from "@/components/account/buttons";
 import { registerAsFarmer, switchToFarmerPortal } from "@/lib/portalSwitch";
+import { useMounted } from "@/hooks/useMounted";
 
 export default function Profile() {
   const { navigateFromIconPage } = useHeaderTransition();
@@ -45,6 +47,7 @@ export default function Profile() {
   const [showEdit, setShowEdit] = useState(false);
   const [switchError, setSwitchError] = useState("");
   const [switching, setSwitching] = useState(false);
+  const mounted = useMounted();
   const isFarmerAccount = user?.availableRoles?.includes("farmer");
 
   const goToFarmerSide = async () => {
@@ -214,18 +217,18 @@ export default function Profile() {
         </section>
 
         {/* Edit popup */}
-        {showEdit && (
+        {showEdit && mounted && createPortal((
           <>
             <div
               className="fixed inset-0 z-40 bg-[#241D18]/55 backdrop-blur-[3px] profile-backdrop"
               onClick={() => !saving && setShowEdit(false)}
             />
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-5 pointer-events-none">
+            <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain p-4 pointer-events-none sm:p-5">
               <div
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="edit-profile-title"
-                className="w-full max-w-sm overflow-hidden rounded-[28px] border border-[#E3C19F]/70 bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] shadow-[0_24px_70px_rgba(34,27,22,0.42)] pointer-events-auto profile-modal"
+                className="max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto rounded-[28px] border border-[#E3C19F]/70 bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] shadow-[0_24px_70px_rgba(34,27,22,0.42)] pointer-events-auto profile-modal sm:max-h-[calc(100dvh-2.5rem)]"
               >
                 <div className="flex items-center justify-between bg-gradient-to-br from-[#41362D] to-[#6B594A] px-5 py-5">
                   <div className="flex min-w-0 items-center gap-3">
@@ -348,7 +351,7 @@ export default function Profile() {
               </div>
             </div>
           </>
-        )}
+        ), document.body)}
 
         {/* Orders & delivery */}
         <SettingsGroup
@@ -364,9 +367,9 @@ export default function Profile() {
           />
           <SettingsRow
             icon={Package}
-            title={t("profile.orderHistoryCard.title")}
-            subtitle={t("profile.orderHistoryCard.subtitle")}
-            onClick={() => requireAuth(() => navigateFromIconPage("/history"))}
+            title={t("profile.transactionHistoryCard.title")}
+            subtitle={t("profile.transactionHistoryCard.subtitle")}
+            onClick={() => requireAuth(() => navigateFromIconPage("/transaction-history"))}
           />
         </SettingsGroup>
 

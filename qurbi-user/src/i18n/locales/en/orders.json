@@ -61,7 +61,7 @@
     "cancelSuccess": "Order cancelled successfully.",
     "cancelErrorFallback": "We couldn't cancel this order. Please try again.",
     "deleteHistoryError": "We couldn't remove those orders from history.",
-    "completePayment": "Complete Payment",
+    "completePayment": "Pay",
     "signInMessage": "Sign in to view and manage your orders.",
     "reservation": {
       "reservedFor24h": "Reserved 24h",

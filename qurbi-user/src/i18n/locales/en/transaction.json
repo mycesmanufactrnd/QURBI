@@ -1,0 +1,40 @@
+{
+  "title": "Transaction History",
+  "loading": "Loading transactions...",
+  "loadError": "We couldn't load your transaction history. Please try again.",
+  "signInPrompt": "Sign in to view your transactions.",
+  "signInMessage": "Sign in to view your transaction history.",
+  "signIn": "Sign In",
+  "retry": "Retry",
+  "yesterday": "Yesterday",
+  "dateUnavailable": "Date unavailable",
+  "empty": "No transactions yet",
+  "farmUnavailable": "Farm unavailable",
+  "moreFarms": "{{name}} + {{count}} farms",
+  "date": [
+    { "today": "Today" },
+    { "jan": "January" },
+    { "feb": "February" },
+    { "march": "March" },
+    { "april": "April" },
+    { "may": "May" },
+    { "june": "June" },
+    { "july": "July" },
+    { "aug": "August" },
+    { "sep": "September" },
+    { "oct": "October" },
+    { "nov": "November" },
+    { "dec": "December" }
+  ],
+  "columns": {
+    "farm": "Farm Name",
+    "status": "Status",
+    "total": "Total"
+  },
+  "statuses": {
+    "completed": "Completed",
+    "refunded": "Refunded",
+    "cancelled": "Cancelled",
+    "outOfStock": "Out of Stock"
+  }
+}

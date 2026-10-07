@@ -653,7 +653,7 @@ export default function Payment() {
   }
 
   const itemTitle = (item) =>
-    item.item_type === "bulk" ? item.listing_name : item.title || item.breed;
+    item.item_type === "bulk" ? item.listing_name : item.breed || item.title;
   const missingReason = !canCheckout
     ? !selectedAddress && !isResumingOrder
       ? t("payment.selectAddressToContinue")

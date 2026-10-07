@@ -21,7 +21,6 @@ export const ORDER_TABS = [
   { key: "to-pay", labelKey: "orders.tabs.toPay" },
   { key: "to-ship", labelKey: "orders.tabs.toShip" },
   { key: "to-receive", labelKey: "orders.tabs.toReceive" },
-  { key: "completed", labelKey: "orders.tabs.completed" },
   { key: "return-refund", labelKey: "orders.tabs.returnRefund" },
 ];
 

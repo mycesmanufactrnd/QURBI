@@ -33,9 +33,9 @@
       "title": "Address Book",
       "subtitle": "Manage delivery addresses"
     },
-    "orderHistoryCard": {
-      "title": "Order History",
-      "subtitle": "View all past orders"
+    "transactionHistoryCard": {
+      "title": "Transaction History",
+      "subtitle": "View all past Transaction"
     },
     "privacyPolicyCard": {
       "title": "Privacy Policy",

@@ -87,6 +87,12 @@
     "loading": "Memuatkan butiran ternakan...",
     "retry": "Cuba Lagi",
     "species": "Spesies",
+    "speciesValues": {
+      "cow": "Lembu",
+      "goat": "Kambing",
+      "sheep": "Bebiri",
+      "buffalo": "Kerbau"
+    },
     "breed": "Baka",
     "gender": "Jantina",
     "age": "Umur",
@@ -95,6 +101,22 @@
     "bodyLength": "Panjang Badan",
     "chestGirth": "Lilitan Dada",
     "color": "Warna",
+    "colorValues": {
+      "black": "Hitam",
+      "white": "Putih",
+      "brown": "Coklat",
+      "red": "Merah",
+      "cream": "Krim",
+      "grey": "Kelabu",
+      "golden": "Keemasan",
+      "tan": "Perang muda",
+      "beige": "Beige",
+      "spotted": "Bertompok",
+      "mixed": "Campuran",
+      "blackAndWhite": "Hitam dan putih",
+      "brownAndWhite": "Coklat dan putih",
+      "redAndWhite": "Merah dan putih"
+    },
     "earTag": "Tag Telinga",
     "rfid": "RFID",
     "inCart": "Dalam Troli",
@@ -113,6 +135,7 @@
     "location": "Lokasi",
     "videos": "Video",
     "videoUnsupported": "Pelayar anda tidak menyokong main balik video.",
+    "noImage": "Tiada gambar",
     "livestockFallback": "Ternakan"
   },
   "viewCartCard": {

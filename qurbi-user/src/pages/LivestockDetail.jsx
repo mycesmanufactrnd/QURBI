@@ -54,6 +54,48 @@ import { qurbiApi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
 import { orderBlocksRepurchase } from "@/components/account/orderStatus";
 
+const SPECIES_VALUE_KEYS = {
+  cow: "cow",
+  cattle: "cow",
+  lembu: "cow",
+  goat: "goat",
+  kambing: "goat",
+  sheep: "sheep",
+  bebiri: "sheep",
+  buffalo: "buffalo",
+  kerbau: "buffalo",
+};
+
+const COLOR_VALUE_KEYS = {
+  black: "black",
+  white: "white",
+  brown: "brown",
+  red: "red",
+  cream: "cream",
+  grey: "grey",
+  gray: "grey",
+  golden: "golden",
+  tan: "tan",
+  beige: "beige",
+  spotted: "spotted",
+  mixed: "mixed",
+  "black and white": "blackAndWhite",
+  "black & white": "blackAndWhite",
+  "brown and white": "brownAndWhite",
+  "brown & white": "brownAndWhite",
+  "red and white": "redAndWhite",
+  "red & white": "redAndWhite",
+};
+
+function translatedListingValue(t, group, keyMap, value) {
+  const original = String(value || "").trim();
+  if (!original) return "";
+  const key = keyMap[original.toLowerCase()];
+  return key
+    ? t(`livestockDetail.${group}.${key}`, { defaultValue: original })
+    : original;
+}
+
 function AvailabilityModal({ state, onClose, onBrowse, backLabel }) {
   const { t } = useTranslation("listings");
   if (!state) return null;
@@ -368,7 +410,7 @@ export default function LivestockDetail() {
   const infoItems = [
     {
       label: t("livestockDetail.species"),
-      value: livestock.species,
+      value: translatedListingValue(t, "speciesValues", SPECIES_VALUE_KEYS, livestock.species),
     },
     { label: t("livestockDetail.breed"), value: livestock.breed },
     { label: t("livestockDetail.gender"), value: genderLabel(tf, livestock.gender) },
@@ -390,7 +432,10 @@ export default function LivestockDetail() {
       label: t("livestockDetail.chestGirth"),
       value: livestock.chestGirth ? `${livestock.chestGirth} cm` : null,
     },
-    { label: t("livestockDetail.color"), value: livestock.color },
+    {
+      label: t("livestockDetail.color"),
+      value: translatedListingValue(t, "colorValues", COLOR_VALUE_KEYS, livestock.color),
+    },
     { label: t("livestockDetail.earTag"), value: livestock.earTag },
     { label: t("livestockDetail.rfid"), value: livestock.rfid },
   ].filter((i) => i.value);
@@ -447,7 +492,7 @@ export default function LivestockDetail() {
           </button>
         ) : (
           <div className="flex h-72 w-full items-center justify-center bg-[#F7EDE2] text-sm font-bold text-[#41362D]">
-            {livestock.species || t("livestockDetail.livestockFallback")}
+            {t("livestockDetail.noImage")}
           </div>
         )}
         {media.length > 1 && (
@@ -468,10 +513,7 @@ export default function LivestockDetail() {
       <DetailOuterSheet raised={detailsRaised} withActionBar>
         {/* Title + price + status */}
         <section className={reveal()} style={{ animationDelay: "80ms" }} aria-labelledby="livestock-title">
-          <p className="text-sm font-semibold uppercase tracking-[0.08em] text-white/75">
-            {[livestock.species, livestock.breed].filter(Boolean).join(" · ")}
-          </p>
-          <h1 id="livestock-title" className="mt-1 break-words text-2xl font-extrabold leading-tight text-white sm:text-3xl">
+          <h1 id="livestock-title" className="break-words text-2xl font-extrabold leading-tight text-white sm:text-3xl">
             {title}
           </h1>
           <div className="mt-3 flex min-w-0 flex-wrap items-center justify-between gap-3">
@@ -584,7 +626,7 @@ export default function LivestockDetail() {
             <div className="no-scrollbar -mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-3">
               {relatedLivestock.map((item) => {
                 const image = item.coverImage || item.images?.[0] || "";
-                const label = item.breed || item.species || t("livestockDetail.livestockFallback");
+                const label = item.breed || translatedListingValue(t, "speciesValues", SPECIES_VALUE_KEYS, item.species) || t("livestockDetail.livestockFallback");
                 return (
                   <button
                     key={item.id}
@@ -601,6 +643,7 @@ export default function LivestockDetail() {
                     <ProductImage
                       src={image}
                       alt={label}
+                      fallbackLabel={t("livestockDetail.noImage")}
                       className="h-28 w-full rounded-none border-0 sm:h-32"
                     />
                     <div className="p-3">
