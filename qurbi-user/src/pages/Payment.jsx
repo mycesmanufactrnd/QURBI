@@ -549,6 +549,7 @@ export default function Payment() {
         }));
       checkoutOrder = order;
       const res = await qurbiApi.functions.invoke("createCheckout", {
+        orderIds: resumedOrder?.order_ids || [],
         orderId: order.id,
         orderNumber,
         items: paymentItems,
@@ -566,9 +567,7 @@ export default function Payment() {
           if (isBuyNowCheckout) clearBuyNow();
           else removeSelected();
         }
-        navigateWithTransition(res.data.url, {
-          navigateOptions: { replace: true },
-        });
+        window.location.assign(res.data.url);
       } else {
         const paymentFailure = {
           title: t("payment.paymentCouldNotStartTitle"),

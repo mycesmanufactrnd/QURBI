@@ -18,6 +18,7 @@ import { BreedRequestsModule } from './breed-requests/breed-requests.module';
 import { AddressesModule } from './addresses/addresses.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { ReservationsModule } from './reservations/reservations.module';
+import { PaymentsModule } from './payments/payments.module';
 
 export const APP_MODULES = [
   AuthModule,
@@ -40,4 +41,5 @@ export const APP_MODULES = [
   BreedRequestsModule,
   AddressesModule,
   ReservationsModule,
+  PaymentsModule,
 ];

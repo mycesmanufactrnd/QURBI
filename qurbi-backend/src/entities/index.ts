@@ -14,6 +14,8 @@ export * from './order.entity';
 export * from './order-item.entity';
 export * from './order-tracking-event.entity';
 export * from './payment.entity';
+export * from './payment-session.entity';
+export * from './payment-session-order.entity';
 export * from './reservation.entity';
 export * from './notification.entity';
 export * from './species-request.entity';
@@ -36,6 +38,8 @@ import { Order } from './order.entity';
 import { OrderItem } from './order-item.entity';
 import { OrderTrackingEvent } from './order-tracking-event.entity';
 import { Payment } from './payment.entity';
+import { PaymentSession } from './payment-session.entity';
+import { PaymentSessionOrder } from './payment-session-order.entity';
 import { Reservation } from './reservation.entity';
 import { Notification } from './notification.entity';
 import { SpeciesRequest } from './species-request.entity';
@@ -60,6 +64,8 @@ export const ALL_ENTITIES = [
   OrderItem,
   OrderTrackingEvent,
   Payment,
+  PaymentSession,
+  PaymentSessionOrder,
   Reservation,
   Notification,
   SpeciesRequest,

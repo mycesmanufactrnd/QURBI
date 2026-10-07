@@ -22,16 +22,10 @@ import { MarkReceivedDto } from './dto/mark-received.dto';
 import { RequestRefundDto } from './dto/request-refund.dto';
 import { ReviewRefundDto } from './dto/review-refund.dto';
 import { HideFromBuyerHistoryDto } from './dto/hide-from-buyer-history.dto';
-import { Headers, UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { Public } from '../auth/decorators/public.decorator';
 
 @Controller('orders')
 export class OrdersController {
-  constructor(
-    private readonly ordersService: OrdersService,
-    private readonly configService: ConfigService,
-  ) {}
+  constructor(private readonly ordersService: OrdersService) {}
 
   // The buyer is always the authenticated caller — never a body field.
   @Roles(UserRole.BUYER)
@@ -104,26 +98,6 @@ export class OrdersController {
     @Body() body: CancelOrderDto,
   ) {
     return this.ordersService.cancel(id, user, body.reason);
-  }
-
-  @Public()
-  @Post(':id/payment-webhook')
-  paymentWebhook(
-    @Param('id') id: string,
-    @Headers('x-qurbi-payment-webhook-secret')
-    suppliedSecret: string | undefined,
-    @Body() body: { providerReference?: string },
-  ) {
-    const expectedSecret = this.configService.get<string>(
-      'PAYMENT_WEBHOOK_SECRET',
-    );
-    if (!expectedSecret || suppliedSecret !== expectedSecret) {
-      throw new UnauthorizedException('Invalid payment webhook signature');
-    }
-    return this.ordersService.completePaymentFromWebhook(
-      id,
-      body.providerReference,
-    );
   }
 
   @Roles(UserRole.BUYER)

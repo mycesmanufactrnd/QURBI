@@ -204,6 +204,8 @@ export default function Home() {
  * @param {{ icon: React.ElementType, iconClassName?: string, label: React.ReactNode, onClick: () => void, primary?: boolean, badge?: number }} props
  */
 function QuickAction({ icon: Icon, iconClassName = "h-5 w-5", label, onClick, primary, badge = 0 }) {
+  const { t } = useTranslation("home");
+
   return (
     <button type="button" onClick={onClick} className="group flex min-h-[88px] min-w-0 flex-col items-center gap-2 rounded-2xl px-1 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
       <span className={cn("relative flex h-14 w-14 items-center justify-center rounded-full transition-transform group-hover:-translate-y-0.5", primary ? "brand-gradient text-primary-foreground shadow-[0_5px_14px_rgba(65,54,45,0.2)]" : "bg-secondary/65 text-primary")}>

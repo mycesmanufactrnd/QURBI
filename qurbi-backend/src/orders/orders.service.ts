@@ -758,53 +758,102 @@ export class OrdersService {
     id: string,
     providerReference?: string,
   ): Promise<Order> {
+    const [order] = await this.completePaymentsFromProvider(
+      [id],
+      providerReference,
+      'external',
+    );
+    return order;
+  }
+
+  async completePaymentsFromProvider(
+    orderIds: string[],
+    providerReference?: string,
+    provider = 'external',
+  ): Promise<Order[]> {
     return this.dataSource.transaction(async (manager) => {
-      const order = await manager
-        .createQueryBuilder(Order, 'order')
-        .setLock('pessimistic_write')
-        .where('order.id = :id', { id })
-        .getOne();
-      if (!order) throw new NotFoundException(`Order ${id} not found`);
-      if (
-        order.status === OrderStatus.PAID &&
-        order.paymentStatus === PaymentStatus.PAID
-      ) {
-        return order;
-      }
-      if (order.status !== OrderStatus.PENDING_PAYMENT) {
-        throw new ConflictException(`Order ${id} is not awaiting payment`);
-      }
+      const completed: Order[] = [];
+      for (const id of [...new Set(orderIds)].sort()) {
+        const order = await manager
+          .createQueryBuilder(Order, 'order')
+          .setLock('pessimistic_write')
+          .where('order.id = :id', { id })
+          .getOne();
+        if (!order) throw new NotFoundException(`Order ${id} not found`);
+        if (
+          order.status === OrderStatus.PAID &&
+          order.paymentStatus === PaymentStatus.PAID
+        ) {
+          completed.push(order);
+          continue;
+        }
+        if (order.status !== OrderStatus.PENDING_PAYMENT) {
+          throw new ConflictException(`Order ${id} is not awaiting payment`);
+        }
 
-      await this.reservationsService.completeOrder(
-        manager,
-        order.id,
-        order.buyerId,
-      );
-      const payment = await manager.findOne(Payment, {
-        where: { orderId: order.id },
-      });
-      if (!payment)
-        throw new ConflictException(`Order ${id} has no payment record`);
-      const paidAt = new Date();
-      payment.status = PaymentStatus.PAID;
-      payment.paidAt = paidAt;
-      if (providerReference) payment.providerReference = providerReference;
-      await manager.save(payment);
+        await this.reservationsService.completeOrder(
+          manager,
+          order.id,
+          order.buyerId,
+        );
+        const payment = await manager.findOne(Payment, {
+          where: { orderId: order.id },
+        });
+        if (!payment)
+          throw new ConflictException(`Order ${id} has no payment record`);
+        const paidAt = new Date();
+        payment.status = PaymentStatus.PAID;
+        payment.provider = provider;
+        payment.paidAt = paidAt;
+        if (providerReference) payment.providerReference = providerReference;
+        await manager.save(payment);
 
-      order.status = OrderStatus.PAID;
-      order.paymentStatus = PaymentStatus.PAID;
-      order.paymentReference = providerReference ?? payment.id;
-      order.paidAt = paidAt;
-      await manager.save(order);
-      await manager.save(
-        manager.create(OrderTrackingEvent, {
-          orderId: order.id,
-          status: OrderStatus.PAID,
-          note: 'Payment completed',
-          createdByUserId: null,
-        }),
-      );
-      return order;
+        order.status = OrderStatus.PAID;
+        order.paymentStatus = PaymentStatus.PAID;
+        order.paymentMethod = provider;
+        order.paymentReference = providerReference ?? payment.id;
+        order.paidAt = paidAt;
+        await manager.save(order);
+        await manager.save(
+          manager.create(OrderTrackingEvent, {
+            orderId: order.id,
+            status: OrderStatus.PAID,
+            note: `Payment completed via ${provider}`,
+            createdByUserId: null,
+          }),
+        );
+        completed.push(order);
+      }
+      return completed;
+    });
+  }
+
+  async markPaymentsFailedFromProvider(
+    orderIds: string[],
+    providerReference?: string,
+    provider = 'external',
+  ): Promise<void> {
+    await this.dataSource.transaction(async (manager) => {
+      for (const id of [...new Set(orderIds)].sort()) {
+        const order = await manager
+          .createQueryBuilder(Order, 'order')
+          .setLock('pessimistic_write')
+          .where('order.id = :id', { id })
+          .getOne();
+        if (!order || order.status !== OrderStatus.PENDING_PAYMENT) continue;
+        const payment = await manager.findOne(Payment, {
+          where: { orderId: id },
+        });
+        if (!payment) continue;
+        payment.status = PaymentStatus.FAILED;
+        payment.provider = provider;
+        if (providerReference) payment.providerReference = providerReference;
+        await manager.save(payment);
+        order.paymentStatus = PaymentStatus.FAILED;
+        order.paymentMethod = provider;
+        if (providerReference) order.paymentReference = providerReference;
+        await manager.save(order);
+      }
     });
   }
 
