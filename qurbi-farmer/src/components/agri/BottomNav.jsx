@@ -1,7 +1,7 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Bell, Home, ShoppingBag, User } from "lucide-react";
+import { BarChart3, Home, ShoppingBag, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CowSilhouetteIcon from "@/components/agri/CowSilhouetteIcon";
 
@@ -9,7 +9,7 @@ const ITEMS = [
   { to: "/livestock", labelKey: "livestock", icon: CowSilhouetteIcon, end: true },
   { to: "/orders", labelKey: "orders", icon: ShoppingBag },
   { to: "/", labelKey: "home", icon: Home, end: true, featured: true },
-  { to: "/notifications", labelKey: "alerts", ariaKey: "notifications", icon: Bell },
+  { to: "/analytics", labelKey: "analytics", icon: BarChart3 },
   { to: "/profile", labelKey: "profile", icon: User },
 ];
 

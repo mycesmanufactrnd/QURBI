@@ -53,6 +53,7 @@ import { recentPageOr } from "@/lib/navigation";
 import { qurbiApi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
 import { orderBlocksRepurchase } from "@/components/account/orderStatus";
+import { analyticsSource, trackBuyerActivity } from "@/lib/buyer-analytics";
 
 const SPECIES_VALUE_KEYS = {
   cow: "cow",
@@ -186,7 +187,12 @@ export default function LivestockDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeMedia, setActiveMedia] = useState(0);
-  useEffect(() => { setActiveMedia(0); }, [id]);
+  const farmSectionRef = React.useRef(null);
+  const farmViewTracked = React.useRef(false);
+  useEffect(() => {
+    setActiveMedia(0);
+    farmViewTracked.current = false;
+  }, [id]);
   const [previewImage, setPreviewImage] = useState("");
   const [availabilityModal, setAvailabilityModal] = useState("");
   const [detailsRaised, setDetailsRaised] = useState(false);
@@ -229,6 +235,35 @@ export default function LivestockDetail() {
   useEffect(() => {
     load();
   }, [id]);
+
+  useEffect(() => {
+    if (!livestock?.id) return;
+    trackBuyerActivity({
+      eventType: "listing_view",
+      targetType: "livestock",
+      targetId: livestock.id,
+      source: analyticsSource(searchParams),
+    });
+  }, [livestock?.id]);
+
+  useEffect(() => {
+    const farmerId = livestock?.ownerId || livestock?.created_by_id;
+    const element = farmSectionRef.current;
+    if (!farmerId || !element || farmViewTracked.current) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting || farmViewTracked.current) return;
+      farmViewTracked.current = true;
+      trackBuyerActivity({
+        eventType: "farmer_profile_view",
+        targetType: "farmer",
+        targetId: farmerId,
+        source: "livestock_detail",
+      });
+      observer.disconnect();
+    }, { threshold: 0.6 });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [livestock?.ownerId, livestock?.created_by_id]);
 
   useEffect(() => {
     let active = true;
@@ -322,6 +357,12 @@ export default function LivestockDetail() {
       if (!addToCart(buildCartItem())) {
         alert(t("livestockDetail.alreadyInCart"));
       } else {
+        trackBuyerActivity({
+          eventType: "add_to_cart",
+          targetType: "livestock",
+          targetId: livestock.id,
+          source: analyticsSource(searchParams),
+        });
         animateProductToCart(animationSource);
       }
     });
@@ -353,6 +394,12 @@ export default function LivestockDetail() {
         return;
       }
       buyNow(buildCartItem());
+      trackBuyerActivity({
+        eventType: "buy_now",
+        targetType: "livestock",
+        targetId: livestock.id,
+        source: analyticsSource(searchParams),
+      });
       animateProductToCart(animationSource);
       navigateWithTransition("/payment?source=buy-now");
     });
@@ -532,6 +579,7 @@ export default function LivestockDetail() {
 
         {/* Farm & location */}
         {farmRows.length > 0 && (
+          <div ref={farmSectionRef}>
           <LightDetailCard title={tf("detail.farmAndLocation")} className={reveal()}>
             <dl className="space-y-3" style={{ animationDelay: "140ms" }}>
               {farmRows.map(({ icon: Icon, label, value }) => (
@@ -547,6 +595,7 @@ export default function LivestockDetail() {
               ))}
             </dl>
           </LightDetailCard>
+          </div>
         )}
 
         {/* Info grid */}

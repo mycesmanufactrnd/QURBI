@@ -36,6 +36,7 @@ import StickyActionBar from "@/components/shop/StickyActionBar";
 import { formatRM } from "@/lib/format";
 import { extractState } from "@/lib/livestock-data";
 import { recentPageOr } from "@/lib/navigation";
+import { analyticsSource, trackBuyerActivity } from "@/lib/buyer-analytics";
 
 export default function BulkListingDetail() {
   const { t } = useTranslation("listings");
@@ -71,6 +72,8 @@ export default function BulkListingDetail() {
   const [listing, setListing] = useState(null);
   const [error, setError] = useState("");
   const [detailsRaised, setDetailsRaised] = useState(false);
+  const farmSectionRef = React.useRef(null);
+  const farmViewTracked = React.useRef(false);
   const breedNames = useBreedNames(listing ? [listing] : []);
 
   const load = useCallback(() => {
@@ -84,8 +87,38 @@ export default function BulkListingDetail() {
   }, [id]);
 
   useEffect(() => {
+    farmViewTracked.current = false;
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!listing?.id) return;
+    trackBuyerActivity({
+      eventType: "listing_view",
+      targetType: "bulk_listing",
+      targetId: listing.id,
+      source: analyticsSource(searchParams),
+    });
+  }, [listing?.id]);
+
+  useEffect(() => {
+    const farmerId = listing?.ownerId;
+    const element = farmSectionRef.current;
+    if (!farmerId || !element || farmViewTracked.current) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting || farmViewTracked.current) return;
+      farmViewTracked.current = true;
+      trackBuyerActivity({
+        eventType: "farmer_profile_view",
+        targetType: "farmer",
+        targetId: farmerId,
+        source: "bulk_listing_detail",
+      });
+      observer.disconnect();
+    }, { threshold: 0.6 });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [listing?.ownerId]);
 
   useEffect(() => {
     if (listing || error) completeProductTransition();
@@ -170,12 +203,24 @@ export default function BulkListingDetail() {
         }
         if (now) {
           buyNow(item);
+          trackBuyerActivity({
+            eventType: "buy_now",
+            targetType: "bulk_listing",
+            targetId: listing.id,
+            source: analyticsSource(searchParams),
+          });
           animateProductToCart(animationSource);
           navigateWithTransition("/payment?source=buy-now");
         } else {
           if (!addToCart(item)) {
             alert(t("bulkListingDetail.alreadyInCart"));
           } else {
+            trackBuyerActivity({
+              eventType: "add_to_cart",
+              targetType: "bulk_listing",
+              targetId: listing.id,
+              source: analyticsSource(searchParams),
+            });
             animateProductToCart(animationSource);
           }
         }
@@ -275,6 +320,7 @@ export default function BulkListingDetail() {
         </header>
 
         {farmRows.length > 0 && (
+          <div ref={farmSectionRef}>
           <LightDetailCard title={tf("detail.farmAndLocation")}>
             <dl className="space-y-3">
               {farmRows.map(({ icon: Icon, label, value }) => (
@@ -290,6 +336,7 @@ export default function BulkListingDetail() {
               ))}
             </dl>
           </LightDetailCard>
+          </div>
         )}
 
         <LightDetailCard title={t("bulkListingDetail.bulkLotDetails")}>

@@ -24,6 +24,7 @@ export * from './cart.entity';
 export * from './cart-item.entity';
 export * from './address.entity';
 export * from './uploaded-file.entity';
+export * from './buyer-activity.entity';
 
 import { User } from './user.entity';
 import { RefreshToken } from './refresh-token.entity';
@@ -48,6 +49,7 @@ import { Cart } from './cart.entity';
 import { CartItem } from './cart-item.entity';
 import { Address } from './address.entity';
 import { UploadedFile } from './uploaded-file.entity';
+import { BuyerActivity } from './buyer-activity.entity';
 
 // Passed straight to TypeOrmModule.forRoot({ entities: ALL_ENTITIES }).
 export const ALL_ENTITIES = [
@@ -74,4 +76,5 @@ export const ALL_ENTITIES = [
   CartItem,
   Address,
   UploadedFile,
+  BuyerActivity,
 ];

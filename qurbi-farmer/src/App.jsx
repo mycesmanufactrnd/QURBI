@@ -25,6 +25,7 @@ import Orders from "@/pages/Orders";
 import OrderTracking from "@/pages/OrderTracking";
 import Profile from "@/pages/Profile";
 import Notifications from "@/pages/Notifications";
+import Analytics from "@/pages/Analytics";
 import BulkListings from "@/pages/BulkListings";
 import AddBulkListing from "@/pages/AddBulkListing";
 import BulkListingDetail from "@/pages/BulkListingDetail";
@@ -91,6 +92,7 @@ const AuthenticatedApp = () => {
             <Route path="/orders" element={<Orders />} />
             <Route path="/orders/:orderId" element={<OrderTracking />} />
             <Route path="/notifications" element={<Notifications />} />
+            <Route path="/analytics" element={<Analytics />} />
             <Route path="/profile" element={<Profile />} />
           </Route>
         </Route>

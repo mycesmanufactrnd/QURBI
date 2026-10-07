@@ -14,6 +14,7 @@ import { useToast } from "@/components/ui/use-toast";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { switchToBuyerPortal } from "@/lib/portalSwitch";
 import StatusBadge from "@/components/agri/StatusBadge";
+import NotificationBell from "@/components/agri/NotificationBell";
 import DeliveryPreference from "@/components/agri/DeliveryPreference";
 import { MALAYSIA_STATES, VERIFICATION_STATUSES, initials, userVal } from "@/lib/agri";
 import {
@@ -117,9 +118,12 @@ export default function Profile() {
     <div className="animate-fade-in max-w-2xl mx-auto">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight">{t("title")}</h1>
-        <Button type="button" variant="outline" onClick={openEditor} disabled={!profile} className="h-11 rounded-2xl">
-          <Pencil className="mr-1.5 h-4 w-4" /> {t("editProfile")}
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          <NotificationBell />
+          <Button type="button" variant="outline" onClick={openEditor} disabled={!profile} aria-label={t("editProfile")} className="h-11 w-11 rounded-2xl px-0 sm:w-auto sm:px-4">
+            <Pencil className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">{t("editProfile")}</span>
+          </Button>
+        </div>
       </div>
 
       <section className="home-brand-hero mt-4 rounded-[1.75rem] p-5 text-primary-foreground shadow-[0_8px_24px_rgba(65,54,45,0.18)]">
