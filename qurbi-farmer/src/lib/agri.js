@@ -434,7 +434,13 @@ export function paymentStatusLabel(status) {
 /** Name for an order line: listing title first, breed only when it is meaningful. */
 export function orderItemTitle(item) {
   const title = item?.titleSnapshot || item?.species || tr("livestock");
-  const breed = item?.breed && !/^unspecified/i.test(item.breed) ? item.breed : "";
+  const candidateBreed = item?.breed && !/^unspecified/i.test(item.breed) ? item.breed : "";
+  const normalizeName = (value) => String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const normalizedTitle = normalizeName(title);
+  const normalizedBreed = normalizeName(candidateBreed);
+  // Generated snapshots already read like "Goat - Shami". Do not repeat
+  // "Shami" as a second line, but preserve it for custom titles that omit it.
+  const breed = normalizedBreed && !normalizedTitle.includes(normalizedBreed) ? candidateBreed : "";
   return { title, breed };
 }
 
