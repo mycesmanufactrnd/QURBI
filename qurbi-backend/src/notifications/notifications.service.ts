@@ -1,7 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Notification, NotificationAudience, UserRole } from '../entities';
+import { In, IsNull, Not, Repository } from 'typeorm';
+import {
+  Notification,
+  NotificationAudience,
+  NotificationType,
+  OrderTrackingEvent,
+  UserRole,
+} from '../entities';
 import { BaseCrudService } from '../common/base-crud.service';
 import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 
@@ -9,19 +15,70 @@ import type { AuthenticatedUser } from '../auth/decorators/current-user.decorato
 export class NotificationsService extends BaseCrudService<Notification> {
   constructor(
     @InjectRepository(Notification) repository: Repository<Notification>,
+    @InjectRepository(OrderTrackingEvent)
+    private readonly trackingEventRepository: Repository<OrderTrackingEvent>,
   ) {
     super(repository);
   }
 
   // audience keeps a buyer's and farmer's inboxes separate for someone who is
   // both, and isCleared excludes anything the user already "cleared".
-  findInbox(
+  async findInbox(
     userId: string,
     audience: NotificationAudience,
-  ): Promise<Notification[]> {
-    return this.repository.find({
+  ): Promise<Array<Notification & { imageUrl: string | null }>> {
+    const notifications = await this.repository.find({
       where: { userId, audience, isCleared: false },
       order: { createdAt: 'DESC' },
+    });
+    const deliveryNotifications = notifications.filter(
+      (notification) => notification.type === NotificationType.DELIVERY,
+    );
+    const eventIds = deliveryNotifications
+      .filter(
+        (notification) =>
+          notification.relatedType === 'order_tracking_event' &&
+          notification.relatedId,
+      )
+      .map((notification) => notification.relatedId as string);
+    const orderIds = deliveryNotifications
+      .filter(
+        (notification) =>
+          notification.relatedType === 'order' && notification.relatedId,
+      )
+      .map((notification) => notification.relatedId as string);
+
+    const exactEventsPromise: Promise<OrderTrackingEvent[]> = eventIds.length
+      ? this.trackingEventRepository.find({ where: { id: In(eventIds) } })
+      : Promise.resolve([]);
+    const legacyEventsPromise: Promise<OrderTrackingEvent[]> = orderIds.length
+      ? this.trackingEventRepository.find({
+          where: {
+            orderId: In(orderIds),
+            images: Not(IsNull()),
+          },
+          order: { createdAt: 'DESC' },
+        })
+      : Promise.resolve([]);
+    const [exactEvents, legacyEvents] = await Promise.all([
+      exactEventsPromise,
+      legacyEventsPromise,
+    ]);
+    const exactById = new Map(exactEvents.map((event) => [event.id, event]));
+    const latestByOrder = new Map<string, OrderTrackingEvent>();
+    for (const event of legacyEvents) {
+      if (!latestByOrder.has(event.orderId)) latestByOrder.set(event.orderId, event);
+    }
+
+    return notifications.map((notification) => {
+      const event =
+        notification.relatedType === 'order_tracking_event'
+          ? exactById.get(notification.relatedId || '')
+          : notification.relatedType === 'order'
+            ? latestByOrder.get(notification.relatedId || '')
+            : undefined;
+      const imageUrl = Array.isArray(event?.images) ? event.images[0] || null : null;
+      return Object.assign(notification, { imageUrl });
     });
   }
 

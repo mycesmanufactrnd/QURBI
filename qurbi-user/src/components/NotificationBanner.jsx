@@ -20,9 +20,11 @@ const TYPE_STYLE = {
 export default function NotificationBanner({ notification, onOpen, onClose }) {
   const { t } = useTranslation("orders");
   const [closing, setClosing] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
 
   useEffect(() => {
     setClosing(false);
+    setImageFailed(false);
     const closeTimer = window.setTimeout(() => setClosing(true), 5000);
     return () => {
       window.clearTimeout(closeTimer);
@@ -51,11 +53,20 @@ export default function NotificationBanner({ notification, onOpen, onClose }) {
           onClick={() => onOpen(notification)}
           className="flex min-h-[64px] w-full items-center gap-3 px-4 py-3 pr-14 text-left active:bg-[#F7EDE2]/70"
         >
-          <span
-            className={`flex h-11 w-11 flex-none items-center justify-center rounded-xl ${style.iconClass}`}
-          >
-            <Icon className="h-5 w-5" />
-          </span>
+          {notification.image_url && !imageFailed ? (
+            <img
+              src={notification.image_url}
+              alt=""
+              className="h-11 w-11 flex-none rounded-xl border border-[#E3C19F]/70 object-cover"
+              onError={() => setImageFailed(true)}
+            />
+          ) : (
+            <span
+              className={`flex h-11 w-11 flex-none items-center justify-center rounded-xl ${style.iconClass}`}
+            >
+              <Icon className="h-5 w-5" />
+            </span>
+          )}
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-bold text-[#41362D]">
               {notification.title}

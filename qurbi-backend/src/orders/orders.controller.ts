@@ -19,6 +19,7 @@ import { CheckoutDto } from './dto/checkout.dto';
 import { CancelOrderDto } from './dto/cancel-order.dto';
 import { SetOrderStatusDto } from './dto/set-order-status.dto';
 import { MarkReceivedDto } from './dto/mark-received.dto';
+import { SaveReceivedProofDto } from './dto/save-received-proof.dto';
 import { RequestRefundDto } from './dto/request-refund.dto';
 import { ReviewRefundDto } from './dto/review-refund.dto';
 import { HideFromBuyerHistoryDto } from './dto/hide-from-buyer-history.dto';
@@ -117,6 +118,17 @@ export class OrdersController {
     @Body() body: MarkReceivedDto,
   ) {
     return this.ordersService.markReceived(id, user, body.proofImages);
+  }
+
+  @Roles(UserRole.BUYER)
+  @UseGuards(RolesGuard)
+  @Patch(':id/received-proof')
+  saveReceivedProof(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: SaveReceivedProofDto,
+  ) {
+    return this.ordersService.saveReceivedProof(id, user, body.proofImages);
   }
 
   @Patch(':id/refund-request')

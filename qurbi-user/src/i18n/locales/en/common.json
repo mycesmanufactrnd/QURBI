@@ -4,8 +4,15 @@
     "signUp": "Sign Up",
     "goBack": "Go back",
     "openProfile": "Open profile",
+    "closeProfile": "Close profile",
     "notifications": "Open notifications",
-    "notificationsUnread": "Open notifications, {{count}} unread"
+    "notificationsUnread": "Open notifications, {{count}} unread",
+    "profileMenu": {
+      "label": "Account actions",
+      "profile": "Profile",
+      "logout": "Log Out",
+      "close": "Close account actions"
+    }
   },
   "bottomNav": {
     "browse": "Browse",

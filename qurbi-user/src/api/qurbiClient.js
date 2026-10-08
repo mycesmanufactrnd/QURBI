@@ -1,5 +1,6 @@
 import apiClient, { getAccessToken, uploadApi } from "@/api/apiClient";
 import { checkoutGroupFromOrder, checkoutGroupNote } from "@/lib/order-groups";
+import { accountMediaUrl, orderProofPhotos } from "@/components/account/media";
 
 const API_ORIGIN = new URL(
   import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api",
@@ -184,7 +185,7 @@ function orderForUser(order) {
     };
   });
   const checkoutGroupId = checkoutGroupFromOrder(order);
-  return {
+  const mappedOrder = {
     ...order,
     items,
     created_date: order.createdAt || order.created_at || order.created_date || null,
@@ -199,6 +200,10 @@ function orderForUser(order) {
     fulfillment_method: order.deliveryMethod === "self_pickup" ? "pickup" : "delivery",
     tracking_events: order.trackingEvents || [],
     checkout_group_id: checkoutGroupId,
+  };
+  return {
+    ...mappedOrder,
+    tracking_photos: orderProofPhotos(mappedOrder),
   };
 }
 
@@ -258,9 +263,6 @@ function availabilityFor(item, availableStatus) {
   return { available, state: available ? "available" : item.status || "unavailable", item };
 }
 
-/** @type {Map<string, string>} orderId -> uploaded proof photo URL awaiting confirmation */
-const pendingReceivedProof = new Map();
-
 // The API sends camelCase notifications; the notification context, banner and
 // page read the older snake_case shape. Keep both so either reader works.
 /** @param {any} n */
@@ -272,6 +274,7 @@ function notificationForUser(n) {
     event_at: n.event_at ?? n.createdAt ?? null,
     is_read: n.is_read ?? Boolean(n.isRead),
     order_id: n.order_id ?? (n.relatedType === "order" ? n.relatedId : null) ?? orderFromLink ?? null,
+    image_url: accountMediaUrl(n.image_url ?? n.imageUrl ?? ""),
   };
 }
 
@@ -344,11 +347,23 @@ const functionHandlers = {
   /** @param {{ orderId?: string }} [payload] */
   async fetchMyOrders({ orderId } = {}) {
     const farmProfileCache = new Map();
+    // Order status and proof photos can change while this page is open. A
+    // cache-busting query keeps polling/navigation fetches out of the browser's
+    // HTTP cache without changing the backend contract.
+    const freshParams = { _ts: Date.now() };
     if (orderId) {
-      const order = await request({ method: "get", url: `/orders/${orderId}` });
+      const order = await request({
+        method: "get",
+        url: `/orders/${orderId}`,
+        params: freshParams,
+      });
       return wrap({ order: await orderWithFarmName(order, farmProfileCache) });
     }
-    const response = await request({ method: "get", url: "/orders", params: { buyerId: currentUserId() } });
+    const response = await request({
+      method: "get",
+      url: "/orders",
+      params: { buyerId: currentUserId(), ...freshParams },
+    });
     const orders = collectionFrom(response) || [];
     return wrap({
       orders: await Promise.all(
@@ -365,9 +380,14 @@ const functionHandlers = {
     return wrap({ success: true });
   },
   async confirmMyOrderReceived({ orderId }) {
-    const proofImages = pendingReceivedProof.has(orderId) ? [pendingReceivedProof.get(orderId)] : [];
+    const currentOrder = await request({ method: "get", url: `/orders/${orderId}`, params: { _ts: Date.now() } });
+    const proofImages = Array.isArray(currentOrder?.receivedProofImages)
+      ? currentOrder.receivedProofImages
+      : [];
+    if (!proofImages.length) {
+      throw new Error("Save a received proof photo before confirming receipt.");
+    }
     const order = await request({ method: "patch", url: `/orders/${orderId}/received`, data: { proofImages } });
-    pendingReceivedProof.delete(orderId);
     return wrap({ order: orderForUser(order) });
   },
   async requestMyOrderRefund({ orderId, reason }) {
@@ -433,21 +453,13 @@ const functionHandlers = {
       }),
     });
   },
-  // The backend only accepts the buyer's proof photo as part of marking the
-  // order received, so hold the uploaded file's URL until the buyer confirms.
-  async saveMyReceivedOrderProof({ orderId, receivedPhotoUrl, previewUrl }) {
-    pendingReceivedProof.set(orderId, receivedPhotoUrl);
-    const order = orderForUser(await request({ method: "get", url: `/orders/${orderId}` }));
-    const tracking = order.tracking_photos || {};
-    return wrap({
-      order: {
-        ...order,
-        tracking_photos: {
-          ...tracking,
-          received: { ...(tracking.received || {}), image_url: previewUrl || receivedPhotoUrl },
-        },
-      },
+  async saveMyReceivedOrderProof({ orderId, receivedPhotoUrl }) {
+    const order = await request({
+      method: "patch",
+      url: `/orders/${orderId}/received-proof`,
+      data: { proofImages: [receivedPhotoUrl] },
     });
+    return wrap({ order: orderForUser(order) });
   },
   async createTestOrder() {
     throw new Error("Test-order creation is not available through the current NestJS API.");
@@ -472,7 +484,6 @@ export const qurbiApi = {
   entities: {
     Breed: entity("/breeds"),
     LivestockCategory: entity("/livestock-categories"),
-    Order: { create: async (draft) => ({ ...draft, id: `pending-${Date.now()}` }) },
   },
   integrations: {
     Core: {

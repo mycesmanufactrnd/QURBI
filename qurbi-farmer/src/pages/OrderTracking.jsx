@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import { qurbi } from "@/api/qurbiClient";
-import { resolveApiAssetUrl } from "@/api/apiClient";
+import { resolveApiAssetUrl, uploadApi } from "@/api/apiClient";
 import {
   ArrowLeft,
   CalendarDays,
@@ -60,6 +60,62 @@ function DetailSkeleton() {
 
 function InfoRow({ icon: Icon, label, value, fallback }) {
   return <div className="flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><Icon className="h-4 w-4" /></span><div className="min-w-0"><p className="text-sm text-muted-foreground">{label}</p><p className="break-words text-base font-bold">{value || fallback}</p></div></div>;
+}
+
+function AuthenticatedProofImage({ url, alt }) {
+  const [imageUrl, setImageUrl] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl = "";
+    const source = String(url || "");
+
+    setImageUrl("");
+    setFailed(false);
+
+    if (!source) {
+      setLoading(false);
+      setFailed(true);
+      return undefined;
+    }
+
+    if (!source.includes("/uploads/private/")) {
+      setImageUrl(resolveApiAssetUrl(source));
+      setLoading(false);
+      return undefined;
+    }
+
+    setLoading(true);
+    uploadApi.getPrivateFile(source)
+      .then((blob) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setImageUrl(objectUrl);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLoading(false);
+        setFailed(true);
+      });
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [url]);
+
+  if (loading) {
+    return <span className="flex h-24 w-24 items-center justify-center rounded-xl bg-muted"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></span>;
+  }
+
+  if (failed || !imageUrl) {
+    return <span className="flex h-24 w-24 items-center justify-center rounded-xl bg-muted"><ImageOff className="h-6 w-6 text-muted-foreground" /></span>;
+  }
+
+  return <a href={imageUrl} target="_blank" rel="noreferrer" className="block h-24 w-24 overflow-hidden rounded-xl bg-muted"><img src={imageUrl} alt={alt} className="h-full w-full object-cover" /></a>;
 }
 
 function deliveryAddressDetails(address = {}) {
@@ -323,9 +379,9 @@ export default function OrderTracking() {
                   <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">{t(`tracking.owner.${stage.owner}`)}</span>
                 </div>
                 {proof?.image_url ? (
-                  <div className="mt-3 flex flex-wrap items-end gap-3"><a href={proof.image_url} target="_blank" rel="noreferrer" className="block h-24 w-24 overflow-hidden rounded-xl bg-muted"><img src={proof.image_url} alt={t("tracking.proofAlt", { stage: stageLabel(stage.key) })} className="h-full w-full object-cover" /></a><p className="flex items-center gap-1 text-sm text-muted-foreground"><Clock3 className="h-3.5 w-3.5" />{formatDateTime(proof.uploaded_at)}</p></div>
+                  <div className="mt-3 flex flex-wrap items-end gap-3"><AuthenticatedProofImage url={proof.image_url} alt={t("tracking.proofAlt", { stage: stageLabel(stage.key) })} /><p className="flex items-center gap-1 text-sm text-muted-foreground"><Clock3 className="h-3.5 w-3.5" />{formatDateTime(proof.uploaded_at)}</p></div>
                 ) : stage.key === "received" && receivedProof.length ? (
-                  <div className="mt-3 flex flex-wrap gap-2">{receivedProof.map((url) => <a key={url} href={url} target="_blank" rel="noreferrer" className="block h-24 w-24 overflow-hidden rounded-xl bg-muted"><img src={url} alt={t("tracking.buyerProofAlt")} className="h-full w-full object-cover" /></a>)}</div>
+                  <div className="mt-3 flex flex-wrap gap-2">{receivedProof.map((url) => <AuthenticatedProofImage key={url} url={url} alt={t("tracking.buyerProofAlt")} />)}</div>
                 ) : current ? (
                   <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">{uploading === stage.key ? t("tracking.uploading") : t("tracking.waitingPhoto")}</p>
                 ) : (

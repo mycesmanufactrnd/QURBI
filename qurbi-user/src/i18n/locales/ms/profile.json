@@ -80,7 +80,7 @@
       "statePlaceholder": "Negeri",
       "postcodePlaceholder": "Poskod",
       "countryPlaceholder": "Negara",
-      "setDefault": "Tetapkan sebagai alamat lalai",
+      "setDefault": "Tetapkan sebagai alamat utama",
       "setDefaultHint": "Dipilih secara automatik semasa checkout troli",
       "cancel": "Batal",
       "saveAddress": "Simpan Alamat",
@@ -91,9 +91,9 @@
     },
     "card": {
       "noLabel": "Tiada label",
-      "default": "LALAI",
+      "default": "ALAMAT UTAMA",
       "selected": "DIPILIH",
-      "setDefault": "Tetapkan Lalai",
+      "setDefault": "Tetapkan Alamat Utama",
       "selectedButton": "Dipilih",
       "useThisAddress": "Guna Alamat Ini"
     },
@@ -244,7 +244,7 @@
       },
       {
         "q": "Bagaimana saya kemas kini alamat penghantaran saya?",
-        "a": "Pergi ke Profil > Buku Alamat untuk menambah, menyunting atau menetapkan alamat penghantaran lalai."
+        "a": "Pergi ke Profil > Buku Alamat untuk menambah, menyunting atau menetapkan alamat penghantaran alamat utama."
       },
       {
         "q": "Saya tidak menerima pemberitahuan tentang pesanan saya. Apa yang perlu saya lakukan?",
