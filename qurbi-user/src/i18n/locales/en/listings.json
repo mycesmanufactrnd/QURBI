@@ -87,6 +87,12 @@
     "loading": "Loading livestock details...",
     "retry": "Retry",
     "species": "Species",
+    "speciesValues": {
+      "cow": "Cow",
+      "goat": "Goat",
+      "sheep": "Sheep",
+      "buffalo": "Buffalo"
+    },
     "breed": "Breed",
     "gender": "Gender",
     "age": "Age",
@@ -95,6 +101,22 @@
     "bodyLength": "Body Length",
     "chestGirth": "Chest Girth",
     "color": "Color",
+    "colorValues": {
+      "black": "Black",
+      "white": "White",
+      "brown": "Brown",
+      "red": "Red",
+      "cream": "Cream",
+      "grey": "Grey",
+      "golden": "Golden",
+      "tan": "Tan",
+      "beige": "Beige",
+      "spotted": "Spotted",
+      "mixed": "Mixed",
+      "blackAndWhite": "Black and white",
+      "brownAndWhite": "Brown and white",
+      "redAndWhite": "Red and white"
+    },
     "earTag": "Ear Tag",
     "rfid": "RFID",
     "inCart": "In Cart",
@@ -113,6 +135,7 @@
     "location": "Location",
     "videos": "Videos",
     "videoUnsupported": "Your browser does not support video playback.",
+    "noImage": "No image",
     "livestockFallback": "Livestock"
   },
   "viewCartCard": {

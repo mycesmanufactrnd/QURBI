@@ -15,7 +15,6 @@ import {
 } from "@/lib/cart-animation";
 import { formatRM } from "@/lib/format";
 import { resolvedBreakdown, useBreedNames } from "@/lib/breed-names";
-import StatusChip from "@/components/shop/StatusChip";
 
 const lotTotal = (listing) =>
   listing.totalAnimals ??
@@ -28,6 +27,7 @@ const toCartItem = (listing) => ({
   listing_name: listing.name,
   farmer_id: listing.ownerId || "",
   farmer_name: listing.farmer_name || "Unknown Farmer",
+  farm_name: listing.farm_name || listing.farmName || "",
   farm_location:
     listing.farm_location ||
     listing.farmLocation ||
@@ -115,7 +115,8 @@ export default function BulkBuy() {
         const item = toCartItem(listing);
         if (goToCart) {
           buyNow(item);
-          navigateWithTransition("/payment");
+          animateProductToCart(animationSource);
+          navigateWithTransition("/payment?source=buy-now");
         } else {
           if (!addToCart(item)) {
             alert(t("bulkBuy.alreadyInCart"));
@@ -254,8 +255,6 @@ export default function BulkBuy() {
                     <h2 className="line-clamp-2 break-words text-base font-bold leading-snug text-white">
                       {listing.name}
                     </h2>
-                    <StatusChip status={listing.status || "open"} className="mt-1.5" />
-
                     <p className="mt-2 flex items-center gap-1.5 text-sm text-white/85">
                       <MapPin aria-hidden="true" className="h-4 w-4 flex-none" />
                       {listing.state || t("bulkBuy.locationNotSpecified")}

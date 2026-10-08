@@ -292,7 +292,7 @@ export default function Receipt() {
           <Link to="/" className={secondaryBtn}>
             <Home className="h-4 w-4" aria-hidden="true" /> {t("receipt.homeLink")}
           </Link>
-          <Link to="/history" className={secondaryBtn}>
+          <Link to="/transaction-history" className={secondaryBtn}>
             <Clock className="h-4 w-4" aria-hidden="true" /> {t("receipt.historyLink")}
           </Link>
         </div>

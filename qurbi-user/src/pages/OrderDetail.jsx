@@ -812,8 +812,8 @@ export default function OrderDetail() {
   const returnTab =
     searchParams.get("fromTab") || TAB_FOR_STATUS[order.status] || "to-pay";
   const returnPath =
-    returnTab === "history"
-      ? "/history"
+    returnTab === "transaction-history" || returnTab === "history"
+      ? "/transaction-history"
       : `/orders?tab=${encodeURIComponent(returnTab)}`;
   const forcedReturnPath = location.state?.returnTo || "";
   const pendingPaymentStatuses = ["pending", "pending_payment", "to_pay"];
@@ -859,17 +859,12 @@ export default function OrderDetail() {
 
         <div className="rounded-2xl border border-[#E3C19F]/40 bg-gradient-to-br from-[#41362D] to-[#6B594A] p-4 shadow-sm">
           <div className="flex items-start justify-between gap-3">
-            <span className="text-sm text-white/75">Status</span>
+            <span className="text-lg font-bold text-white">Status</span>
             <span className="text-right text-sm font-bold capitalize text-white">
               {statusLabel(order)}
             </span>
           </div>
           <p className="mt-2 text-sm text-white/80">{formatOrderDateTime(order.created_date)}</p>
-          {isAwaitingPayment && (
-            <p className="mt-1 text-xs font-semibold text-white/65">
-              Your order is saved and ready for payment.
-            </p>
-          )}
         </div>
         <DeliveryCard order={order} />
 

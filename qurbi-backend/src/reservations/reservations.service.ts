@@ -9,6 +9,9 @@ import {
   FarmerProfile,
   Livestock,
   LivestockStatus,
+  Notification,
+  NotificationAudience,
+  NotificationType,
   Order,
   OrderStatus,
   RequestStatus,
@@ -39,9 +42,11 @@ export class ReservationsService {
     const expired = await qb.getMany();
 
     for (const staleReservation of expired) {
-      const reservation = await manager.findOne(Reservation, {
-        where: { id: staleReservation.id },
-      });
+      const reservation = await manager
+        .createQueryBuilder(Reservation, 'reservation')
+        .setLock('pessimistic_write')
+        .where('reservation.id = :id', { id: staleReservation.id })
+        .getOne();
       if (!reservation || reservation.status !== ReservationStatus.ACTIVE)
         continue;
       reservation.status = ReservationStatus.EXPIRED;
@@ -54,7 +59,20 @@ export class ReservationsService {
         order.status = OrderStatus.CANCELLED;
         order.cancelledAt = now;
         order.cancellationReason = 'Payment reservation expired';
+        order.checkoutKey = null;
         await manager.save(order);
+        await manager.save(
+          manager.create(Notification, {
+            userId: reservation.userId,
+            audience: NotificationAudience.BUYER,
+            type: NotificationType.PAYMENT,
+            title: 'Reservation expired',
+            body: 'Your payment reservation has expired. The livestock has been released and the unpaid order was cancelled.',
+            linkUrl: `/orders/${order.id}`,
+            relatedType: 'order',
+            relatedId: order.id,
+          }),
+        );
         const remaining = await manager.find(Reservation, {
           where: { orderId: order.id, status: ReservationStatus.ACTIVE },
         });
@@ -117,7 +135,8 @@ export class ReservationsService {
       farmerProfile?.verificationStatus === VerificationStatus.VERIFIED &&
       livestock.speciesApprovalStatus === RequestStatus.APPROVED &&
       livestock.breedApprovalStatus === RequestStatus.APPROVED &&
-      (!livestock.marketplaceEligibleFrom || livestock.marketplaceEligibleFrom <= now) &&
+      (!livestock.marketplaceEligibleFrom ||
+        livestock.marketplaceEligibleFrom <= now) &&
       listingExpiresAt > now;
     if (!reservable) {
       throw new ConflictException(

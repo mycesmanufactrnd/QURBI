@@ -4,16 +4,15 @@ import { extractState } from "@/lib/livestock-data";
 // cart, payment). They only read fields the API already returns.
 
 /**
- * The farmer-entered listing title ("Kambing Boer Jantan Premium"), falling
- * back to breed / species for older listings without one.
+ * Buyer-facing livestock name. The marketplace intentionally presents the
+ * breed as the product name while leaving the stored title/name untouched.
  * @param {any} listing
  * @param {string} [fallback]
  */
 export function listingTitle(listing, fallback = "") {
   return (
+    String(listing?.breed || "").trim() ||
     String(listing?.title || listing?.name || "").trim() ||
-    listing?.breed ||
-    listing?.species ||
     fallback
   );
 }

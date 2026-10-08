@@ -1,0 +1,57 @@
+{
+  "eyebrow": "Buyer insights",
+  "title": "Analytics",
+  "subtitle": "Understand which listings attract attention and where buyer interest becomes purchase intent.",
+  "periodLabel": "Analytics period",
+  "days_one": "{{count}} day",
+  "days_other": "{{count}} days",
+  "overview": "Performance overview",
+  "loadError": "Analytics could not be loaded. Please try again.",
+  "retry": "Try again",
+  "metrics": {
+    "views": "Listing views",
+    "visitors": "Unique visitors",
+    "cart": "Added to cart",
+    "buyIntent": "Buy intent",
+    "farmViews": "Farm interest"
+  },
+  "trend": {
+    "title": "Buyer interest",
+    "subtitle": "Listing views over the latest {{count}} days",
+    "barLabel": "{{date}}: {{count}} views"
+  },
+  "funnel": {
+    "title": "Interest funnel",
+    "subtitle": "See where buyers move forward or drop off.",
+    "viewToCart": "View to cart",
+    "viewToCartHint": "The share of listing views that led to an add-to-cart action.",
+    "viewToBuy": "View to buy intent",
+    "viewToBuyHint": "The share of listing views where a buyer tapped Buy now. This is not the same as a completed payment."
+  },
+  "top": {
+    "title": "Top listings",
+    "subtitle": "Ranked by views and buyer actions for this period.",
+    "views_one": "{{count}} view",
+    "views_other": "{{count}} views",
+    "cart_one": "{{count}} cart",
+    "cart_other": "{{count}} carts",
+    "intent_one": "{{count}} intent",
+    "intent_other": "{{count}} intents",
+    "emptyTitle": "No listing activity yet",
+    "emptyBody": "Buyer activity will appear here after someone opens one of your listings."
+  },
+  "activity": {
+    "title": "Recent buyer activity",
+    "privacy": "Buyer identities stay private; activity is shown as signed-in or guest only.",
+    "listingView": "Viewed a listing",
+    "addToCart": "Added to cart",
+    "buyNow": "Tapped Buy now",
+    "farmView": "Viewed your farm",
+    "signedIn": "Signed-in buyer",
+    "guest": "Guest visitor",
+    "now": "now",
+    "emptyTitle": "No recent activity",
+    "emptyBody": "New views and buyer actions will be recorded automatically."
+  },
+  "unknownListing": "Listing"
+}

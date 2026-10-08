@@ -255,6 +255,10 @@ const User = {
 const FarmVerification = {
   /** @type {FilterFn} */ filter: async ({ userId } = {}) => { const profile = userId ? await data(apiClient.get(`/farmer-profiles/by-user/${userId}`)) : null; if (userId && !profile) return []; const page = await data(apiClient.get("/farm-verifications", { params: { farmerProfileId: profile?.id, page: 1, limit: 100 } })); return page.data.map((row) => ({ ...row.documents, ...row, policySignature: row.signatureUrl, created_date: row.createdAt, status: titleCase(row.status === "verified" ? "approved" : row.status) })); } };
 
+const analytics = {
+  summary: async (days = 30) => data(apiClient.get("/analytics/farmer/summary", { params: { days } })),
+};
+
 async function fetchOrders(orderId, admin = false) { if (orderId) return normalizeOrder(await data(apiClient.get(`/orders/${orderId}`))); const response = await data(apiClient.get(admin ? "/orders/admin" : "/orders", admin ? { params: { page: 1, limit: 100 } } : undefined)); return (Array.isArray(response) ? response : response.data || []).map(normalizeOrder); }
 const functions = { invoke: async (name, input = {}) => {
   if (name === "fetchFarmerOrders") return { data: input.orderId ? { order: await fetchOrders(input.orderId) } : { orders: await fetchOrders() } };
@@ -267,4 +271,4 @@ const functions = { invoke: async (name, input = {}) => {
   throw new Error(`Unsupported operation: ${name}`);
 } };
 
-export const qurbi = { entities: { FarmerProfile, FarmVerification, Livestock, BulkListing, Species, Breed, SpeciesRequest: requestEntity("/species-requests", false), BreedRequest: requestEntity("/breed-requests", true), FarmerNotification, User }, functions, integrations: { Core: { UploadFile: async ({ file }) => { const result = await uploadApi.upload(file, "public"); return { file_url: result.fileUrl }; } } } };
+export const qurbi = { entities: { FarmerProfile, FarmVerification, Livestock, BulkListing, Species, Breed, SpeciesRequest: requestEntity("/species-requests", false), BreedRequest: requestEntity("/breed-requests", true), FarmerNotification, User }, analytics, functions, integrations: { Core: { UploadFile: async ({ file }) => { const result = await uploadApi.upload(file, "public"); return { file_url: result.fileUrl }; } } } };

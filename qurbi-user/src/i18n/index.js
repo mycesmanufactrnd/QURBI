@@ -31,15 +31,16 @@ const storedLanguage = (() => {
 })();
 
 const enResources = buildResources(enModules);
+const msResources = buildResources(msModules);
 
 i18n.use(initReactI18next).init({
   resources: {
     en: enResources,
-    ms: buildResources(msModules),
+    ms: msResources,
   },
   lng: SUPPORTED_LANGUAGES.includes(storedLanguage) ? storedLanguage : DEFAULT_LANGUAGE,
   fallbackLng: "en",
-  ns: Object.keys(enResources),
+  ns: [...new Set([...Object.keys(enResources), ...Object.keys(msResources)])],
   defaultNS: "common",
   interpolation: { escapeValue: false },
   react: { useSuspense: false },

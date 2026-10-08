@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import StatusBadge from "@/components/agri/StatusBadge";
 import EmptyState from "@/components/agri/EmptyState";
+import NotificationBell from "@/components/agri/NotificationBell";
 import { formatMYR, orderItemTitle, orderPhotoStage, orderStatusMeta } from "@/lib/agri";
 import { cn } from "@/lib/utils";
 import { reconcileOrderLivestockStatuses } from "@/lib/orderLivestockStatus";
@@ -206,7 +207,10 @@ export default function Orders() {
           <h1 className="text-2xl font-extrabold tracking-tight lg:text-3xl">{t("list.title")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{t("list.subtitle")}</p>
         </div>
-        <Button variant="outline" onClick={load} disabled={loading} aria-label={t("list.refreshAria")} className="h-11 w-11 shrink-0 rounded-2xl px-0 sm:w-auto sm:px-4"><RefreshCw className={cn("h-4 w-4 sm:mr-2", loading && "animate-spin")} /><span className="hidden sm:inline">{t("list.refresh")}</span></Button>
+        <div className="flex shrink-0 items-center gap-2">
+          <NotificationBell />
+          <Button variant="outline" onClick={load} disabled={loading} aria-label={t("list.refreshAria")} className="h-11 w-11 shrink-0 rounded-2xl px-0 sm:w-auto sm:px-4"><RefreshCw className={cn("h-4 w-4 sm:mr-2", loading && "animate-spin")} /><span className="hidden sm:inline">{t("list.refresh")}</span></Button>
+        </div>
       </div>
 
       <div className="no-scrollbar -mx-5 mt-5 overflow-x-auto px-5 pb-2 lg:mx-0 lg:px-0" role="tablist" aria-label={t("list.filterAria")}>

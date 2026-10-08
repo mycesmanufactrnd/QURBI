@@ -221,7 +221,7 @@ function OrderCard({
                           : `/livestock/${encodeURIComponent(productId)}?from=order`;
                         navigateFromProductCard(productPath, event.currentTarget, {
                           image: accountMediaUrl(item.image),
-                          label: item.listing_name || item.breed || t("orders.fallbackItemName"),
+                          label: item.breed || item.listing_name || t("orders.fallbackItemName"),
                         });
                       }}
                       className="grid w-full min-w-0 grid-cols-[3rem_minmax(0,1fr)_6.5rem] items-center gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E3C19F] disabled:cursor-default"
@@ -229,7 +229,7 @@ function OrderCard({
                       <OrderThumb item={item} size="h-12 w-12" />
                       <div className="min-w-0">
                         <p className="line-clamp-2 break-words text-xs font-semibold leading-snug text-white">
-                          {item.listing_name || item.breed || t("orders.fallbackItemName")}
+                          {item.breed || item.listing_name || t("orders.fallbackItemName")}
                         </p>
                         <p className="mt-0.5 text-[11px] text-white/65">×{Number(item.quantity) || 1}</p>
                       </div>
@@ -276,7 +276,7 @@ function OrderCard({
           )}
         </div>
         {isPending && (
-          <div className="mt-2 grid grid-cols-2 gap-2">
+          <div className="mt-1.5 grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={(event) => {
@@ -284,14 +284,14 @@ function OrderCard({
                 onCancel(order);
               }}
               disabled={cancelling}
-              className={`${ghostOnDarkBtn} min-h-10 px-2 text-xs`}
+              className={`${ghostOnDarkBtn} !min-h-9 !rounded-lg !px-2 !text-xs`}
             >
               {cancelling ? t("orders.cancelling") : t("orders.cancelOrder")}
             </button>
             <Link
               to={primary.to}
               onClick={(event) => event.stopPropagation()}
-              className={`${lightBtn} min-h-10 px-3 text-xs`}
+              className={`${lightBtn} !min-h-9 !gap-1 !rounded-lg !px-2 !text-xs`}
             >
               {primary.label}
               <ChevronRight className="h-4 w-4 flex-none" aria-hidden="true" />
@@ -396,7 +396,10 @@ export default function Orders() {
   const ordersByTab = useMemo(() => {
     const byTab = {};
     for (const order of orders) {
-      const tab = orderStatusInfo(order).tab;
+      const status = orderStatusInfo(order);
+      // Final outcomes belong to Transaction History, not the active Orders page.
+      if (["completed", "cancelled", "outOfStock", "refunded"].includes(status.key)) continue;
+      const tab = status.tab;
       (byTab[tab] ||= []).push(order);
     }
     // Orders created by one multi-farmer checkout are shown as one entry.
@@ -456,7 +459,7 @@ export default function Orders() {
         title={t("orders.title")}
         subtitle={t("orders.subtitle")}
         leftAction={
-          <TransactionHeaderButton onOpen={() => navigateWithTransition("/history")} />
+          <TransactionHeaderButton onOpen={() => navigateWithTransition("/transaction-history")} />
         }
       >
         <div className="flex w-full min-w-0 items-center gap-2">

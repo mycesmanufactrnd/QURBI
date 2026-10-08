@@ -33,7 +33,7 @@ const QUICK_ACTIONS = [
   { icon: Boxes, label: "bulkBuy", path: "/bulk-buy" },
   { icon: ShoppingCart, label: "cart", path: "/cart" },
   { icon: Package, label: "orders", path: "/orders" },
-  { icon: ReceiptText, label: "transaction", path: "/history" },
+  { icon: ReceiptText, label: "transaction", path: "/transaction-history" },
   { icon: User, label: "profile", path: "/profile" },
   { icon: MapPin, label: "addresses", path: "/address-book" },
 ];

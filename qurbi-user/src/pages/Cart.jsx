@@ -217,7 +217,7 @@ export default function Cart() {
     });
   };
   const itemName = (item) =>
-    item.item_type === "bulk" ? item.listing_name : item.title || item.breed;
+    item.item_type === "bulk" ? item.listing_name : item.breed || item.title;
   const payDisabled =
     selectedItems.length === 0 || checkingStock || Boolean(availabilityError);
 
@@ -318,9 +318,7 @@ export default function Cart() {
               const subtitle =
                 item.item_type === "bulk"
                   ? t("cart.bulkAnimalsCount", { count: item.total_animals })
-                  : [item.animal, item.title && item.breed !== item.title ? item.breed : ""]
-                      .filter(Boolean)
-                      .join(" · ");
+                  : "";
               return (
                 <li
                   key={item.key}

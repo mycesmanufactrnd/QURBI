@@ -1,0 +1,53 @@
+{
+  "eyebrow": "Cerapan pembeli",
+  "title": "Analitik",
+  "subtitle": "Fahami ternakan mana yang menarik perhatian dan bila minat pembeli mula menuju kepada pembelian.",
+  "periodLabel": "Tempoh analitik",
+  "days": "{{count}} hari",
+  "overview": "Ringkasan prestasi",
+  "loadError": "Analitik tidak dapat dimuatkan. Sila cuba lagi.",
+  "retry": "Cuba lagi",
+  "metrics": {
+    "views": "Paparan ternakan",
+    "visitors": "Pelawat unik",
+    "cart": "Tambah ke troli",
+    "buyIntent": "Niat membeli",
+    "farmViews": "Minat ladang"
+  },
+  "trend": {
+    "title": "Minat pembeli",
+    "subtitle": "Paparan ternakan untuk {{count}} hari terkini",
+    "barLabel": "{{date}}: {{count}} paparan"
+  },
+  "funnel": {
+    "title": "Corong minat",
+    "subtitle": "Lihat tahap pembeli meneruskan tindakan atau berhenti.",
+    "viewToCart": "Paparan ke troli",
+    "viewToCartHint": "Peratus paparan ternakan yang membawa kepada tindakan tambah ke troli.",
+    "viewToBuy": "Paparan ke niat membeli",
+    "viewToBuyHint": "Peratus paparan yang membawa pembeli menekan Beli sekarang. Ini bukan pembayaran yang telah selesai."
+  },
+  "top": {
+    "title": "Ternakan terbaik",
+    "subtitle": "Disusun mengikut paparan dan tindakan pembeli dalam tempoh ini.",
+    "views": "{{count}} paparan",
+    "cart": "{{count}} troli",
+    "intent": "{{count}} niat",
+    "emptyTitle": "Belum ada aktiviti ternakan",
+    "emptyBody": "Aktiviti pembeli akan muncul selepas seseorang membuka ternakan anda."
+  },
+  "activity": {
+    "title": "Aktiviti pembeli terkini",
+    "privacy": "Identiti pembeli kekal peribadi; aktiviti hanya ditunjukkan sebagai pengguna berdaftar atau tetamu.",
+    "listingView": "Melihat ternakan",
+    "addToCart": "Tambah ke troli",
+    "buyNow": "Tekan Beli sekarang",
+    "farmView": "Melihat ladang anda",
+    "signedIn": "Pembeli berdaftar",
+    "guest": "Pelawat tetamu",
+    "now": "sekarang",
+    "emptyTitle": "Tiada aktiviti terkini",
+    "emptyBody": "Paparan dan tindakan pembeli baharu akan direkod secara automatik."
+  },
+  "unknownListing": "Ternakan"
+}

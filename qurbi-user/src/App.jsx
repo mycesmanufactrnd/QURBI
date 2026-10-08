@@ -21,7 +21,7 @@ import Cart from "@/pages/Cart";
 import Payment from "@/pages/Payment";
 import Receipt from "@/pages/Receipt";
 import ChipPaymentReturn from "@/pages/ChipPaymentReturn";
-import History from "@/pages/History";
+import TransactionHistory from "@/pages/TransactionHistory";
 import Orders from "@/pages/Orders";
 import OrderDetail from "@/pages/OrderDetail";
 import Profile from "@/pages/Profile";
@@ -79,7 +79,8 @@ function App({ Router = BrowserRouter, routerProps = {} }) {
                         path="/orders/:orderId"
                         element={<OrderDetail />}
                       />
-                      <Route path="/history" element={<History />} />
+                      <Route path="/transaction-history" element={<TransactionHistory />} />
+                      <Route path="/history" element={<Navigate to="/transaction-history" replace />} />
                       <Route path="/profile" element={<Profile />} />
                       <Route
                         path="/notifications"

@@ -5,6 +5,7 @@ import { Boxes, ChevronRight, Plus, RefreshCw } from "lucide-react";
 import LivestockCard from "@/components/agri/LivestockCard";
 import EmptyState from "@/components/agri/EmptyState";
 import CowSilhouetteIcon from "@/components/agri/CowSilhouetteIcon";
+import NotificationBell from "@/components/agri/NotificationBell";
 import ConfirmDialog from "@/components/agri/ConfirmDialog";
 import { useToast } from "@/components/ui/use-toast";
 import { LIVESTOCK_STATUS_META, listingExpiry } from "@/lib/agri";
@@ -76,9 +77,12 @@ export default function MyLivestock() {
           <h1 className="text-2xl font-extrabold tracking-tight lg:text-3xl">{t("myLivestock.title")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{t("myLivestock.subtitle")}</p>
         </div>
-        <button type="button" onClick={() => navigate("/livestock/add")} className="brand-gradient flex h-12 shrink-0 items-center gap-1.5 rounded-2xl px-4 text-sm font-bold text-primary-foreground shadow-[0_4px_12px_rgba(65,54,45,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          <Plus className="h-5 w-5" /> {t("myLivestock.add")}
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <NotificationBell />
+          <button type="button" onClick={() => navigate("/livestock/add")} className="brand-gradient flex h-11 shrink-0 items-center gap-1.5 rounded-2xl px-3 text-sm font-bold text-primary-foreground shadow-[0_4px_12px_rgba(65,54,45,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-12 sm:px-4">
+            <Plus className="h-5 w-5" /> <span className="hidden min-[390px]:inline">{t("myLivestock.add")}</span>
+          </button>
+        </div>
       </div>
 
       <button type="button" onClick={() => navigate("/bulk")} className="soft-card mt-5 flex min-h-[72px] w-full items-center justify-between gap-3 p-4 text-left transition-all hover:border-primary/20">

@@ -3,7 +3,7 @@ import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/AuthContext";
 import BrandLogo from "@/components/agri/BrandLogo";
-import { Bell, Boxes, Home, ShoppingBag, User, LogOut } from "lucide-react";
+import { BarChart3, Bell, Boxes, Home, ShoppingBag, User, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CowSilhouetteIcon from "@/components/agri/CowSilhouetteIcon";
 
@@ -12,6 +12,7 @@ const ITEMS = [
   { to: "/livestock", labelKey: "myLivestock", icon: CowSilhouetteIcon },
   { to: "/bulk", labelKey: "bulkSell", icon: Boxes },
   { to: "/orders", labelKey: "orders", icon: ShoppingBag },
+  { to: "/analytics", labelKey: "analytics", icon: BarChart3 },
   { to: "/notifications", labelKey: "notifications", icon: Bell },
   { to: "/profile", labelKey: "profile", icon: User },
 ];

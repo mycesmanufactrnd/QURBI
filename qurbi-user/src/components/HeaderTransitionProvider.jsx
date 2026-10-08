@@ -211,11 +211,16 @@ export default function HeaderTransitionProvider({ children }) {
   );
 
   useLayoutEffect(() => {
-    if (locationKeyRef.current === location.key) return;
+    if (locationKeyRef.current === location.key) {
+      if (location.pathname === "/profile") window.scrollTo(0, 0);
+      return;
+    }
     scrollPositionsRef.current.set(locationKeyRef.current, window.scrollY);
     locationKeyRef.current = location.key;
     const destinationScroll =
-      navigationType === "POP"
+      location.pathname === "/profile"
+        ? 0
+        : navigationType === "POP"
         ? scrollPositionsRef.current.get(location.key) || 0
         : 0;
     window.scrollTo(0, destinationScroll);
@@ -227,7 +232,7 @@ export default function HeaderTransitionProvider({ children }) {
     if (transitionType !== "product") {
       schedule(() => unlockRun(runId), ENTER_MS);
     }
-  }, [location.key, navigationType, schedule, transitionType, unlockRun]);
+  }, [location.key, location.pathname, navigationType, schedule, transitionType, unlockRun]);
 
   useEffect(() => {
     const handleLinkClick = (event) => {

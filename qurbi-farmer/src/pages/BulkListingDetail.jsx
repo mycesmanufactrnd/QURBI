@@ -91,7 +91,7 @@ export default function BulkListingDetail() {
         <button type="button" onClick={() => navigate(`/bulk/${id}/edit`)} aria-label={t("detail.editAria")} className="flex h-11 shrink-0 items-center gap-2 rounded-2xl bg-secondary/70 px-3.5 text-sm font-bold text-primary"><Pencil className="h-4 w-4" /><span className="hidden sm:inline">{t("detail.edit")}</span></button>
       </header>
 
-      <div className="mt-5 grid min-w-0 grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(22rem,.92fr)] lg:gap-8">
+      <div className="mt-5 grid min-w-0 grid-cols-1 items-start gap-5 pb-28 lg:grid-cols-[minmax(0,1.08fr)_minmax(22rem,.92fr)] lg:gap-8 lg:pb-0">
         <div className="min-w-0 space-y-5">
           <section className="soft-card overflow-hidden p-2">
             <div className="aspect-[4/3] w-full overflow-hidden rounded-[1rem] bg-muted sm:aspect-[16/11]">

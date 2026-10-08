@@ -33,6 +33,32 @@ function readBrowseFilters() {
   }
 }
 
+function matchesBrowseFilters(livestock, filters) {
+  if (isProductExpired(livestock)) return false;
+  if (filters.activeSpecies !== "All" && livestock.species !== filters.activeSpecies) return false;
+  if (filters.filterBreed && livestock.breed !== filters.filterBreed) return false;
+  if (filters.filterGender && livestock.gender !== filters.filterGender) return false;
+  if (filters.filterAge && livestock.age !== filters.filterAge) return false;
+  if (filters.filterLocation && listingState(livestock) !== filters.filterLocation) return false;
+  if (filters.priceMin && (livestock.price || 0) < Number(filters.priceMin)) return false;
+  if (filters.priceMax && (livestock.price || 0) > Number(filters.priceMax)) return false;
+
+  if (!filters.searchQuery) return true;
+  const query = filters.searchQuery.toLowerCase();
+  return [
+    livestock.name,
+    livestock.title,
+    livestock.breed,
+    livestock.species,
+    livestock.earTag,
+    livestock.rfid,
+    livestock.farmLocation,
+    livestock.farmer_name,
+    livestock.description,
+    livestock.specialNotes,
+  ].some((value) => String(value || "").toLowerCase().includes(query));
+}
+
 export default function Browse() {
   const { cartItems } = useCart();
   const { t } = useTranslation("shop");
@@ -57,6 +83,15 @@ export default function Browse() {
   const [priceMin, setPriceMin] = useState(savedFilters.priceMin || "");
   const [priceMax, setPriceMax] = useState(savedFilters.priceMax || "");
   const [sortBy, setSortBy] = useState(savedFilters.sortBy || "newest");
+  const [appliedFilters, setAppliedFilters] = useState(() => ({
+    filterBreed: savedFilters.filterBreed || "",
+    filterGender: savedFilters.filterGender || "",
+    filterAge: savedFilters.filterAge || "",
+    filterLocation: savedFilters.filterLocation || "",
+    priceMin: savedFilters.priceMin || "",
+    priceMax: savedFilters.priceMax || "",
+    sortBy: savedFilters.sortBy || "newest",
+  }));
   const [showFilters, setShowFilters] = useState(false);
 
   const { mounted, reveal } = useReveal();
@@ -105,18 +140,12 @@ export default function Browse() {
       sessionStorage.setItem(BROWSE_FILTERS_KEY, JSON.stringify({
         searchQuery,
         activeSpecies,
-        filterBreed,
-        filterGender,
-        filterAge,
-        filterLocation,
-        priceMin,
-        priceMax,
-        sortBy,
+        ...appliedFilters,
       }));
     } catch {
       // Session storage may be unavailable in restricted browser contexts.
     }
-  }, [searchQuery, activeSpecies, filterBreed, filterGender, filterAge, filterLocation, priceMin, priceMax, sortBy]);
+  }, [searchQuery, activeSpecies, appliedFilters]);
 
   /*
    * =========================================================
@@ -210,107 +239,11 @@ export default function Browse() {
    */
 
   const filtered = useMemo(() => {
-    let result = livestock.filter((l) => {
-      if (isProductExpired(l)) return false;
-
-      // Species
-      if (
-        activeSpecies !== "All" &&
-        l.species !== activeSpecies
-      ) {
-        return false;
-      }
-
-      // Breed
-      if (
-        filterBreed &&
-        l.breed !== filterBreed
-      ) {
-        return false;
-      }
-
-      // Gender
-      if (
-        filterGender &&
-        l.gender !== filterGender
-      ) {
-        return false;
-      }
-
-      // Age
-      if (
-        filterAge &&
-        l.age !== filterAge
-      ) {
-        return false;
-      }
-
-      // Location
-      if (
-        filterLocation &&
-        listingState(l) !==
-          filterLocation
-      ) {
-        return false;
-      }
-
-      // Minimum price
-      if (
-        priceMin &&
-        (l.price || 0) < Number(priceMin)
-      ) {
-        return false;
-      }
-
-      // Maximum price
-      if (
-        priceMax &&
-        (l.price || 0) > Number(priceMax)
-      ) {
-        return false;
-      }
-
-      // Search
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-
-        const matches =
-          (l.name || "")
-            .toLowerCase()
-            .includes(q) ||
-          (l.title || "")
-            .toLowerCase()
-            .includes(q) ||
-          (l.breed || "")
-            .toLowerCase()
-            .includes(q) ||
-          (l.species || "")
-            .toLowerCase()
-            .includes(q) ||
-          (l.earTag || "")
-            .toLowerCase()
-            .includes(q) ||
-          (l.rfid || "")
-            .toLowerCase()
-            .includes(q) ||
-          (l.farmLocation || "")
-            .toLowerCase()
-            .includes(q) ||
-          (l.farmer_name || "")
-            .toLowerCase()
-            .includes(q) ||
-          (l.description || "")
-            .toLowerCase()
-            .includes(q) ||
-          (l.specialNotes || "")
-            .toLowerCase()
-            .includes(q);
-
-        if (!matches) return false;
-      }
-
-      return true;
-    });
+    let result = livestock.filter((item) => matchesBrowseFilters(item, {
+      activeSpecies,
+      searchQuery,
+      ...appliedFilters,
+    }));
 
     /*
      * =======================================================
@@ -318,13 +251,13 @@ export default function Browse() {
      * =======================================================
      */
 
-    if (sortBy === "price-asc") {
+    if (appliedFilters.sortBy === "price-asc") {
       result = [...result].sort(
         (a, b) =>
           (a.price || 0) -
           (b.price || 0),
       );
-    } else if (sortBy === "price-desc") {
+    } else if (appliedFilters.sortBy === "price-desc") {
       result = [...result].sort(
         (a, b) =>
           (b.price || 0) -
@@ -342,15 +275,33 @@ export default function Browse() {
   }, [
     livestock,
     activeSpecies,
-    filterBreed,
-    filterGender,
-    filterAge,
-    filterLocation,
-    priceMin,
-    priceMax,
+    appliedFilters,
     searchQuery,
-    sortBy,
   ]);
+
+  const draftResultCount = useMemo(
+    () => livestock.filter((item) => matchesBrowseFilters(item, {
+      activeSpecies,
+      searchQuery,
+      filterBreed,
+      filterGender,
+      filterAge,
+      filterLocation,
+      priceMin,
+      priceMax,
+    })).length,
+    [
+      livestock,
+      activeSpecies,
+      searchQuery,
+      filterBreed,
+      filterGender,
+      filterAge,
+      filterLocation,
+      priceMin,
+      priceMax,
+    ],
+  );
 
   /*
    * =========================================================
@@ -360,24 +311,24 @@ export default function Browse() {
 
   const hasFilters =
     activeSpecies !== "All" ||
-    filterBreed ||
-    filterGender ||
-    filterAge ||
-    filterLocation ||
-    priceMin ||
-    priceMax ||
+    appliedFilters.filterBreed ||
+    appliedFilters.filterGender ||
+    appliedFilters.filterAge ||
+    appliedFilters.filterLocation ||
+    appliedFilters.priceMin ||
+    appliedFilters.priceMax ||
     searchQuery;
 
   const activeFilterCount = [
     activeSpecies !== "All"
       ? activeSpecies
       : "",
-    filterBreed,
-    filterGender,
-    filterAge,
-    filterLocation,
-    priceMin,
-    priceMax,
+    appliedFilters.filterBreed,
+    appliedFilters.filterGender,
+    appliedFilters.filterAge,
+    appliedFilters.filterLocation,
+    appliedFilters.priceMin,
+    appliedFilters.priceMax,
   ].filter(Boolean).length;
 
   /*
@@ -394,7 +345,60 @@ export default function Browse() {
     setFilterLocation("");
     setPriceMin("");
     setPriceMax("");
+    setSortBy("newest");
+    setAppliedFilters({
+      filterBreed: "",
+      filterGender: "",
+      filterAge: "",
+      filterLocation: "",
+      priceMin: "",
+      priceMax: "",
+      sortBy: "newest",
+    });
     setSearchQuery("");
+  };
+
+  const syncDraftFilters = useCallback((nextFilters = appliedFilters) => {
+    setFilterBreed(nextFilters.filterBreed);
+    setFilterGender(nextFilters.filterGender);
+    setFilterAge(nextFilters.filterAge);
+    setFilterLocation(nextFilters.filterLocation);
+    setPriceMin(nextFilters.priceMin);
+    setPriceMax(nextFilters.priceMax);
+    setSortBy(nextFilters.sortBy);
+  }, [appliedFilters]);
+
+  const openFilterPanel = () => {
+    syncDraftFilters();
+    setShowFilters(true);
+  };
+
+  const closeFilterPanel = useCallback(() => {
+    syncDraftFilters();
+    setShowFilters(false);
+  }, [syncDraftFilters]);
+
+  const applyDraftFilters = () => {
+    setAppliedFilters({
+      filterBreed,
+      filterGender,
+      filterAge,
+      filterLocation,
+      priceMin,
+      priceMax,
+      sortBy,
+    });
+    setShowFilters(false);
+  };
+
+  const clearDraftFilters = () => {
+    setFilterBreed("");
+    setFilterGender("");
+    setFilterAge("");
+    setFilterLocation("");
+    setPriceMin("");
+    setPriceMax("");
+    setSortBy("newest");
   };
 
   /*
@@ -531,9 +535,7 @@ export default function Browse() {
             {/* Filter button */}
             <button
               type="button"
-              onClick={() =>
-                setShowFilters(true)
-              }
+              onClick={openFilterPanel}
               aria-label={t("browse.openFilters")}
               className="relative flex h-12 w-12 flex-none items-center justify-center rounded-2xl bg-[#E3C19F] text-[#41362D] shadow-md transition-transform active:scale-90"
             >
@@ -640,10 +642,9 @@ export default function Browse() {
       {/* Filter Sidebar */}
       <FilterSidebar
         open={showFilters}
-        onClose={() =>
-          setShowFilters(false)
-        }
-        resultCount={filtered.length}
+        onClose={closeFilterPanel}
+        onApply={applyDraftFilters}
+        resultCount={draftResultCount}
         filters={{
           filterBreed,
           setFilterBreed,
@@ -659,7 +660,7 @@ export default function Browse() {
           setPriceMax,
           sortBy,
           setSortBy,
-          clearAllFilters,
+          clearAllFilters: clearDraftFilters,
         }}
         options={{
           breedOptions,

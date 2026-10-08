@@ -28,6 +28,7 @@ export const PRIVATE_PATHS = [
   "/cart",
   "/payment",
   "/orders",
+  "/transaction-history",
   "/history",
   "/profile",
   "/notifications",
