@@ -11,7 +11,8 @@ import { ArrowLeft, Loader2, Plus, Trash2, Users } from "lucide-react";
 import ImageUploader from "@/components/agri/ImageUploader";
 import VideoUploader from "@/components/agri/VideoUploader";
 import StickyActionBar from "@/components/agri/StickyActionBar";
-import { MALAYSIA_STATES, breedsFor, speciesOptions } from "@/lib/agri";
+import SpeciesSelector from "@/components/agri/SpeciesSelector";
+import { MALAYSIA_STATES, breedsFor } from "@/lib/agri";
 
 const newBreakdown = () => ({ species: "", breed: "", maleCount: "", femaleCount: "" });
 
@@ -156,10 +157,12 @@ export default function AddBulkListing() {
         {form.breedBreakdown.map((row, index) => (
           <div key={index} className="rounded-2xl border border-border p-3 space-y-3">
             <div className="flex min-h-11 items-center justify-between"><p className="text-sm font-bold">{t("form.breedGroup", { index: index + 1 })}</p>{form.breedBreakdown.length > 1 && <button type="button" aria-label={t("form.removeGroupAria", { index: index + 1 })} onClick={() => setForm((current) => ({ ...current, breedBreakdown: current.breedBreakdown.filter((_, rowIndex) => rowIndex !== index) }))} className="flex h-11 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold text-destructive hover:bg-destructive/10"><Trash2 className="w-4 h-4" />{t("form.remove")}</button>}</div>
-            <Select value={row.species} onValueChange={(species) => updateBreakdown(index, { species, breed: "" })}>
-              <SelectTrigger className="h-12" aria-label={t("form.speciesAria", { index: index + 1 })}><SelectValue placeholder={t("form.selectSpecies")} /></SelectTrigger>
-              <SelectContent>{speciesOptions().map((species) => <SelectItem key={species} value={species}>{t(`species.${species}`, { defaultValue: species })}</SelectItem>)}</SelectContent>
-            </Select>
+            <div aria-label={t("form.speciesAria", { index: index + 1 })}>
+              <SpeciesSelector
+                value={row.species}
+                onChange={({ species }) => updateBreakdown(index, { species, breed: "" })}
+              />
+            </div>
             <Select value={row.breed} onValueChange={(breed) => updateBreakdown(index, { breed })} disabled={!row.species}>
               <SelectTrigger className="h-12" aria-label={t("form.breedAria", { index: index + 1 })}><SelectValue placeholder={row.species ? t("form.selectBreed") : t("form.chooseSpeciesFirst")} /></SelectTrigger>
               <SelectContent>{breedsFor(row.species, managedBreeds).map((breed) => <SelectItem key={breed} value={breed}>{breed}</SelectItem>)}</SelectContent>
