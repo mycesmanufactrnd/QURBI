@@ -37,12 +37,80 @@ import AdminTest from "@/pages/AdminTest";
 import { AuthPromptProvider } from "@/lib/auth-prompt-context";
 import AppErrorBoundary from "@/components/AppErrorBoundary";
 import RouteSeo from "@/components/RouteSeo";
+import IconRouteOverlay from "@/components/IconRouteOverlay";
 
 function LegacyAuthRedirect({ mode }) {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   params.set("mode", mode);
   return <Navigate to={`/auth?${params.toString()}`} replace />;
+}
+
+function ApplicationRoutes() {
+  const location = useLocation();
+  const backgroundLocation = location.state?.qurbiIconOverlay
+    ? location.state.backgroundLocation
+    : null;
+
+  return (
+    <>
+      <Routes location={backgroundLocation || location}>
+        <Route element={<AppLayout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/browse" element={<Browse />} />
+          <Route path="/livestock/:id" element={<LivestockDetail />} />
+          <Route path="/bulk-buy" element={<BulkBuy />} />
+          <Route path="/bulk-buy/:id" element={<BulkListingDetail />} />
+          <Route path="/cart" element={<Cart />} />
+          <Route path="/payment" element={<Payment />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/orders/:orderId" element={<OrderDetail />} />
+          <Route path="/transaction-history" element={<TransactionHistory />} />
+          <Route path="/history" element={<Navigate to="/transaction-history" replace />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/notifications" element={<Notifications />} />
+        </Route>
+        <Route element={<StandaloneLayout />}>
+          <Route path="/auth" element={<Authentication />} />
+          <Route path="/login" element={<LegacyAuthRedirect mode="login" />} />
+          <Route path="/register" element={<LegacyAuthRedirect mode="register" />} />
+          <Route path="/switch-session" element={<SwitchSession />} />
+          <Route path="/signup-details" element={<SignupDetails />} />
+          <Route path="/user-agreement" element={<UserAgreement />} />
+          <Route path="/address-book" element={<AddressBook />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-conditions" element={<TermsConditions />} />
+          <Route path="/support" element={<CustomerSupport />} />
+          <Route path="/admin/breeds" element={<AdminBreeds />} />
+          <Route path="/admin/test" element={<AdminTest />} />
+          <Route path="/receipt" element={<Receipt />} />
+          <Route path="/payment/chip/:result" element={<ChipPaymentReturn />} />
+          <Route path="*" element={<PageNotFound />} />
+        </Route>
+      </Routes>
+
+      {backgroundLocation && (
+        <Routes location={location}>
+          <Route
+            path="/profile"
+            element={
+              <IconRouteOverlay type="profile">
+                <Profile />
+              </IconRouteOverlay>
+            }
+          />
+          <Route
+            path="/notifications"
+            element={
+              <IconRouteOverlay type="notification">
+                <Notifications />
+              </IconRouteOverlay>
+            }
+          />
+        </Routes>
+      )}
+    </>
+  );
 }
 
 // `Router`/`routerProps` let the build-time prerenderer supply a StaticRouter;
@@ -59,52 +127,7 @@ function App({ Router = BrowserRouter, routerProps = {} }) {
                 <NotificationProvider>
                   <HeaderTransitionProvider>
                   <AppErrorBoundary>
-                  <Routes>
-                    <Route element={<AppLayout />}>
-                      <Route path="/" element={<Home />} />
-                      <Route path="/browse" element={<Browse />} />
-                      <Route
-                        path="/livestock/:id"
-                        element={<LivestockDetail />}
-                      />
-                      <Route path="/bulk-buy" element={<BulkBuy />} />
-                      <Route
-                        path="/bulk-buy/:id"
-                        element={<BulkListingDetail />}
-                      />
-                      <Route path="/cart" element={<Cart />} />
-                      <Route path="/payment" element={<Payment />} />
-                      <Route path="/orders" element={<Orders />} />
-                      <Route
-                        path="/orders/:orderId"
-                        element={<OrderDetail />}
-                      />
-                      <Route path="/transaction-history" element={<TransactionHistory />} />
-                      <Route path="/history" element={<Navigate to="/transaction-history" replace />} />
-                      <Route path="/profile" element={<Profile />} />
-                      <Route
-                        path="/notifications"
-                        element={<Notifications />}
-                      />
-                    </Route>
-                    <Route element={<StandaloneLayout />}>
-                      <Route path="/auth" element={<Authentication />} />
-                      <Route path="/login" element={<LegacyAuthRedirect mode="login" />} />
-                      <Route path="/register" element={<LegacyAuthRedirect mode="register" />} />
-                      <Route path="/switch-session" element={<SwitchSession />} />
-                      <Route path="/signup-details" element={<SignupDetails />} />
-                      <Route path="/user-agreement" element={<UserAgreement />} />
-                      <Route path="/address-book" element={<AddressBook />} />
-                      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                      <Route path="/terms-conditions" element={<TermsConditions />} />
-                      <Route path="/support" element={<CustomerSupport />} />
-                      <Route path="/admin/breeds" element={<AdminBreeds />} />
-                      <Route path="/admin/test" element={<AdminTest />} />
-                      <Route path="/receipt" element={<Receipt />} />
-                      <Route path="/payment/chip/:result" element={<ChipPaymentReturn />} />
-                      <Route path="*" element={<PageNotFound />} />
-                    </Route>
-                  </Routes>
+                  <ApplicationRoutes />
                   </AppErrorBoundary>
                   </HeaderTransitionProvider>
                 </NotificationProvider>

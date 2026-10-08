@@ -314,76 +314,78 @@ export default function Notifications() {
           </button>
         </div>
 
-        {notifications.length > 0 && (
-          <div className="mt-4 flex items-center justify-between gap-3">
-            <p className="text-[15px] font-semibold text-[#41362D]" aria-live="polite">
-              {unreadCount > 0
-                ? ta("notifications.unreadCount", { count: unreadCount })
-                : ta("notifications.allRead")}
-            </p>
-            <button
-              type="button"
-              onClick={() => setShowClearAll(true)}
-              className="min-h-11 flex-none rounded-xl px-3 text-sm font-bold text-[#41362D] underline underline-offset-4"
-            >
-              {t("notifications.clearAll")}
-            </button>
-          </div>
-        )}
+        <div className="qurbi-icon-page-content">
+          {notifications.length > 0 && (
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <p className="text-[15px] font-semibold text-[#41362D]" aria-live="polite">
+                {unreadCount > 0
+                  ? ta("notifications.unreadCount", { count: unreadCount })
+                  : ta("notifications.allRead")}
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowClearAll(true)}
+                className="min-h-11 flex-none rounded-xl px-3 text-sm font-bold text-[#41362D] underline underline-offset-4"
+              >
+                {t("notifications.clearAll")}
+              </button>
+            </div>
+          )}
 
-        {error && (
-          <div role="alert" className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[#E8A39A] bg-[#FBE4E1] px-4 py-3 text-sm font-semibold text-[#8A1C12]">
-            <span>{error}</span>
-            <button type="button" onClick={() => refreshNotifications()} className="min-h-11 rounded-lg px-2 font-bold underline">
-              {ta("notifications.retry")}
-            </button>
-          </div>
-        )}
+          {error && (
+            <div role="alert" className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[#E8A39A] bg-[#FBE4E1] px-4 py-3 text-sm font-semibold text-[#8A1C12]">
+              <span>{error}</span>
+              <button type="button" onClick={() => refreshNotifications()} className="min-h-11 rounded-lg px-2 font-bold underline">
+                {ta("notifications.retry")}
+              </button>
+            </div>
+          )}
 
-        {loading && !notifications.length ? (
-          <div className="mt-6">
-            <AisyahCardSkeleton count={4} variant="list" />
-          </div>
-        ) : !groups.length ? (
-          <div className="mt-8 rounded-3xl border border-[#E3C19F] bg-[#FFFDF9]/80 px-6 py-12 text-center shadow-sm">
-            <Bell className="mx-auto h-10 w-10 text-[#6B594A]" aria-hidden="true" />
-            <h2 className="mt-4 text-base font-bold text-[#41362D]">
-              {t("notifications.emptyTitle")}
-            </h2>
-            <p className="mx-auto mt-1 max-w-xs text-[15px] text-[#41362D]/75">
-              {t("notifications.emptyBody")}
-            </p>
-            <button
-              type="button"
-              onClick={() => navigateFromIconPage("/orders")}
-              className={`${secondaryBtn} mt-5 px-6`}
-            >
-              {ta("notifications.goToOrders")}
-            </button>
-          </div>
-        ) : (
-          <div className="mt-5 space-y-6 animate-content-ready">
-            {groups.map((group) => (
-              <section key={group.key} aria-label={group.label}>
-                <h2 className="mb-2.5 px-1 text-sm font-bold text-[#41362D]/80">
-                  {group.label}
-                </h2>
-                <div className="space-y-3">
-                  {group.notifications.map((notification) => (
-                    <SwipeableNotificationRow
-                      key={notification.id}
-                      notification={notification}
-                      opening={openingId === notification.id}
-                      clearing={clearingId === notification.id}
-                      onOpen={openNotification}
-                      onClear={clearOne}
-                    />
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
-        )}
+          {loading && !notifications.length ? (
+            <div className="mt-6">
+              <AisyahCardSkeleton count={4} variant="list" />
+            </div>
+          ) : !groups.length ? (
+            <div className="mt-8 rounded-3xl border border-[#E3C19F] bg-[#FFFDF9]/80 px-6 py-12 text-center shadow-sm">
+              <Bell className="mx-auto h-10 w-10 text-[#6B594A]" aria-hidden="true" />
+              <h2 className="mt-4 text-base font-bold text-[#41362D]">
+                {t("notifications.emptyTitle")}
+              </h2>
+              <p className="mx-auto mt-1 max-w-xs text-[15px] text-[#41362D]/75">
+                {t("notifications.emptyBody")}
+              </p>
+              <button
+                type="button"
+                onClick={() => navigateFromIconPage("/orders")}
+                className={`${secondaryBtn} mt-5 px-6`}
+              >
+                {ta("notifications.goToOrders")}
+              </button>
+            </div>
+          ) : (
+            <div className="mt-5 space-y-6 animate-content-ready">
+              {groups.map((group) => (
+                <section key={group.key} aria-label={group.label}>
+                  <h2 className="mb-2.5 px-1 text-sm font-bold text-[#41362D]/80">
+                    {group.label}
+                  </h2>
+                  <div className="space-y-3">
+                    {group.notifications.map((notification) => (
+                      <SwipeableNotificationRow
+                        key={notification.id}
+                        notification={notification}
+                        opening={openingId === notification.id}
+                        clearing={clearingId === notification.id}
+                        onOpen={openNotification}
+                        onClear={clearOne}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
       {showClearAll && (
         <div

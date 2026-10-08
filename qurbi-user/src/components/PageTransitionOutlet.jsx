@@ -7,6 +7,7 @@ export default function PageTransitionOutlet() {
   const outlet = useOutlet();
   const { phase, isIconClosing, iconOrigin, transitionType } =
     useHeaderTransition();
+  const hasIconOverlay = Boolean(location.state?.qurbiIconOverlay);
   const pageType =
     location.pathname === "/notifications"
       ? "notification"
@@ -16,8 +17,14 @@ export default function PageTransitionOutlet() {
   const usesIconOrigin = Boolean(
     pageType && iconOrigin?.type === pageType && transitionType === pageType,
   );
+  const keepsBackgroundStable = Boolean(
+    !pageType &&
+      (transitionType === "profile" || transitionType === "notification"),
+  );
 
-  const animationClass = usesIconOrigin
+  const animationClass = hasIconOverlay || keepsBackgroundStable
+    ? ""
+    : usesIconOrigin
     ? isIconClosing
       ? `animate-${pageType}-origin-exit`
       : `animate-${pageType}-origin-enter`

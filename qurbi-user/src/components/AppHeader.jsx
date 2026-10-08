@@ -9,6 +9,8 @@ import { recentPageOr } from "@/lib/navigation";
 
 const HEADER_SHRINK_SCROLL_Y = 12;
 const HEADER_EXPAND_SCROLL_Y = 4;
+const useIsomorphicLayoutEffect =
+  typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 /** Shared QURBI page header for normal in-app screens. */
 export default function AppHeader({
@@ -39,25 +41,28 @@ export default function AppHeader({
   const [expandedHeight, setExpandedHeight] = useState(0);
   const headerRef = useRef(null);
   const shrinkEnabled = progressiveShrink || thresholdShrink;
-  const headerExpanded = headerEntered && !isContracting;
+  const headerExpanded = headerEntered;
+  const routeContentVisible = headerEntered && !isContracting;
   const headerCopyAnimation = isContracting
     ? "animate-header-copy-exit"
     : headerEntered
       ? "animate-header-copy-enter"
       : "header-copy-pending";
 
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setHeaderEntered(true));
-    return () => cancelAnimationFrame(frame);
+  useIsomorphicLayoutEffect(() => {
+    // Commit the entered state before the browser's first paint. Waiting for a
+    // normal effect/RAF briefly painted the newly mounted route with a compact,
+    // empty header and caused a visible flash between pages.
+    setHeaderEntered(true);
   }, []);
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (!hasExpandableContent) {
       setExtraVisible(false);
       return undefined;
     }
-    const frame = requestAnimationFrame(() => setExtraVisible(true));
-    return () => cancelAnimationFrame(frame);
+    setExtraVisible(true);
+    return undefined;
   }, [hasExpandableContent]);
 
   useEffect(() => {
@@ -96,7 +101,7 @@ export default function AppHeader({
     return () => window.clearTimeout(timer);
   }, [shrinkEnabled, headerEntered, extraVisible, title]);
 
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (!shrinkEnabled || !expandedHeight || !headerRef.current) return undefined;
     const page = headerRef.current.closest(".aisyah-page");
     if (!page) return undefined;
@@ -150,7 +155,7 @@ export default function AppHeader({
       style={{ viewTransitionName: "qurbi-header", ...shrinkStyle }}
     >
       <div
-        className={`relative z-10 flex origin-top flex-col items-center text-center transition-transform duration-500 ease-in-out ${headerExpanded ? "scale-100" : "scale-[0.96]"}`}
+        className="relative z-10 flex flex-col items-center text-center"
       >
         <div className="absolute left-0 top-0 z-20 flex flex-row items-center gap-1">
           {!isAuthenticated && guestActionsOnLeft && (
@@ -204,9 +209,11 @@ export default function AppHeader({
           {isAuthenticated && (
             <Link
               to="/notifications"
-              onClick={(event) =>
-                beginIconTransition("notification", event.currentTarget)
-              }
+              onClick={(event) => {
+                if (!event.defaultPrevented) {
+                  beginIconTransition("notification", event.currentTarget);
+                }
+              }}
               aria-label={
                 unreadCount
                   ? t("appHeader.notificationsUnread", { count: unreadCount })
@@ -225,9 +232,11 @@ export default function AppHeader({
           {isAuthenticated && (
             <Link
               to="/profile"
-              onClick={(event) =>
-                beginIconTransition("profile", event.currentTarget)
-              }
+              onClick={(event) => {
+                if (!event.defaultPrevented) {
+                  beginIconTransition("profile", event.currentTarget);
+                }
+              }}
               aria-label={t("appHeader.openProfile")}
               className="relative flex h-11 w-11 flex-none items-center justify-center transition-transform active:scale-90"
             >
@@ -238,38 +247,37 @@ export default function AppHeader({
           )}
         </div>
 
-        <div
-          className={`pointer-events-none flex w-full flex-col items-center text-center ${headerCopyAnimation}`}
-        >
-          <div className="flex items-center justify-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#F7EDE2]/70 bg-white/10 shadow-sm backdrop-blur-sm">
-              <Leaf className="h-3.5 w-3.5 text-white" />
-            </div>
-            {eyebrow ? (
-              <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white/80">
-                {eyebrow}
-              </p>
-            ) : (
+        <div className="qurbi-header-static-brand pointer-events-none flex items-center justify-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#F7EDE2]/70 bg-white/10 shadow-sm backdrop-blur-sm">
+            <Leaf className="h-3.5 w-3.5 text-white" />
+          </div>
+          {eyebrow && (
+            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white/80">
+              {eyebrow}
+            </p>
+          )}
+        </div>
+
+        {title && (
+          <div
+            className={`qurbi-header-route-copy grid w-full ${routeContentVisible ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+            aria-hidden={!routeContentVisible}
+          >
+            <div className="min-h-0 overflow-hidden">
               <h1
-                className={`max-w-[65%] text-xl font-bold leading-tight tracking-tight text-white sm:max-w-none ${titleClassName}`}
+                className={`mx-auto mt-1 max-w-[65%] text-xl font-bold leading-tight tracking-tight text-white sm:max-w-none ${headerCopyAnimation} ${titleClassName}`}
               >
                 {title}
               </h1>
-            )}
+            </div>
           </div>
-          {eyebrow && title && (
-            <h1
-              className={`mt-1 max-w-[65%] text-xl font-bold leading-tight tracking-tight text-white sm:max-w-none ${titleClassName}`}
-            >
-              {title}
-            </h1>
-          )}
-        </div>
+        )}
       </div>
 
       {subtitle && (
         <div
-          className={`relative z-10 grid transition-[grid-template-rows] duration-500 ease-in-out ${headerEntered && !isContracting ? "grid-rows-[1fr] delay-0" : "grid-rows-[0fr]"}`}
+          className={`qurbi-header-route-copy relative z-10 grid ${routeContentVisible ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+          aria-hidden={!routeContentVisible}
         >
           <div
             className="min-h-0 overflow-hidden"
@@ -285,7 +293,7 @@ export default function AppHeader({
       )}
 
       <div
-        className={`relative z-10 grid ${shrinkEnabled ? "transition-[grid-template-rows]" : "transition-[grid-template-rows,opacity]"} duration-500 ease-in-out ${extraVisible && !isContracting ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+        className={`qurbi-header-route-copy relative z-10 grid ${extraVisible && !isContracting ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
         aria-hidden={!hasExpandableContent}
       >
         <div

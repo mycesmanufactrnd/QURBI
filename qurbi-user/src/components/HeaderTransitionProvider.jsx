@@ -14,16 +14,20 @@ import {
   useNavigationType,
 } from "react-router-dom";
 
-const NORMAL_EXIT_MS = 520;
-const ICON_EXIT_MS = 620;
-const ENTER_MS = 720;
+const NORMAL_EXIT_MS = 280;
+const ICON_OPEN_DELAY_MS = 48;
+const ICON_EXIT_MS = 560;
+const ENTER_MS = 680;
 const PRODUCT_EXPAND_MS = 760;
 const PRODUCT_REVEAL_MS = 480;
 const FAILSAFE_MS = 2400;
+const useIsomorphicLayoutEffect =
+  typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 const HeaderTransitionContext = createContext({
   phase: "idle",
   isContracting: false,
+  isIconOpening: false,
   isIconClosing: false,
   iconOrigin: null,
   transitionType: null,
@@ -38,6 +42,10 @@ const HeaderTransitionContext = createContext({
   navigateFromProductCard: () => {},
   /** @type {(...args: any[]) => any} */
   completeProductTransition: () => {},
+  /** @type {(...args: any[]) => any} */
+  requestIconClose: () => {},
+  /** @type {(...args: any[]) => any} */
+  completeIconClose: () => {},
 });
 
 export function useHeaderTransition() {
@@ -55,14 +63,20 @@ export default function HeaderTransitionProvider({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const navigationType = useNavigationType();
+  const persistedIconOrigin = location.state?.iconOrigin || null;
   const [phase, setPhase] = useState("idle");
-  const [iconOrigin, setIconOrigin] = useState(null);
+  const [iconOrigin, setIconOrigin] = useState(persistedIconOrigin);
   const [transitionType, setTransitionType] = useState(null);
   const [productTransition, setProductTransition] = useState(null);
   const productTransitionRef = useRef(null);
   const lockedRef = useRef(false);
   const transitionRunRef = useRef(0);
-  const iconOriginRef = useRef(null);
+  const iconOriginRef = useRef(persistedIconOrigin);
+  const iconExitLocationKeyRef = useRef(null);
+  const closingFromIconRef = useRef(false);
+  const iconOpenLocationKeyRef = useRef(null);
+  const openingToIconRef = useRef(false);
+  const pendingIconCloseRef = useRef(false);
   const timersRef = useRef(new Set());
   const locationKeyRef = useRef(location.key);
   const scrollPositionsRef = useRef(new Map());
@@ -78,6 +92,8 @@ export default function HeaderTransitionProvider({ children }) {
 
   const unlock = useCallback(() => {
     lockedRef.current = false;
+    closingFromIconRef.current = false;
+    openingToIconRef.current = false;
     setPhase("idle");
     setTransitionType(null);
   }, []);
@@ -96,10 +112,47 @@ export default function HeaderTransitionProvider({ children }) {
       type,
       x: bounds.left + bounds.width / 2,
       y: bounds.top + bounds.height / 2,
+      left: bounds.left,
+      top: bounds.top,
+      width: bounds.width,
+      height: bounds.height,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
     };
     iconOriginRef.current = origin;
     setIconOrigin(origin);
   }, []);
+
+  const completeIconClose = useCallback(() => {
+    if (!pendingIconCloseRef.current) return false;
+    pendingIconCloseRef.current = false;
+    flushSync(() => navigate(-1));
+    return true;
+  }, [navigate]);
+
+  const requestIconClose = useCallback(
+    (type) => {
+      if (
+        lockedRef.current ||
+        !location.state?.qurbiIconOverlay ||
+        (iconOriginRef.current?.type || location.state?.iconType) !== type
+      ) return false;
+
+      const runId = ++transitionRunRef.current;
+      lockedRef.current = true;
+      pendingIconCloseRef.current = true;
+      iconExitLocationKeyRef.current = location.key;
+      closingFromIconRef.current = true;
+      openingToIconRef.current = false;
+      setTransitionType(type);
+      setPhase("exiting");
+      schedule(() => {
+        if (transitionRunRef.current === runId) completeIconClose();
+      }, 1000);
+      return true;
+    },
+    [completeIconClose, location.key, location.state, schedule],
+  );
 
   const navigateWithTransition = useCallback(
     (destination, options = {}) => {
@@ -115,9 +168,18 @@ export default function HeaderTransitionProvider({ children }) {
       const closingFromIcon = Boolean(
         currentType && iconOriginRef.current?.type === currentType,
       );
+      const openingToIcon = Boolean(
+        destinationType &&
+          destinationType !== currentType &&
+          iconOriginRef.current?.type === destinationType,
+      );
       const runId = ++transitionRunRef.current;
 
       lockedRef.current = true;
+      iconExitLocationKeyRef.current = location.key;
+      closingFromIconRef.current = closingFromIcon;
+      iconOpenLocationKeyRef.current = location.key;
+      openingToIconRef.current = openingToIcon;
       setTransitionType(requestedType);
       setPhase("exiting");
 
@@ -126,12 +188,29 @@ export default function HeaderTransitionProvider({ children }) {
           navigate(destination);
           return;
         }
-        flushSync(() => navigate(destination, options.navigateOptions));
-      }, closingFromIcon ? ICON_EXIT_MS : NORMAL_EXIT_MS);
+        const navigateOptions = openingToIcon
+          ? {
+              ...options.navigateOptions,
+              state: {
+                ...(options.navigateOptions?.state || {}),
+                qurbiIconOverlay: true,
+                iconType: destinationType,
+                iconOrigin: iconOriginRef.current,
+                backgroundLocation:
+                  location.state?.backgroundLocation || location,
+              },
+            }
+          : options.navigateOptions;
+        flushSync(() => navigate(destination, navigateOptions));
+      }, openingToIcon
+        ? ICON_OPEN_DELAY_MS
+        : closingFromIcon
+          ? ICON_EXIT_MS
+          : NORMAL_EXIT_MS);
       schedule(() => unlockRun(runId), FAILSAFE_MS);
       return true;
     },
-    [location.pathname, navigate, schedule, unlockRun],
+    [location, navigate, schedule, unlockRun],
   );
 
   const navigateFromIconPage = useCallback(
@@ -210,7 +289,7 @@ export default function HeaderTransitionProvider({ children }) {
     [navigate, schedule, unlockRun],
   );
 
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (locationKeyRef.current === location.key) {
       if (location.pathname === "/profile") window.scrollTo(0, 0);
       return;
@@ -251,7 +330,14 @@ export default function HeaderTransitionProvider({ children }) {
       if (url.origin !== window.location.origin) return;
       const destination = `${url.pathname}${url.search}${url.hash}`;
       const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-      if (destination === current) return;
+      if (destination === current) {
+        const currentType = iconTypeForPath(location.pathname);
+        if (currentType && location.state?.qurbiIconOverlay) {
+          event.preventDefault();
+          requestIconClose(currentType);
+        }
+        return;
+      }
 
       event.preventDefault();
       if (lockedRef.current) return;
@@ -270,7 +356,7 @@ export default function HeaderTransitionProvider({ children }) {
 
     document.addEventListener("click", handleLinkClick, true);
     return () => document.removeEventListener("click", handleLinkClick, true);
-  }, [beginIconTransition, navigateWithTransition]);
+  }, [beginIconTransition, location.pathname, location.state, navigateWithTransition, requestIconClose]);
 
   useEffect(
     () => () => {
@@ -283,13 +369,21 @@ export default function HeaderTransitionProvider({ children }) {
   const currentIconType = iconTypeForPath(location.pathname);
   const isIconClosing =
     phase === "exiting" &&
+    closingFromIconRef.current &&
+    iconExitLocationKeyRef.current === location.key &&
     Boolean(currentIconType && iconOrigin?.type === currentIconType);
+  const isIconOpening =
+    phase === "exiting" &&
+    openingToIconRef.current &&
+    iconOpenLocationKeyRef.current === location.key;
 
   return (
     <HeaderTransitionContext.Provider
       value={{
         phase,
-        isContracting: phase === "exiting" && !isIconClosing,
+        isContracting:
+          phase === "exiting" && !isIconClosing && !isIconOpening,
+        isIconOpening,
         isIconClosing,
         iconOrigin,
         transitionType,
@@ -299,6 +393,8 @@ export default function HeaderTransitionProvider({ children }) {
         navigateFromIconPage,
         navigateFromProductCard,
         completeProductTransition,
+        requestIconClose,
+        completeIconClose,
       }}
     >
       {children}
