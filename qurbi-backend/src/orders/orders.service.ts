@@ -822,6 +822,18 @@ export class OrdersService {
             createdByUserId: null,
           }),
         );
+        await manager.save(
+          manager.create(Notification, {
+            userId: order.farmerId,
+            audience: NotificationAudience.FARMER,
+            type: NotificationType.PAYMENT,
+            title: 'New paid order',
+            body: `Payment for order #${order.orderNumber} has been confirmed. Open the order to begin fulfilment.`,
+            linkUrl: `/orders/${order.id}`,
+            relatedType: 'order',
+            relatedId: order.id,
+          }),
+        );
         completed.push(order);
       }
       return completed;

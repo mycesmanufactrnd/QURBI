@@ -11,6 +11,8 @@ import {
   CircleDollarSign,
   CircleX,
   Clock3,
+  Copy,
+  ExternalLink,
   ImageOff,
   Loader2,
   MapPinned,
@@ -58,6 +60,23 @@ function DetailSkeleton() {
 
 function InfoRow({ icon: Icon, label, value, fallback }) {
   return <div className="flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><Icon className="h-4 w-4" /></span><div className="min-w-0"><p className="text-sm text-muted-foreground">{label}</p><p className="break-words text-base font-bold">{value || fallback}</p></div></div>;
+}
+
+function deliveryAddressDetails(address = {}) {
+  const recipientName = address.recipientName || address.recipient_name || address.name || "";
+  const recipientPhone = address.recipientPhone || address.recipient_phone || address.phone || "";
+  const street = address.addressLine1 || address.address_line1 || address.street || "";
+  const secondLine = address.addressLine2 || address.address_line2 || "";
+  const locality = [address.postcode, address.city].filter(Boolean).join(" ");
+  const region = [address.state, address.country].filter(Boolean).join(", ");
+  const lines = [street, secondLine, locality, region].filter(Boolean);
+  return {
+    recipientName,
+    recipientPhone,
+    lines,
+    text: lines.join(", "),
+    note: address.deliveryNote || address.delivery_note || "",
+  };
 }
 
 export default function OrderTracking() {
@@ -154,6 +173,25 @@ export default function OrderTracking() {
   const receivedProof = (order.receivedProofImages || []).map((url) => resolveApiAssetUrl(url));
   const orderNo = order.order_number || order.id;
   const isCancelled = order.status === "cancelled";
+  const isDelivery = order.fulfillment_method !== "pickup";
+  const paymentStatus = String(order.payment_status || "").toLowerCase();
+  const refundStatus = String(order.refund_status || "").toLowerCase();
+  const canRevealDelivery = isDelivery && paymentStatus === "paid" && !isCancelled && refundStatus !== "refunded";
+  const deliveryAddress = deliveryAddressDetails(order.delivery_address);
+  const recipientNameIsDifferent = deliveryAddress.recipientName
+    && deliveryAddress.recipientName.trim().toLowerCase() !== String(order.buyer_name || "").trim().toLowerCase();
+  const recipientPhoneIsDifferent = deliveryAddress.recipientPhone
+    && deliveryAddress.recipientPhone.replace(/\D/g, "") !== String(order.buyer_phone || "").replace(/\D/g, "");
+
+  const copyDeliveryAddress = async () => {
+    if (!deliveryAddress.text) return;
+    try {
+      await navigator.clipboard.writeText(deliveryAddress.text);
+      setMessage(t("tracking.addressCopied"));
+    } catch {
+      setError(t("tracking.addressCopyFailed"));
+    }
+  };
 
   return <div className="animate-fade-in">
     <div className="flex items-center justify-between gap-3">
@@ -225,9 +263,49 @@ export default function OrderTracking() {
             <InfoRow icon={Clock3} fallback={t("common.notAvailable")} label={t("tracking.shipmentDate")} value={shippedAt ? formatDateTime(shippedAt) : t("tracking.notShipped")} />
             <InfoRow icon={UserRound} fallback={t("common.notAvailable")} label={t("tracking.buyerName")} value={order.buyer_name} />
             <InfoRow icon={Phone} fallback={t("common.notAvailable")} label={t("tracking.contact")} value={order.buyer_phone || t("tracking.notProvided")} />
-            <InfoRow icon={MapPinned} fallback={t("common.notAvailable")} label={t("tracking.deliveryInfo")} value={order.fulfillment_method === "pickup" ? t("tracking.buyerPickup") : t("tracking.deliverySelected")} />
           </div>
-          {order.buyer_phone && <a href={`tel:${order.buyer_phone}`} className="mt-4 flex min-h-12 items-center justify-center rounded-xl border border-primary/25 bg-primary/5 text-sm font-bold text-primary"><Phone className="mr-2 h-4 w-4" />{t("tracking.callBuyer")}</a>}
+
+          <div className="mt-5 rounded-2xl border border-border bg-muted/45 p-4">
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><MapPinned className="h-4 w-4" /></span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-muted-foreground">{t("tracking.deliveryInfo")}</p>
+                <p className="mt-0.5 font-extrabold">{isDelivery ? t("tracking.delivery") : t("tracking.buyerPickup")}</p>
+              </div>
+            </div>
+
+            {!isDelivery && <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{t("tracking.pickupArrangement")}</p>}
+
+            {isDelivery && !canRevealDelivery && (
+              <div className="mt-3 rounded-xl bg-background p-3 text-sm text-muted-foreground">
+                <p className="font-semibold text-foreground">{t("tracking.deliverySelected")}</p>
+                <p className="mt-1">{isCancelled || paymentStatus === "refunded" || refundStatus === "refunded" ? t("tracking.addressHiddenClosed") : t("tracking.addressPrivateUntilPaid")}</p>
+              </div>
+            )}
+
+            {canRevealDelivery && (
+              <div className="mt-3 space-y-3">
+                {(recipientNameIsDifferent || recipientPhoneIsDifferent) && (
+                  <div className="rounded-xl bg-background p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("tracking.recipient")}</p>
+                    {recipientNameIsDifferent && <p className="mt-1 font-bold">{deliveryAddress.recipientName}</p>}
+                    {recipientPhoneIsDifferent && <p className="mt-0.5 text-sm text-muted-foreground">{deliveryAddress.recipientPhone}</p>}
+                  </div>
+                )}
+                <div className="rounded-xl bg-background p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("tracking.deliveryAddress")}</p>
+                  {deliveryAddress.lines.length ? <address className="mt-1 not-italic leading-relaxed">{deliveryAddress.lines.map((line, index) => <span key={`${index}-${line}`} className="block break-words">{line}</span>)}</address> : <p className="mt-1 text-sm text-muted-foreground">{t("tracking.notProvided")}</p>}
+                </div>
+                {deliveryAddress.note && <div className="rounded-xl bg-background p-3"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("tracking.deliveryNote")}</p><p className="mt-1 whitespace-pre-wrap text-sm">{deliveryAddress.note}</p></div>}
+                {deliveryAddress.text && <div className="grid grid-cols-2 gap-2">
+                  <Button type="button" variant="outline" className="h-11 rounded-xl" onClick={copyDeliveryAddress}><Copy className="mr-2 h-4 w-4" />{t("tracking.copyAddress")}</Button>
+                  <Button asChild variant="outline" className="h-11 rounded-xl"><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(deliveryAddress.text)}`} target="_blank" rel="noreferrer"><ExternalLink className="mr-2 h-4 w-4" />{t("tracking.openMaps")}</a></Button>
+                </div>}
+              </div>
+            )}
+          </div>
+
+          {order.buyer_phone && <a href={`tel:${order.buyer_phone}`} className="mt-3 flex min-h-12 items-center justify-center rounded-xl border border-primary/25 bg-primary/5 text-sm font-bold text-primary"><Phone className="mr-2 h-4 w-4" />{t("tracking.callBuyer")}</a>}
         </section>
 
         {(order.refund_reason || order.refund_status) && <section className="rounded-2xl border border-destructive/20 bg-destructive/5 p-4"><h2 className="text-lg font-extrabold text-destructive">{t("tracking.refundTitle")}</h2>{order.refund_status && <p className="mt-2 text-sm"><span className="font-semibold">{t("tracking.refundStatusLabel")} </span>{t(`refundStatus.${String(order.refund_status).toLowerCase()}`, { defaultValue: humanize(order.refund_status) })}</p>}{order.refund_reason && <p className="mt-1 text-sm"><span className="font-semibold">{t("tracking.refundReason")} </span>{order.refund_reason}</p>}{order.refund_admin_note && <p className="mt-1 text-sm"><span className="font-semibold">{t("tracking.refundAdminNote")} </span>{order.refund_admin_note}</p>}</section>}
