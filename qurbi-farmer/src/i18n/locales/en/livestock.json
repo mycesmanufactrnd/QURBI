@@ -177,6 +177,20 @@
   "form": {
     "submitLabel": "Save Listing",
     "stillNeeded": "Still needed:",
+    "wizard": {
+      "animal": "Animal",
+      "listing": "Listing",
+      "media": "Photos",
+      "review": "Review",
+      "step": "Step {{current}} of {{total}}",
+      "back": "Back",
+      "next": "Next",
+      "reviewTitle": "Review your listing",
+      "reviewDescription": "Check the key details before saving or continuing.",
+      "notSet": "Not set",
+      "photoCount_one": "{{count}} photo",
+      "photoCount_other": "{{count}} photos"
+    },
     "sections": {
       "photosTitle": "Photos & video",
       "photosDescription": "Buyers decide from photos first.",

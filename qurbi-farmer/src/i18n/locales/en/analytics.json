@@ -8,6 +8,8 @@
   "overview": "Performance overview",
   "loadError": "Analytics could not be loaded. Please try again.",
   "retry": "Try again",
+  "viewAll": "View all ({{count}})",
+  "showLess": "Show less",
   "metrics": {
     "views": "Listing views",
     "visitors": "Unique visitors",

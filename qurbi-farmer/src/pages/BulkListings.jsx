@@ -7,6 +7,7 @@ import { Loader2, PackageOpen, Pencil, Plus, Trash2, Users } from "lucide-react"
 import ConfirmDialog from "@/components/agri/ConfirmDialog";
 import EmptyState from "@/components/agri/EmptyState";
 import StatusBadge from "@/components/agri/StatusBadge";
+import LoadMoreButton from "@/components/agri/LoadMoreButton";
 import { useToast } from "@/components/ui/use-toast";
 import { formatMYR } from "@/lib/agri";
 
@@ -18,6 +19,7 @@ export default function BulkListings() {
   const [loading, setLoading] = useState(true);
   const [toDelete, setToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(9);
 
   useEffect(() => {
     qurbi.entities.BulkListing.list("-created_date", 100)
@@ -50,7 +52,7 @@ export default function BulkListings() {
       <div className="mt-5">
         {loading ? <div className="flex justify-center py-16"><Loader2 className="w-7 h-7 animate-spin text-primary" /></div> : items.length ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {items.map((item) => {
+            {items.slice(0, visibleCount).map((item) => {
               const total = Number(item.maleCount || 0) + Number(item.femaleCount || 0);
               return (
                 <article key={item.id} className="soft-card overflow-hidden transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-[0_10px_24px_rgba(65,54,45,0.11)]">
@@ -76,6 +78,7 @@ export default function BulkListings() {
                 </article>
               );
             })}
+            {items.length > visibleCount && <div className="md:col-span-2 xl:col-span-3"><LoadMoreButton shown={visibleCount} total={items.length} onClick={() => setVisibleCount((count) => count + 9)} /></div>}
           </div>
         ) : <EmptyState icon={PackageOpen} title={t("list.emptyTitle")} description={t("list.emptyDescription")} action={<button type="button" onClick={() => navigate("/bulk/add")} className="brand-gradient min-h-11 rounded-2xl px-5 text-sm font-bold text-primary-foreground">{t("list.emptyAction")}</button>} />}
       </div>

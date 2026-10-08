@@ -95,6 +95,7 @@ export default function OrderTracking() {
   const [pendingUpload, setPendingUpload] = useState(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [activeTab, setActiveTab] = useState("overview");
   const fileInputRef = useRef(null);
 
   const load = useCallback(async () => {
@@ -141,6 +142,7 @@ export default function OrderTracking() {
       });
       setOrder(response.data?.order || order);
       setMessage(t("tracking.photoSaved", { stage: stageLabel(stage) }));
+      setActiveTab("evidence");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (uploadError) {
       setError(errorMessage(uploadError, t("tracking.saveFailed")));
@@ -208,7 +210,14 @@ export default function OrderTracking() {
     {hasIssue && <div className="mt-4 flex gap-2 rounded-xl bg-red-50 p-3 text-sm text-red-700"><ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" /><span>{t("tracking.issueNotice")}</span></div>}
     {isCancelled && <div className="mt-4 flex gap-2 rounded-xl border border-border bg-muted/55 p-3 text-sm text-foreground"><CircleX className="mt-0.5 h-4 w-4 shrink-0" /><span>{t("tracking.closedNotice")}</span></div>}
 
-    <div className="mt-5 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start lg:gap-5">
+    <div className="no-scrollbar mt-5 flex gap-2 overflow-x-auto rounded-2xl bg-muted/70 p-1" role="tablist" aria-label={t("tracking.sectionTabsAria")}>
+      {["overview", "delivery", ...(!isCancelled ? ["evidence"] : [])].map((tab) => (
+        <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} onClick={() => setActiveTab(tab)} className={cn("min-h-11 flex-1 whitespace-nowrap rounded-xl px-4 text-sm font-bold transition-colors", activeTab === tab ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground")}>{t(`tracking.tabs.${tab}`)}</button>
+      ))}
+    </div>
+
+    <div className="mx-auto mt-4 max-w-3xl">
+      {activeTab === "overview" && (
       <div className="min-w-0 space-y-4">
         <section className={cn("rounded-2xl border p-4", nextStage ? "border-amber-300 bg-amber-50/70" : "border-border bg-card")}>
           <div className="flex items-center justify-between gap-3">
@@ -265,60 +274,38 @@ export default function OrderTracking() {
             <InfoRow icon={Phone} fallback={t("common.notAvailable")} label={t("tracking.contact")} value={order.buyer_phone || t("tracking.notProvided")} />
           </div>
 
-          <div className="mt-5 rounded-2xl border border-border bg-muted/45 p-4">
-            <div className="flex items-start gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><MapPinned className="h-4 w-4" /></span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm text-muted-foreground">{t("tracking.deliveryInfo")}</p>
-                <p className="mt-0.5 font-extrabold">{isDelivery ? t("tracking.delivery") : t("tracking.buyerPickup")}</p>
-              </div>
-            </div>
-
-            {!isDelivery && <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{t("tracking.pickupArrangement")}</p>}
-
-            {isDelivery && !canRevealDelivery && (
-              <div className="mt-3 rounded-xl bg-background p-3 text-sm text-muted-foreground">
-                <p className="font-semibold text-foreground">{t("tracking.deliverySelected")}</p>
-                <p className="mt-1">{isCancelled || paymentStatus === "refunded" || refundStatus === "refunded" ? t("tracking.addressHiddenClosed") : t("tracking.addressPrivateUntilPaid")}</p>
-              </div>
-            )}
-
-            {canRevealDelivery && (
-              <div className="mt-3 space-y-3">
-                {(recipientNameIsDifferent || recipientPhoneIsDifferent) && (
-                  <div className="rounded-xl bg-background p-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("tracking.recipient")}</p>
-                    {recipientNameIsDifferent && <p className="mt-1 font-bold">{deliveryAddress.recipientName}</p>}
-                    {recipientPhoneIsDifferent && <p className="mt-0.5 text-sm text-muted-foreground">{deliveryAddress.recipientPhone}</p>}
-                  </div>
-                )}
-                <div className="rounded-xl bg-background p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("tracking.deliveryAddress")}</p>
-                  {deliveryAddress.lines.length ? <address className="mt-1 not-italic leading-relaxed">{deliveryAddress.lines.map((line, index) => <span key={`${index}-${line}`} className="block break-words">{line}</span>)}</address> : <p className="mt-1 text-sm text-muted-foreground">{t("tracking.notProvided")}</p>}
-                </div>
-                {deliveryAddress.note && <div className="rounded-xl bg-background p-3"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("tracking.deliveryNote")}</p><p className="mt-1 whitespace-pre-wrap text-sm">{deliveryAddress.note}</p></div>}
-                {deliveryAddress.text && <div className="grid grid-cols-2 gap-2">
-                  <Button type="button" variant="outline" className="h-11 rounded-xl" onClick={copyDeliveryAddress}><Copy className="mr-2 h-4 w-4" />{t("tracking.copyAddress")}</Button>
-                  <Button asChild variant="outline" className="h-11 rounded-xl"><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(deliveryAddress.text)}`} target="_blank" rel="noreferrer"><ExternalLink className="mr-2 h-4 w-4" />{t("tracking.openMaps")}</a></Button>
-                </div>}
-              </div>
-            )}
-          </div>
-
-          {order.buyer_phone && <a href={`tel:${order.buyer_phone}`} className="mt-3 flex min-h-12 items-center justify-center rounded-xl border border-primary/25 bg-primary/5 text-sm font-bold text-primary"><Phone className="mr-2 h-4 w-4" />{t("tracking.callBuyer")}</a>}
         </section>
 
         {(order.refund_reason || order.refund_status) && <section className="rounded-2xl border border-destructive/20 bg-destructive/5 p-4"><h2 className="text-lg font-extrabold text-destructive">{t("tracking.refundTitle")}</h2>{order.refund_status && <p className="mt-2 text-sm"><span className="font-semibold">{t("tracking.refundStatusLabel")} </span>{t(`refundStatus.${String(order.refund_status).toLowerCase()}`, { defaultValue: humanize(order.refund_status) })}</p>}{order.refund_reason && <p className="mt-1 text-sm"><span className="font-semibold">{t("tracking.refundReason")} </span>{order.refund_reason}</p>}{order.refund_admin_note && <p className="mt-1 text-sm"><span className="font-semibold">{t("tracking.refundAdminNote")} </span>{order.refund_admin_note}</p>}</section>}
       </div>
+      )}
 
-    {isCancelled && (
+      {activeTab === "delivery" && (
+        <section className="rounded-2xl border border-border bg-card p-4">
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><MapPinned className="h-4 w-4" /></span>
+            <div className="min-w-0 flex-1"><p className="text-sm text-muted-foreground">{t("tracking.deliveryInfo")}</p><p className="mt-0.5 font-extrabold">{isDelivery ? t("tracking.delivery") : t("tracking.buyerPickup")}</p></div>
+          </div>
+          {!isDelivery && <p className="mt-4 rounded-xl bg-muted/45 p-3 text-sm leading-relaxed text-muted-foreground">{t("tracking.pickupArrangement")}</p>}
+          {isDelivery && !canRevealDelivery && <div className="mt-4 rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground"><p className="font-semibold text-foreground">{t("tracking.deliverySelected")}</p><p className="mt-1">{isCancelled || paymentStatus === "refunded" || refundStatus === "refunded" ? t("tracking.addressHiddenClosed") : t("tracking.addressPrivateUntilPaid")}</p></div>}
+          {canRevealDelivery && <div className="mt-4 space-y-3">
+            {(recipientNameIsDifferent || recipientPhoneIsDifferent) && <div className="rounded-xl bg-muted/45 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("tracking.recipient")}</p>{recipientNameIsDifferent && <p className="mt-1 font-bold">{deliveryAddress.recipientName}</p>}{recipientPhoneIsDifferent && <p className="mt-0.5 text-sm text-muted-foreground">{deliveryAddress.recipientPhone}</p>}</div>}
+            <div className="rounded-xl bg-muted/45 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("tracking.deliveryAddress")}</p>{deliveryAddress.lines.length ? <address className="mt-1 not-italic leading-relaxed">{deliveryAddress.lines.map((line, index) => <span key={`${index}-${line}`} className="block break-words">{line}</span>)}</address> : <p className="mt-1 text-sm text-muted-foreground">{t("tracking.notProvided")}</p>}</div>
+            {deliveryAddress.note && <div className="rounded-xl bg-muted/45 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("tracking.deliveryNote")}</p><p className="mt-1 whitespace-pre-wrap text-sm">{deliveryAddress.note}</p></div>}
+            {deliveryAddress.text && <div className="grid grid-cols-2 gap-2"><Button type="button" variant="outline" className="h-11 rounded-xl" onClick={copyDeliveryAddress}><Copy className="mr-2 h-4 w-4" />{t("tracking.copyAddress")}</Button><Button asChild variant="outline" className="h-11 rounded-xl"><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(deliveryAddress.text)}`} target="_blank" rel="noreferrer"><ExternalLink className="mr-2 h-4 w-4" />{t("tracking.openMaps")}</a></Button></div>}
+          </div>}
+          {order.buyer_phone && <a href={`tel:${order.buyer_phone}`} className="mt-4 flex min-h-12 items-center justify-center rounded-xl border border-primary/25 bg-primary/5 text-sm font-bold text-primary"><Phone className="mr-2 h-4 w-4" />{t("tracking.callBuyer")}</a>}
+        </section>
+      )}
+
+    {activeTab === "overview" && isCancelled && (
       <section className="mt-4 rounded-2xl border border-border bg-card p-4">
         <div className="flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground"><CircleX className="h-5 w-5" /></span><div className="min-w-0"><h2 className="font-extrabold">{t("tracking.cancellationSummary")}</h2><p className="mt-0.5 text-sm text-muted-foreground">{t("tracking.cancellationReleased")}</p></div></div>
         <div className="mt-4 grid gap-3 rounded-xl bg-muted/45 p-3 text-sm sm:grid-cols-2"><div><p className="text-xs text-muted-foreground">{t("tracking.cancelledBy")}</p><p className="mt-0.5 font-bold">{t(`role.${order.cancelled_by || "Buyer"}`, { defaultValue: order.cancelled_by || "Buyer" })}</p></div><div><p className="text-xs text-muted-foreground">{t("tracking.cancelledAt")}</p><p className="mt-0.5 font-bold">{formatDateTime(order.cancelled_at, t("common.notAvailable"))}</p></div><div className="sm:col-span-2"><p className="text-xs text-muted-foreground">{t("tracking.reason")}</p><p className="mt-0.5 whitespace-pre-wrap font-semibold">{order.cancellation_reason || t("tracking.noReason")}</p></div></div>
       </section>
     )}
 
-      {!isCancelled && (
+      {activeTab === "evidence" && !isCancelled && (
       <section className="mt-4 min-w-0 rounded-2xl border border-border bg-card p-4 lg:mt-0">
         <h2 className="text-lg font-extrabold">{t("tracking.deliveryPhotos")}</h2>
         <p className="mt-1 text-sm text-muted-foreground">{t("tracking.deliveryPhotosHelp")}</p>

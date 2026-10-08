@@ -1,5 +1,5 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from "react";
-import { AlertCircle, ChevronDown, Loader2, MapPin, RotateCcw, Tag } from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, ChevronDown, Loader2, MapPin, RotateCcw, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,6 +10,7 @@ import BreedSelector from "@/components/agri/BreedSelector";
 import SpeciesSelector from "@/components/agri/SpeciesSelector";
 import FormField, { scrollToField } from "@/components/agri/FormField";
 import StickyActionBar from "@/components/agri/StickyActionBar";
+import StepIndicator from "@/components/agri/StepIndicator";
 import {
   GENDERS,
   FARMER_LISTING_STATUSES,
@@ -88,6 +89,7 @@ const LivestockForm = forwardRef(
   const [cover, setCover] = useState(initial.coverImage || initial.images?.[0] || null);
   const [ageTouched, setAgeTouched] = useState(false);
   const [attempted, setAttempted] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
 
   const setValue = (key, value) => setForm((current) => ({ ...current, [key]: value }));
   const setFromInput = (key) => (event) => setValue(key, event.target.value);
@@ -125,7 +127,10 @@ const LivestockForm = forwardRef(
   const submit = () => {
     if (!valid) {
       setAttempted(true);
-      scrollToField(missing.map((item) => item.id));
+      const firstMissing = missing[0]?.id;
+      const targetStep = ["species", "gender", "breed", "age", "state"].includes(firstMissing) ? 1 : ["price", "status"].includes(firstMissing) ? 2 : 3;
+      setCurrentStep(targetStep);
+      window.setTimeout(() => scrollToField(missing.map((item) => item.id)), 0);
       return false;
     }
 
@@ -173,9 +178,36 @@ const LivestockForm = forwardRef(
     4: form.price !== "" && Number(form.price) >= 0 && Boolean(form.status),
   };
 
+  const stepMissing = currentStep === 1
+    ? missing.filter((item) => ["species", "gender", "breed", "age", "state"].includes(item.id))
+    : currentStep === 2
+      ? missing.filter((item) => ["price", "status"].includes(item.id))
+      : currentStep === 3
+        ? missing.filter((item) => item.id === "photos")
+        : missing;
+
+  const goNext = () => {
+    if (stepMissing.length) {
+      setAttempted(true);
+      scrollToField(stepMissing.map((item) => item.id));
+      return;
+    }
+    setCurrentStep((step) => Math.min(4, step + 1));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const wizardSteps = [
+    { n: 1, label: t("form.wizard.animal") },
+    { n: 2, label: t("form.wizard.listing") },
+    { n: 3, label: t("form.wizard.media") },
+    { n: 4, label: t("form.wizard.review") },
+  ];
+
   return (
-    <div className="lg:grid lg:grid-cols-[1fr_1.3fr] lg:items-start lg:gap-8">
-      <div className="mb-5 space-y-5 lg:sticky lg:top-6 lg:mb-0">
+    <div>
+      <div className="no-scrollbar overflow-x-auto pb-1"><StepIndicator current={currentStep} steps={wizardSteps} className="min-w-[620px]" /></div>
+
+      {currentStep === 3 && <div className="mx-auto mt-5 max-w-3xl space-y-5">
         <Section title={t("form.sections.photosTitle")} step={1} done={sectionDone[1]} description={t("form.sections.photosDescription")}>
           <div className="space-y-5">
             <FormField id="photos" label={t("form.fields.photos")} required error={errorFor("photos")}>
@@ -186,9 +218,10 @@ const LivestockForm = forwardRef(
             </FormField>
           </div>
         </Section>
-      </div>
+      </div>}
 
-      <div className="space-y-5">
+      <div className="mx-auto mt-5 max-w-3xl space-y-5">
+        {currentStep === 1 && <>
         <Section title={t("form.sections.aboutTitle")} step={2} done={sectionDone[2]}>
           <div className="space-y-4">
             <Grid>
@@ -314,6 +347,36 @@ const LivestockForm = forwardRef(
           </div>
         </Section>
 
+        <div className="soft-card overflow-hidden rounded-[1.5rem]">
+          <button type="button" onClick={() => setShowAdvanced((current) => !current)} aria-expanded={showAdvanced} className="flex min-h-[72px] w-full items-center justify-between gap-3 p-5 text-left transition-colors hover:bg-muted/40">
+            <span>
+              <span className="block text-base font-bold">{t("form.sections.moreTitle")} <span className="font-normal text-muted-foreground">{t("form.sections.moreOptional")}</span></span>
+              <span className="mt-0.5 block text-sm font-normal text-muted-foreground">{t("form.sections.moreDescription")}</span>
+            </span>
+            <ChevronDown className={cn("h-5 w-5 shrink-0 text-muted-foreground transition-transform", showAdvanced && "rotate-180")} />
+          </button>
+          {showAdvanced && (
+            <div className="animate-fade-in space-y-4 border-t border-border/60 px-5 pb-5 pt-4">
+              <Grid>
+                <FormField label={t("form.fields.weight")}><Input inputMode="decimal" value={form.weight} onChange={setFromInput("weight")} className="h-12" /></FormField>
+                <FormField label={t("form.fields.height")}><Input inputMode="decimal" value={form.height} onChange={setFromInput("height")} className="h-12" /></FormField>
+              </Grid>
+              <Grid>
+                <FormField label={t("form.fields.bodyLength")}><Input inputMode="decimal" value={form.bodyLength} onChange={setFromInput("bodyLength")} className="h-12" /></FormField>
+                <FormField label={t("form.fields.chestGirth")}><Input inputMode="decimal" value={form.chestGirth} onChange={setFromInput("chestGirth")} className="h-12" /></FormField>
+              </Grid>
+              <Grid>
+                <FormField label={t("form.fields.tagNumber")}><Input value={form.tagNumber} onChange={setFromInput("tagNumber")} className="h-12" /></FormField>
+                <FormField label={t("form.fields.rfid")}><Input value={form.rfid} onChange={setFromInput("rfid")} className="h-12" /></FormField>
+              </Grid>
+              <FormField label={t("form.fields.feed")}><Textarea value={form.feedDetails} onChange={setFromInput("feedDetails")} placeholder={t("form.fields.feedPlaceholder")} rows={2} className="resize-none text-base" /></FormField>
+              <FormField label={t("form.fields.specialNotes")}><Textarea value={form.specialNotes} onChange={setFromInput("specialNotes")} rows={2} className="resize-none text-base" /></FormField>
+            </div>
+          )}
+        </div>
+        </>}
+
+        {currentStep === 2 &&
         <Section title={t("form.sections.priceTitle")} step={4} done={sectionDone[4]}>
           <div className="space-y-4">
             <FormField id="price" label={t("form.fields.price")} required error={errorFor("price")} hint={t("form.fields.priceHint")}>
@@ -346,47 +409,35 @@ const LivestockForm = forwardRef(
             )}
           </div>
         </Section>
+        }
 
-        <div className="soft-card overflow-hidden rounded-[1.5rem]">
-          <button type="button" onClick={() => setShowAdvanced((current) => !current)} aria-expanded={showAdvanced} className="flex min-h-[72px] w-full items-center justify-between gap-3 p-5 text-left transition-colors hover:bg-muted/40">
-            <span>
-              <span className="block text-base font-bold">{t("form.sections.moreTitle")} <span className="font-normal text-muted-foreground">{t("form.sections.moreOptional")}</span></span>
-              <span className="mt-0.5 block text-sm font-normal text-muted-foreground">{t("form.sections.moreDescription")}</span>
-            </span>
-            <ChevronDown className={cn("h-5 w-5 shrink-0 text-muted-foreground transition-transform", showAdvanced && "rotate-180")} />
-          </button>
-          {showAdvanced && (
-            <div className="animate-fade-in space-y-4 border-t border-border/60 px-5 pb-5 pt-4">
-              <Grid>
-                <FormField label={t("form.fields.weight")}><Input inputMode="decimal" value={form.weight} onChange={setFromInput("weight")} className="h-12" /></FormField>
-                <FormField label={t("form.fields.height")}><Input inputMode="decimal" value={form.height} onChange={setFromInput("height")} className="h-12" /></FormField>
-              </Grid>
-              <Grid>
-                <FormField label={t("form.fields.bodyLength")}><Input inputMode="decimal" value={form.bodyLength} onChange={setFromInput("bodyLength")} className="h-12" /></FormField>
-                <FormField label={t("form.fields.chestGirth")}><Input inputMode="decimal" value={form.chestGirth} onChange={setFromInput("chestGirth")} className="h-12" /></FormField>
-              </Grid>
-              <Grid>
-                <FormField label={t("form.fields.tagNumber")}><Input value={form.tagNumber} onChange={setFromInput("tagNumber")} className="h-12" /></FormField>
-                <FormField label={t("form.fields.rfid")}><Input value={form.rfid} onChange={setFromInput("rfid")} className="h-12" /></FormField>
-              </Grid>
-              <FormField label={t("form.fields.feed")}>
-                <Textarea value={form.feedDetails} onChange={setFromInput("feedDetails")} placeholder={t("form.fields.feedPlaceholder")} rows={2} className="resize-none text-base" />
-              </FormField>
-              <FormField label={t("form.fields.specialNotes")}><Textarea value={form.specialNotes} onChange={setFromInput("specialNotes")} rows={2} className="resize-none text-base" /></FormField>
-            </div>
-          )}
-        </div>
+        {currentStep === 4 && <section className="soft-card rounded-[1.5rem] p-4 sm:p-5">
+          <h2 className="text-lg font-extrabold">{t("form.wizard.reviewTitle")}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t("form.wizard.reviewDescription")}</p>
+          <dl className="mt-4 divide-y divide-border/60 rounded-2xl bg-muted/40 px-4">
+            <ReviewRow label={t("form.fields.species")} value={form.species || t("form.wizard.notSet")} />
+            <ReviewRow label={t("form.fields.breed")} value={form.breed || t("form.wizard.notSet")} />
+            <ReviewRow label={t("form.fields.gender")} value={form.gender ? display.gender(form.gender) : t("form.wizard.notSet")} />
+            <ReviewRow label={t("form.fields.age")} value={preview.age} />
+            <ReviewRow label={t("form.fields.state")} value={form.state || t("form.wizard.notSet")} />
+            <ReviewRow label={t("form.fields.price")} value={form.price === "" ? t("form.wizard.notSet") : `RM ${Number(form.price).toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
+            <ReviewRow label={t("form.fields.visibility")} value={form.status ? display.status(form.status).label : t("form.wizard.notSet")} />
+            <ReviewRow label={t("form.fields.photos")} value={t("form.wizard.photoCount", { count: images.length })} />
+          </dl>
+          {missing.length > 0 && <div className="mt-4 rounded-xl bg-destructive/10 p-3 text-sm text-destructive"><MissingSummary missing={missing} /></div>}
+        </section>}
       </div>
 
       {!hideActions && (
-        <div className="lg:col-span-2">
+        <div>
           <StickyActionBar
-            hint={attempted && missing.length ? <MissingSummary missing={missing} /> : undefined}
+            hint={attempted && stepMissing.length ? <MissingSummary missing={stepMissing} /> : t("form.wizard.step", { current: currentStep, total: 4 })}
             hintTone="danger"
           >
-            <Button onClick={submit} disabled={submitting} className="h-12 w-full rounded-2xl text-base font-semibold">
-              {submitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}{submitLabel || t("form.submitLabel")}
-            </Button>
+            {currentStep > 1 && <Button type="button" variant="outline" onClick={() => setCurrentStep((step) => Math.max(1, step - 1))} disabled={submitting} className="h-12 w-[34%] shrink-0 rounded-2xl"><ArrowLeft className="mr-1.5 h-4 w-4" />{t("form.wizard.back")}</Button>}
+            {currentStep < 4
+              ? <Button type="button" onClick={goNext} className="h-12 flex-1 rounded-2xl text-base font-semibold">{t("form.wizard.next")}<ArrowRight className="ml-1.5 h-5 w-5" /></Button>
+              : <Button onClick={submit} disabled={submitting} className="h-12 flex-1 rounded-2xl text-base font-semibold">{submitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}{submitLabel || t("form.submitLabel")}</Button>}
           </StickyActionBar>
         </div>
       )}
@@ -420,11 +471,11 @@ function InlineError({ children }) {
 /**
  * @param {{ title: React.ReactNode, step: number, done?: boolean, description?: React.ReactNode, children?: React.ReactNode }} props
  */
-function Section({ title, step, done = false, description, children }) {
+function Section({ title, done = false, description, children }) {
   return (
     <section className="soft-card rounded-[1.5rem] p-4 sm:p-5">
       <div className="mb-5 flex items-center gap-3 border-b border-border/60 pb-4">
-        <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-bold shadow-sm", done ? "bg-emerald-600 text-white" : "bg-primary text-primary-foreground")} aria-hidden="true">{done ? "✓" : step}</span>
+        {done && <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-sm font-bold text-white shadow-sm" aria-hidden="true">✓</span>}
         <div className="min-w-0">
           <h2 className="text-lg font-extrabold text-foreground">{title}</h2>
           {description && <p className="text-sm text-muted-foreground">{description}</p>}
@@ -437,4 +488,8 @@ function Section({ title, step, done = false, description, children }) {
 
 function Grid({ children }) {
   return <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">{children}</div>;
+}
+
+function ReviewRow({ label, value }) {
+  return <div className="flex items-start justify-between gap-4 py-3"><dt className="text-sm text-muted-foreground">{label}</dt><dd className="max-w-[60%] break-words text-right text-sm font-bold">{value}</dd></div>;
 }

@@ -1,13 +1,10 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { qurbi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
-import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import LivestockForm, { MissingSummary } from "@/components/agri/LivestockForm";
-import StepIndicator from "@/components/agri/StepIndicator";
-import StickyActionBar from "@/components/agri/StickyActionBar";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import LivestockForm from "@/components/agri/LivestockForm";
 import { getDraft, setDraft } from "@/lib/livestockDraft";
 import { MALAYSIA_STATES } from "@/lib/agri";
 
@@ -17,8 +14,6 @@ export default function AddLivestock() {
   const { user } = useAuth();
   const [initial, setInitial] = useState(null);
   const [registeredState, setRegisteredState] = useState("");
-  const [validation, setValidation] = useState({ missing: [], attempted: false });
-  const formRef = useRef(null);
 
   useEffect(() => {
     const draft = getDraft();
@@ -45,13 +40,6 @@ export default function AddLivestock() {
     return <div className="flex justify-center py-20"><Loader2 className="w-7 h-7 animate-spin text-primary" /></div>;
   }
 
-  const { missing, attempted } = validation;
-  const hint = attempted && missing.length
-    ? <MissingSummary missing={missing} />
-    : missing.length
-      ? t("add.hintLeft", { count: missing.length })
-      : t("add.hintDone");
-
   return (
     <div className="mx-auto w-full max-w-6xl">
       <Header
@@ -60,28 +48,15 @@ export default function AddLivestock() {
         description={t("add.description")}
         backLabel={t("add.backAria")}
       />
-      <StepIndicator current={1} className="mt-5" />
-
       <div className="mt-4">
         <LivestockForm
-          ref={formRef}
           initial={initial}
           registeredState={registeredState}
           onSubmit={handleNext}
           submitting={false}
-          hideActions
-          onValidationChange={setValidation}
+          submitLabel={t("add.next")}
         />
       </div>
-
-      <StickyActionBar hint={hint} hintTone={attempted && missing.length ? "danger" : missing.length ? "muted" : "success"}>
-        <Button variant="outline" onClick={() => navigate("/livestock")} className="h-12 w-[34%] shrink-0 rounded-2xl">
-          {t("add.cancel")}
-        </Button>
-        <Button onClick={() => formRef.current?.submit()} className="h-12 flex-1 rounded-2xl text-base font-semibold">
-          {t("add.next")} <ArrowRight className="ml-1.5 h-5 w-5" />
-        </Button>
-      </StickyActionBar>
     </div>
   );
 }

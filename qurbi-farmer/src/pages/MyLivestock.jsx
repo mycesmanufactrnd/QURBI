@@ -7,6 +7,7 @@ import EmptyState from "@/components/agri/EmptyState";
 import CowSilhouetteIcon from "@/components/agri/CowSilhouetteIcon";
 import NotificationBell from "@/components/agri/NotificationBell";
 import ConfirmDialog from "@/components/agri/ConfirmDialog";
+import LoadMoreButton from "@/components/agri/LoadMoreButton";
 import { useToast } from "@/components/ui/use-toast";
 import { LIVESTOCK_STATUS_META, listingExpiry } from "@/lib/agri";
 import { cn } from "@/lib/utils";
@@ -34,9 +35,10 @@ export default function MyLivestock() {
   const [loadError, setLoadError] = useState("");
   const [toDelete, setToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(9);
   const requested = searchParams.get("filter");
   const filter = FILTERS.some((item) => item.key === requested) ? requested : "All";
-  const setFilter = (key) => setSearchParams(key === "All" ? {} : { filter: key }, { replace: true });
+  const setFilter = (key) => { setVisibleCount(9); setSearchParams(key === "All" ? {} : { filter: key }, { replace: true }); };
 
   const load = () => {
     setLoading(true);
@@ -127,7 +129,7 @@ export default function MyLivestock() {
           </div>
         ) : filtered.length ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((l) => (
+            {filtered.slice(0, visibleCount).map((l) => (
               <LivestockCard
                 key={l.id}
                 livestock={l}
@@ -136,6 +138,7 @@ export default function MyLivestock() {
                 onDelete={(li) => setToDelete(li)}
               />
             ))}
+            {filtered.length > visibleCount && <div className="md:col-span-2 xl:col-span-3"><LoadMoreButton shown={visibleCount} total={filtered.length} onClick={() => setVisibleCount((count) => count + 9)} /></div>}
           </div>
         ) : !loadError ? (
           <EmptyState

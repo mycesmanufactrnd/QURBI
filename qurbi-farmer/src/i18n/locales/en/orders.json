@@ -133,6 +133,8 @@
     "backToOrders": "Back to orders",
     "tryAgain": "Try again",
     "title": "Order details",
+    "sectionTabsAria": "Order detail sections",
+    "tabs": { "overview": "Overview", "delivery": "Delivery", "evidence": "Evidence" },
     "refreshAria": "Refresh order",
     "multiNotice": "This order contains packages from multiple farmers. Photo upload is locked so one farmer can't change another farmer's delivery status.",
     "issueNotice": "Delivery steps are paused because this order has a return or refund in progress.",

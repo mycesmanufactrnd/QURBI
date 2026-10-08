@@ -133,6 +133,8 @@
     "backToOrders": "Kembali ke pesanan",
     "tryAgain": "Cuba lagi",
     "title": "Butiran pesanan",
+    "sectionTabsAria": "Bahagian butiran pesanan",
+    "tabs": { "overview": "Ringkasan", "delivery": "Penghantaran", "evidence": "Bukti" },
     "refreshAria": "Muat semula pesanan",
     "multiNotice": "Pesanan ini mengandungi bungkusan daripada beberapa penternak. Muat naik gambar dikunci supaya seorang penternak tidak boleh mengubah status penghantaran penternak lain.",
     "issueNotice": "Langkah penghantaran dihentikan sementara kerana pesanan ini mempunyai pemulangan atau bayaran balik yang sedang diproses.",
