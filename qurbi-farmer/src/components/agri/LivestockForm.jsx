@@ -205,7 +205,7 @@ const LivestockForm = forwardRef(
 
   return (
     <div>
-      <div className="no-scrollbar overflow-x-auto pb-1"><StepIndicator current={currentStep} steps={wizardSteps} className="min-w-[620px]" /></div>
+      <StepIndicator current={currentStep} steps={wizardSteps} className="pb-1" />
 
       {currentStep === 3 && <div className="mx-auto mt-5 max-w-3xl space-y-5">
         <Section title={t("form.sections.photosTitle")} step={1} done={sectionDone[1]} description={t("form.sections.photosDescription")}>
