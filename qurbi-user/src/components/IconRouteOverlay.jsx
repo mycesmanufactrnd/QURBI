@@ -1,15 +1,11 @@
 import React, { useEffect, useLayoutEffect, useState } from "react";
-import { Bell } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
 
 export default function IconRouteOverlay({ type, children }) {
-  const { t } = useTranslation("common");
   const {
     completeIconClose,
     iconOrigin,
     isIconClosing,
-    requestIconClose,
   } = useHeaderTransition();
   const [motionState, setMotionState] = useState("preparing");
   const origin =
@@ -47,10 +43,6 @@ export default function IconRouteOverlay({ type, children }) {
     if (isIconClosing) setMotionState("closing");
   }, [isIconClosing]);
 
-  const closeNotification = () => {
-    requestIconClose("notification");
-  };
-
   const handleAnimationEnd = (event) => {
     if (event.target !== event.currentTarget) return;
     if (motionState === "closing") {
@@ -76,20 +68,6 @@ export default function IconRouteOverlay({ type, children }) {
       data-icon-overlay={type}
       onAnimationEnd={handleAnimationEnd}
     >
-      {type === "notification" && (
-        <button
-          type="button"
-          onClick={closeNotification}
-          aria-label={t("appHeader.notifications")}
-          className="qurbi-notification-overlay-close fixed z-[221] flex h-11 w-11 items-center justify-center rounded-full text-[#41362D] transition-transform active:scale-90"
-          style={{
-            left: `${origin.x - 22}px`,
-            top: `${origin.y - 22}px`,
-          }}
-        >
-          <Bell className="h-5 w-5" />
-        </button>
-      )}
       {children}
     </div>
   );

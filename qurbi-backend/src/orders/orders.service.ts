@@ -432,7 +432,7 @@ export class OrdersService {
     }
     await manager.save(order);
 
-    await manager.save(
+    const trackingEvent = await manager.save(
       manager.create(OrderTrackingEvent, {
         orderId: order.id,
         status: toStatus,
@@ -442,6 +442,25 @@ export class OrdersService {
         createdByUserId: opts.userId ?? null,
       }),
     );
+
+    if (
+      opts.images?.length &&
+      FULFILMENT_ADVANCE_TARGETS.includes(toStatus)
+    ) {
+      const update = deliveryNotificationFor(toStatus);
+      await manager.save(
+        manager.create(Notification, {
+          userId: order.buyerId,
+          audience: NotificationAudience.BUYER,
+          type: NotificationType.DELIVERY,
+          title: update.title,
+          body: update.body,
+          linkUrl: `/orders/${order.id}`,
+          relatedType: 'order_tracking_event',
+          relatedId: trackingEvent.id,
+        }),
+      );
+    }
 
     if (toStatus === OrderStatus.CANCELLED) {
       await this.reservationsService.cancelOrder(manager, order.id);
@@ -614,6 +633,34 @@ export class OrdersService {
         userId: actor.id,
         extra: { receivedProofImages: proofImages },
       });
+    });
+  }
+
+  async saveReceivedProof(
+    id: string,
+    actor: Actor,
+    proofImages: string[],
+  ): Promise<Order> {
+    return this.dataSource.transaction(async (manager) => {
+      const order = await this.loadOwnedOrder(manager, id, actor, ['buyer']);
+      if (order.status !== OrderStatus.DELIVERED) {
+        throw new ConflictException(
+          'Received proof can only be saved after the farmer marks the order delivered',
+        );
+      }
+      order.receivedProofImages = proofImages;
+      await manager.save(order);
+      const savedOrder = await manager.findOne(Order, {
+        where: { id },
+        relations: {
+          items: true,
+          trackingEvents: true,
+          reservations: true,
+          buyer: true,
+        },
+      });
+      if (!savedOrder) throw new NotFoundException(`Order ${id} not found`);
+      return savedOrder;
     });
   }
 
@@ -888,6 +935,28 @@ export class OrdersService {
       return order;
     });
   }
+}
+
+function deliveryNotificationFor(status: OrderStatus): {
+  title: string;
+  body: string;
+} {
+  if (status === OrderStatus.PREPARING) {
+    return {
+      title: 'Farmer uploaded a preparation photo',
+      body: 'A new before-delivery proof photo is ready to view in your order.',
+    };
+  }
+  if (status === OrderStatus.IN_TRANSIT) {
+    return {
+      title: 'Your order is on the way',
+      body: 'The farmer uploaded a delivery progress photo for your order.',
+    };
+  }
+  return {
+    title: 'Your order has arrived',
+    body: 'The farmer uploaded the arrival proof photo. Open your order to review it.',
+  };
 }
 
 function isDuplicateOrderNumberError(err: unknown): boolean {

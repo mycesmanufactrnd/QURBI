@@ -480,9 +480,16 @@ export default function Payment() {
     }
     try {
       const latest = await checkCartAvailability(paymentItems);
-      if (paymentItems.some((item) => !latest[item.key]?.available)) {
+      const isBlocked = (item) => {
+        const result = latest[item.key];
+        return (
+          !result?.available &&
+          !(isResumingOrder && result?.state === "reserved_by_you")
+        );
+      };
+      if (paymentItems.some(isBlocked)) {
         const unavailable = paymentItems.find(
-          (item) => !latest[item.key]?.available,
+          isBlocked,
         );
         setCheckoutError({
           title: t("payment.errorUnavailableTitle"),
@@ -501,57 +508,8 @@ export default function Payment() {
     setLoading(true);
     let checkoutOrder = resumedOrder;
     try {
-      const orderNumber = resumedOrder?.order_number || "GH-" + Date.now();
-      const order =
-        resumedOrder ||
-        (await qurbiApi.entities.Order.create({
-          order_number: orderNumber,
-          items: paymentItems.map((i) =>
-            i.item_type === "bulk"
-              ? {
-                  item_type: "bulk",
-                  bulk_listing_id: i.bulk_listing_id || i.id,
-                  farmer_id: i.farmer_id || "",
-                  farmer_name: i.farmer_name || "",
-                  listing_name: i.listing_name,
-                  male_count: i.male_count || 0,
-                  female_count: i.female_count || 0,
-                  total_animals: i.total_animals || 0,
-                  breed_breakdown: i.breed_breakdown || [],
-                  state: i.state || "",
-                  quantity: 1,
-                  price_per_head: i.price_per_head,
-                  total: i.total,
-                }
-              : {
-                  livestock_id: i.livestock_id || i.id,
-                  farmer_id: i.farmer_id || "",
-                  farmer_name: i.farmer_name || "",
-                  animal: i.animal,
-                  breed: i.breed,
-                  grade: i.grade,
-                  quantity: 1,
-                  weight_min: i.weight_min,
-                  weight_max: i.weight_max,
-                  price_per_head: i.price_per_head,
-                  total: i.total,
-                },
-          ),
-          subtotal: paymentSubtotal,
-          delivery_fee: deliveryFee,
-          total: grandTotal,
-          status: "pending",
-          fulfillment_method: fulfillmentMethod,
-          buyer_name: buyerName,
-          buyer_email: buyerEmail,
-          buyer_phone: buyerPhone,
-          buyer_id: user.id,
-        }));
-      checkoutOrder = order;
       const res = await qurbiApi.functions.invoke("createCheckout", {
         orderIds: resumedOrder?.order_ids || [],
-        orderId: order.id,
-        orderNumber,
         items: paymentItems,
         buyerEmail,
         buyerName,
@@ -562,6 +520,8 @@ export default function Payment() {
         deliveryAddress: selectedAddress || resumedOrder?.delivery_address || {},
         checkoutGroupId: resumedOrder?.checkout_group_id || newCheckoutGroupId,
       });
+      const order = res.data?.order || res.data?.orders?.[0] || resumedOrder;
+      checkoutOrder = order;
       if (res.data?.url) {
         if (!isResumingOrder) {
           if (isBuyNowCheckout) clearBuyNow();
@@ -573,11 +533,15 @@ export default function Payment() {
           title: t("payment.paymentCouldNotStartTitle"),
           message: t("payment.paymentCouldNotStartMessage"),
           reserved: true,
-          orderId: order.id,
+          orderId: order?.id || "",
         };
-        navigateWithTransition(`/orders/${encodeURIComponent(order.id)}?fromTab=to-pay`, {
-          navigateOptions: { replace: true, state: { paymentError: paymentFailure, returnTo: "/orders?tab=to-pay" } },
-        });
+        if (order?.id) {
+          navigateWithTransition(`/orders/${encodeURIComponent(order.id)}?fromTab=to-pay`, {
+            navigateOptions: { replace: true, state: { paymentError: paymentFailure, returnTo: "/orders?tab=to-pay" } },
+          });
+        } else {
+          setCheckoutError(paymentFailure);
+        }
       }
     } catch (err) {
       const reservedOrder = checkoutOrder?.id ? checkoutOrder : await findReservedOrder();

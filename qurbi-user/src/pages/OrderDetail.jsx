@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Link,
@@ -9,6 +9,7 @@ import {
 } from "react-router-dom";
 import { Camera, Check, ChevronRight, CircleAlert, MapPin, Package, Truck } from "lucide-react";
 import { qurbiApi } from "@/api/qurbiClient";
+import apiClient from "@/api/apiClient";
 import { useAuth } from "@/lib/AuthContext";
 import { useAuthPrompt } from "@/lib/auth-prompt-context";
 import { formatOrderDateTime } from "@/lib/order-date";
@@ -47,28 +48,60 @@ const TRACKING_STAGES = [
   },
 ];
 
-const TAB_FOR_STATUS = {
-  pending: "to-pay",
-  pending_payment: "to-pay",
-  to_pay: "to-pay",
-  cancelled: "to-pay",
-  out_of_stock: "to-pay",
-  paid: "to-ship",
-  preparing: "to-ship",
-  to_ship: "to-ship",
-  processing: "to-ship",
-  in_transit: "to-receive",
-  shipped: "to-receive",
-  to_receive: "to-receive",
-  delivering: "to-receive",
-  delivered: "to-receive",
-  completed: "completed",
-  received: "completed",
-  return_requested: "return-refund",
-  refund_requested: "return-refund",
-  return_refund: "return-refund",
-  refunded: "return-refund",
-};
+function privateUploadId(value) {
+  if (typeof value !== "string") return "";
+  return value.match(/\/uploads\/private\/([^/?#]+)/)?.[1] || "";
+}
+
+function useReadableProofs(tracking) {
+  const rawProofs = TRACKING_STAGES.map((stage) => ({
+    ...stage,
+    rawImage: tracking?.[stage.key]?.image_url || "",
+  })).filter((proof) => proof.rawImage);
+  const signature = rawProofs
+    .map((proof) => `${proof.key}:${proof.rawImage}`)
+    .join("|");
+  const [privateSources, setPrivateSources] = useState({});
+
+  useEffect(() => {
+    let active = true;
+    const objectUrls = [];
+    const loadPrivateProofs = async () => {
+      const entries = await Promise.all(
+        rawProofs.map(async (proof) => {
+          const uploadId = privateUploadId(proof.rawImage);
+          if (!uploadId) return [proof.rawImage, proof.rawImage];
+          try {
+            const response = await apiClient.get(
+              `/uploads/private/${encodeURIComponent(uploadId)}`,
+              { responseType: "blob" },
+            );
+            const objectUrl = URL.createObjectURL(response.data);
+            objectUrls.push(objectUrl);
+            return [proof.rawImage, objectUrl];
+          } catch {
+            return [proof.rawImage, ""];
+          }
+        }),
+      );
+      if (active) setPrivateSources(Object.fromEntries(entries));
+    };
+    loadPrivateProofs();
+    return () => {
+      active = false;
+      objectUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [signature]);
+
+  return rawProofs
+    .map((proof) => ({
+      ...proof,
+      image: privateUploadId(proof.rawImage)
+        ? privateSources[proof.rawImage] || ""
+        : proof.rawImage,
+    }))
+    .filter((proof) => proof.image);
+}
 
 function LegacyOrderTracking({ order, onPreview }) {
   const { t } = useTranslation("orders");
@@ -190,10 +223,7 @@ function OrderTracking({ order, onPreview }) {
   const { t: ta } = useTranslation("account");
   const tracking = order.tracking_photos || {};
 
-  const proofs = TRACKING_STAGES.map((stage) => ({
-    ...stage,
-    image: tracking[stage.key]?.image_url,
-  })).filter((proof) => proof.image);
+  const proofs = useReadableProofs(tracking);
 
   const [selectedKey, setSelectedKey] =
     useState(
@@ -497,6 +527,10 @@ export default function OrderDetail() {
 
   const [previewImage, setPreviewImage] =
     useState(null);
+  const orderRef = useRef(null);
+  const activeOrderKeyRef = useRef(groupOrderParam);
+  const requestSequenceRef = useRef(0);
+  const requestInFlightRef = useRef(new Set());
 
   const [paymentError, setPaymentError] =
     useState(
@@ -505,8 +539,24 @@ export default function OrderDetail() {
         null,
     );
 
+  useEffect(() => {
+    orderRef.current = order;
+  }, [order]);
+
+  // React Router can keep this component mounted when only the order id
+  // changes. Clear the previous order before paint so it is never shown under
+  // the newly selected order's URL while the fresh request is in flight.
+  useLayoutEffect(() => {
+    if (activeOrderKeyRef.current === groupOrderParam) return;
+    activeOrderKeyRef.current = groupOrderParam;
+    orderRef.current = null;
+    setOrder(null);
+    setLoadError("");
+    setLoading(true);
+  }, [groupOrderParam]);
+
   const loadOrder = useCallback(
-    async () => {
+    async ({ silent = false } = {}) => {
       if (!authChecked) return;
 
       if (
@@ -518,8 +568,20 @@ export default function OrderDetail() {
         return;
       }
 
-      setLoading(true);
-      setLoadError("");
+      // Older checkout code could navigate here with a client-only placeholder
+      // such as `pending-...`. It was never a MySQL order id, so do not keep
+      // retrying an API request that can only return 404.
+      if (detailOrderIds.some((id) => id.startsWith("pending-"))) {
+        navigate("/orders?tab=to-pay", { replace: true });
+        return;
+      }
+
+      const requestKey = groupOrderParam;
+      if (requestInFlightRef.current.has(requestKey)) return;
+      requestInFlightRef.current.add(requestKey);
+      const requestSequence = ++requestSequenceRef.current;
+      if (!silent && !orderRef.current) setLoading(true);
+      if (!silent) setLoadError("");
 
     try {
       const responses = await Promise.all(
@@ -527,21 +589,43 @@ export default function OrderDetail() {
           qurbiApi.functions.invoke("fetchMyOrders", { orderId: id }),
         ),
       );
+      if (requestSequence !== requestSequenceRef.current) return;
       setOrder(combineOrders(responses.map((response) => response.data?.order)));
     } catch (error) {
-      setLoadError(
-        error.data?.error ||
-          error.message ||
-          "We couldn't load this order. Please try again.",
-      );
+      if (requestSequence === requestSequenceRef.current && !orderRef.current) {
+        setLoadError(
+          error.data?.error ||
+            error.message ||
+            "We couldn't load this order. Please try again.",
+        );
+      }
     } finally {
-      setLoading(false);
+      requestInFlightRef.current.delete(requestKey);
+      if (requestSequence === requestSequenceRef.current) setLoading(false);
     }
-  }, [authChecked, groupOrderParam, isAuthenticated, user?.id]);
+  }, [authChecked, groupOrderParam, isAuthenticated, navigate, user?.id]);
 
   useEffect(() => {
     loadOrder();
-  }, [loadOrder]);
+  }, [loadOrder, location.key, location.state?.refreshOrderAt]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) return undefined;
+    const refreshVisibleOrder = () => {
+      if (document.visibilityState === "visible") {
+        loadOrder({ silent: true });
+      }
+    };
+    const interval = window.setInterval(refreshVisibleOrder, 7000);
+    window.addEventListener("focus", refreshVisibleOrder);
+    document.addEventListener("visibilitychange", refreshVisibleOrder);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refreshVisibleOrder);
+      document.removeEventListener("visibilitychange", refreshVisibleOrder);
+      requestSequenceRef.current += 1;
+    };
+  }, [isAuthenticated, loadOrder, user?.id]);
 
   useEffect(() => {
     if (!message) return undefined;
@@ -735,6 +819,7 @@ export default function OrderDetail() {
         <AppHeader
           title={t("orderDetail.title")}
           backTo="/orders"
+          preferRecentBack={false}
           subtitle="Track your purchase and delivery progress"
         />
         <PageLoading contentOnly message="Loading order details..." />
@@ -748,7 +833,7 @@ export default function OrderDetail() {
   ) {
     return (
       <div className="aisyah-page min-h-screen pb-28">
-        <AppHeader title="Order Details" backTo="/orders" subtitle="Track your purchase and delivery progress" />
+        <AppHeader title="Order Details" backTo="/orders" preferRecentBack={false} subtitle="Track your purchase and delivery progress" />
         <div className="aisyah-content flex flex-col items-center justify-center gap-3 py-20 text-center">
           <Package className="h-12 w-12 text-[#41362D]/35" />
           <p className="text-sm text-[#41362D]/65">Sign in to view this order.</p>
@@ -769,7 +854,7 @@ export default function OrderDetail() {
       <div className="qurbi-page flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center">
         <Package className="h-12 w-12 text-[#41362D]/25" />
         <p className="max-w-sm text-sm text-[#41362D]/65">{loadError}</p>
-        <button type="button" onClick={loadOrder} className="qurbi-primary-button">
+        <button type="button" onClick={() => loadOrder()} className="qurbi-primary-button">
           Retry
         </button>
         <Link to="/orders" className="text-sm font-bold text-[#6B594A]">
@@ -809,13 +894,6 @@ export default function OrderDetail() {
         )
       : [];
 
-  const returnTab =
-    searchParams.get("fromTab") || TAB_FOR_STATUS[order.status] || "to-pay";
-  const returnPath =
-    returnTab === "transaction-history" || returnTab === "history"
-      ? "/transaction-history"
-      : `/orders?tab=${encodeURIComponent(returnTab)}`;
-  const forcedReturnPath = location.state?.returnTo || "";
   const pendingPaymentStatuses = ["pending", "pending_payment", "to_pay"];
   const isAwaitingPayment = [
     order.status,
@@ -836,8 +914,8 @@ export default function OrderDetail() {
     <div className={`aisyah-page ${stickyAction ? "pb-[calc(11rem+env(safe-area-inset-bottom))]" : ""}`}>
       <AppHeader
         title={t("orderDetail.title")}
-        backTo={forcedReturnPath || returnPath}
-        preferRecentBack={!forcedReturnPath}
+        backTo="/orders"
+        preferRecentBack={false}
       />
 
       {message && (
@@ -1140,7 +1218,7 @@ export default function OrderDetail() {
                   setRefundSheetOpen(true);
                 }}
                 disabled={actionLoading}
-                className="min-h-11 rounded-xl border border-red-100 px-3 text-sm font-bold text-red-500 disabled:opacity-50"
+                className="min-h-11 rounded-xl border border-red-100 px-3 text-sm font-bold text-white disabled:opacity-50"
               >
                 Return / Refund
               </button>
@@ -1153,7 +1231,7 @@ export default function OrderDetail() {
                   !farmerPhotosComplete ||
                   !order.tracking_photos?.received?.image_url
                 }
-                className="min-h-11 rounded-xl  px-3 text-sm font-bold text-white disabled:opacity-50"
+                className="min-h-11 rounded-xl border border-[#F7EDE2]/80 px-3 text-sm font-bold text-white disabled:opacity-50"
               >
                 {actionLoading ? "Updating..." : "Approve Receive"}
               </button>

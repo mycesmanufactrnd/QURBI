@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useId, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -324,29 +324,60 @@ export default function Orders() {
   const [cancelCandidate, setCancelCandidate] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
   const [cancelError, setCancelError] = useState("");
+  const ordersRef = useRef([]);
+  const requestSequenceRef = useRef(0);
+  const requestInFlightRef = useRef(false);
 
-  const loadOrders = useCallback(async () => {
+  useEffect(() => {
+    ordersRef.current = orders;
+  }, [orders]);
+
+  const loadOrders = useCallback(async ({ silent = false } = {}) => {
     if (!authChecked) return;
     if (!isAuthenticated || !user?.id) {
       setOrders([]);
       setLoading(false);
       return;
     }
-    setLoading(true);
-    setError("");
+    if (requestInFlightRef.current) return;
+    requestInFlightRef.current = true;
+    const requestSequence = ++requestSequenceRef.current;
+    if (!silent && !ordersRef.current.length) setLoading(true);
+    if (!silent) setError("");
     try {
       const response = await qurbiApi.functions.invoke("fetchMyOrders", {});
+      if (requestSequence !== requestSequenceRef.current) return;
       setOrders(response.data?.orders || []);
     } catch {
-      setError(t("orders.loadError"));
+      if (requestSequence === requestSequenceRef.current && !ordersRef.current.length) {
+        setError(t("orders.loadError"));
+      }
     } finally {
-      setLoading(false);
+      if (requestSequence === requestSequenceRef.current) setLoading(false);
+      requestInFlightRef.current = false;
     }
   }, [authChecked, isAuthenticated, user?.id]);
 
   useEffect(() => {
     loadOrders();
   }, [loadOrders]);
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) return undefined;
+    const refreshVisibleOrders = () => {
+      if (document.visibilityState === "visible") {
+        loadOrders({ silent: true });
+      }
+    };
+    const interval = window.setInterval(refreshVisibleOrders, 7000);
+    window.addEventListener("focus", refreshVisibleOrders);
+    document.addEventListener("visibilitychange", refreshVisibleOrders);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refreshVisibleOrders);
+      document.removeEventListener("visibilitychange", refreshVisibleOrders);
+      requestSequenceRef.current += 1;
+    };
+  }, [isAuthenticated, loadOrders, user?.id]);
   useEffect(() => {
     const queryTab = new URLSearchParams(window.location.search).get("tab");
     if (ORDER_TABS.some((tab) => tab.key === queryTab))
@@ -510,7 +541,7 @@ export default function Orders() {
             {error ? (
               <div className="flex flex-col items-center gap-3 rounded-2xl border border-[#E3C19F] bg-[#FFFDF9] px-5 py-10 text-center">
                 <p className="text-[15px] font-semibold text-[#41362D]">{error}</p>
-                <button type="button" onClick={loadOrders} className={`${primaryBtn} px-8`}>
+                <button type="button" onClick={() => loadOrders()} className={`${primaryBtn} px-8`}>
                   {t("orders.retry")}
                 </button>
               </div>

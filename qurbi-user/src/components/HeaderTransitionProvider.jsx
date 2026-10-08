@@ -315,6 +315,10 @@ export default function HeaderTransitionProvider({ children }) {
 
   useEffect(() => {
     const handleLinkClick = (event) => {
+      // The Profile icon owns its compact action menu. Never reinterpret that
+      // click as clicking the current /profile route, which would close the
+      // fullscreen icon overlay before the menu can open.
+      if (event.target.closest("[data-profile-action-trigger]")) return;
       if (
         event.defaultPrevented ||
         event.button !== 0 ||
@@ -346,7 +350,7 @@ export default function HeaderTransitionProvider({ children }) {
         const headerIcon =
           destinationType === "notification"
             ? document.querySelector('a[href="/notifications"][aria-label]')
-            : document.querySelector('a[aria-label="Open profile"]');
+            : document.querySelector("[data-profile-trigger]");
         beginIconTransition(destinationType, headerIcon || link);
       }
       navigateWithTransition(destination, {

@@ -242,6 +242,12 @@ export default function Notifications() {
       if (notification.order_id) {
         navigateFromIconPage(
           `/orders/${encodeURIComponent(notification.order_id)}`,
+          {
+            state: {
+              fromNotification: true,
+              refreshOrderAt: Date.now(),
+            },
+          },
         );
       } else if (notification.link_url?.startsWith("/") && !notification.link_url.startsWith("//")) {
         navigateFromIconPage(notification.link_url);
