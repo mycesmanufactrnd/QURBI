@@ -9,7 +9,7 @@
     "entryTitle": "Import livestock with OCR",
     "entryDescription": "Scan veterinary certificates, birth records or livestock detail sheets.",
     "title": "Import documents with OCR",
-    "description": "Upload clear document photos. QURBI will suggest values for you to review before filling the form.",
+    "description": "Upload clear documents for one species per bulk listing. QURBI will suggest values for you to review before filling the form.",
     "privateTitle": "Processed on this device",
     "privateDescription": "The selected document images stay in your browser and are not uploaded to QURBI.",
     "chooseImages": "Choose document images",
@@ -19,6 +19,12 @@
     "duplicateFilesSkipped_other": "{{count}} duplicate images were skipped.",
     "duplicateDocumentsIgnored_one": "One repeated document result was ignored to prevent double counting.",
     "duplicateDocumentsIgnored_other": "{{count}} repeated document results were ignored to prevent double counting.",
+    "mixedSpeciesBlocked": "Cow and Goat data were detected in the same upload. A bulk listing can contain only one species. Remove the unrelated documents and scan again.",
+    "conflictingFields": "Some documents contain different identifiers or locations. Conflicting summary values were left blank for manual review.",
+    "invalidIdentifiersIgnored": "Heading words such as INFORMATION or TOTAL were ignored because they are not valid certificate or animal IDs.",
+    "documentBreakdown": "Result by document",
+    "documentNumber": "Document {{count}}",
+    "noCompleteGroup": "No complete species, breed and count group detected",
     "removeFile": "Remove {{name}}",
     "processing": "Reading documents...",
     "failed": "The documents could not be read. Use a clearer, well-lit image and try again.",
@@ -38,7 +44,8 @@
     "documentTypes": {
       "veterinary": "Veterinary health certificate",
       "birth": "Livestock birth record",
-      "livestock_details": "Livestock details document"
+      "livestock_details": "Livestock details document",
+      "mixed": "Mixed document set"
     },
     "fields": {
       "documentType": "Document type",

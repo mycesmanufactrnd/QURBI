@@ -42,7 +42,10 @@ export default function BulkOcrImporter({ managedBreeds = [], onApply }) {
     setProgress(0);
     try {
       const pages = await recognizeLivestockFiles(files, setProgress);
-      const pageResults = pages.map((page) => parseLivestockDocument(page.text, knownBreeds, page.confidence, MALAYSIA_STATES));
+      const pageResults = pages.map((page) => ({
+        ...parseLivestockDocument(page.text, knownBreeds, page.confidence, MALAYSIA_STATES),
+        filename: page.filename,
+      }));
       const combined = combineLivestockDocuments(pageResults);
       setResult(combined);
       if (!combined.groups.length) setError(t("ocr.noBulkData"));
@@ -54,7 +57,7 @@ export default function BulkOcrImporter({ managedBreeds = [], onApply }) {
   };
 
   const apply = () => {
-    if (!result?.groups.length) return;
+    if (!result?.groups.length || result.blockingWarnings?.length) return;
     onApply(result);
     setOpen(false);
     setFiles([]);
@@ -87,7 +90,7 @@ export default function BulkOcrImporter({ managedBreeds = [], onApply }) {
           </div>
           <DialogFooter className="gap-2 sm:gap-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={processing} className="h-11">{t("ocr.cancel")}</Button>
-            {!result ? <Button type="button" onClick={runOcr} disabled={!files.length || processing} className="h-11">{processing ? t("ocr.processing") : t("ocr.scan")}</Button> : <Button type="button" onClick={apply} disabled={!result.groups.length} className="h-11"><CheckCircle2 className="mr-2 h-4 w-4" />{t("ocr.apply")}</Button>}
+            {!result ? <Button type="button" onClick={runOcr} disabled={!files.length || processing} className="h-11">{processing ? t("ocr.processing") : t("ocr.scan")}</Button> : <Button type="button" onClick={apply} disabled={!result.groups.length || Boolean(result.blockingWarnings?.length)} className="h-11"><CheckCircle2 className="mr-2 h-4 w-4" />{t("ocr.apply")}</Button>}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -112,5 +115,41 @@ function OcrReview({ result, t }) {
     [t("ocr.fields.state"), result.state],
     [t("ocr.fields.veterinaryOfficer"), result.veterinaryOfficer],
   ];
-  return <div className="rounded-2xl border border-border p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="font-extrabold">{t("ocr.reviewTitle")}</h3><p className="mt-1 text-sm text-muted-foreground">{t("ocr.reviewDescription")}</p></div><span className={cn("shrink-0 rounded-full px-2.5 py-1 text-xs font-bold", result.confidence >= 75 ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900")}>{t("ocr.confidence", { count: result.confidence })}</span></div><p className="mt-3 text-sm font-semibold text-muted-foreground">{t("ocr.documentsRead", { count: result.documentCount })}</p>{result.duplicateCount > 0 && <p className="mt-2 rounded-xl bg-amber-50 p-2.5 text-sm text-amber-900">{t("ocr.duplicateDocumentsIgnored", { count: result.duplicateCount })}</p>}<dl className="mt-2 divide-y divide-border/60">{fields.map(([label, value]) => <div key={label} className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-3 py-2.5 text-sm"><dt className="text-muted-foreground">{label}</dt><dd className={cn("break-words text-right font-bold", !value && "text-amber-700")}>{value || t("ocr.notDetected")}</dd></div>)}</dl>{result.groups.length > 0 && <div className="mt-4"><p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{t("ocr.detectedGroups")}</p><div className="mt-2 space-y-2">{result.groups.map((group) => <div key={`${group.species}:${group.breed}`} className="flex items-center justify-between gap-3 rounded-xl bg-muted/55 p-3 text-sm"><span className="font-bold">{group.species} · {group.breed}</span><span className="text-muted-foreground">{t("ocr.groupCount", { male: group.maleCount, female: group.femaleCount })}</span></div>)}</div></div>}<p className="mt-4 flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{t("ocr.notVerification")}</p></div>;
+  const mixedSpecies = result.blockingWarnings?.includes("mixed_species");
+  const conflictingFields = result.warnings?.includes("conflicting_fields");
+  const rejectedIdentifiers = result.warnings?.some((warning) => ["invalid_certificate_number", "invalid_animal_id"].includes(warning));
+
+  return (
+    <div className="rounded-2xl border border-border p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div><h3 className="font-extrabold">{t("ocr.reviewTitle")}</h3><p className="mt-1 text-sm text-muted-foreground">{t("ocr.reviewDescription")}</p></div>
+        <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-xs font-bold", result.confidence >= 75 ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900")}>{t("ocr.confidence", { count: result.confidence })}</span>
+      </div>
+      <p className="mt-3 text-sm font-semibold text-muted-foreground">{t("ocr.documentsRead", { count: result.documentCount })}</p>
+      {result.duplicateCount > 0 && <p className="mt-2 rounded-xl bg-amber-50 p-2.5 text-sm text-amber-900">{t("ocr.duplicateDocumentsIgnored", { count: result.duplicateCount })}</p>}
+      {mixedSpecies && <p role="alert" className="mt-2 flex items-start gap-2 rounded-xl bg-destructive/10 p-3 text-sm font-semibold text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{t("ocr.mixedSpeciesBlocked")}</p>}
+      {!mixedSpecies && conflictingFields && <p className="mt-2 flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{t("ocr.conflictingFields")}</p>}
+      {rejectedIdentifiers && <p className="mt-2 rounded-xl bg-sky-50 p-3 text-sm text-sky-900">{t("ocr.invalidIdentifiersIgnored")}</p>}
+
+      {result.documents?.length > 1 && (
+        <div className="mt-4">
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{t("ocr.documentBreakdown")}</p>
+          <div className="mt-2 space-y-2">
+            {result.documents.map((document, index) => (
+              <div key={`${document.filename}-${index}`} className="rounded-xl bg-muted/55 p-3 text-sm">
+                <p className="truncate font-bold">{document.filename || t("ocr.documentNumber", { count: index + 1 })}</p>
+                <p className="mt-0.5 text-muted-foreground">{document.species && document.breed
+                  ? `${document.species} · ${document.breed} · ${t("ocr.groupCount", { male: document.maleCount, female: document.femaleCount })}`
+                  : t("ocr.noCompleteGroup")}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <dl className="mt-2 divide-y divide-border/60">{fields.map(([label, value]) => <div key={label} className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-3 py-2.5 text-sm"><dt className="text-muted-foreground">{label}</dt><dd className={cn("break-words text-right font-bold", !value && "text-amber-700")}>{value || t("ocr.notDetected")}</dd></div>)}</dl>
+      {result.groups.length > 0 && <div className="mt-4"><p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{t("ocr.detectedGroups")}</p><div className="mt-2 space-y-2">{result.groups.map((group) => <div key={`${group.species}:${group.breed}`} className="flex items-center justify-between gap-3 rounded-xl bg-muted/55 p-3 text-sm"><span className="font-bold">{group.species} · {group.breed}</span><span className="text-muted-foreground">{t("ocr.groupCount", { male: group.maleCount, female: group.femaleCount })}</span></div>)}</div></div>}
+      <p className="mt-4 flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{t("ocr.notVerification")}</p>
+    </div>
+  );
 }
