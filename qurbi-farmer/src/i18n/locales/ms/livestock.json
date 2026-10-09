@@ -215,6 +215,19 @@
   "form": {
     "submitLabel": "Simpan Senarai",
     "stillNeeded": "Masih diperlukan:",
+    "wizard": {
+      "animal": "Haiwan",
+      "listing": "Senarai",
+      "media": "Gambar",
+      "review": "Semakan",
+      "step": "Langkah {{current}} daripada {{total}}",
+      "back": "Kembali",
+      "next": "Seterusnya",
+      "reviewTitle": "Semak senarai anda",
+      "reviewDescription": "Semak butiran penting sebelum menyimpan atau meneruskan.",
+      "notSet": "Belum ditetapkan",
+      "photoCount": "{{count}} gambar"
+    },
     "sections": {
       "photosTitle": "Gambar & video",
       "photosDescription": "Pembeli membuat keputusan berdasarkan gambar terlebih dahulu.",

@@ -1,6 +1,8 @@
 // Order item images and proof photos arrive as API-relative paths
 // ("/uploads/public/..."); resolve them against the API origin.
-const API_ORIGIN = String(import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api")
+const API_BASE_URL = String(import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api")
+  .replace(/\/$/, "");
+const API_ORIGIN = API_BASE_URL
   .replace(/\/$/, "")
   .replace(/\/api$/, "");
 
@@ -9,6 +11,9 @@ export function accountMediaUrl(value) {
   if (typeof value !== "string" || !value.trim()) return "";
   const reference = value.trim();
   if (/^(?:https?:|data:|blob:)/i.test(reference)) return reference;
+  if (reference.startsWith("/uploads/private/")) {
+    return `${API_BASE_URL}${reference}`;
+  }
   return `${API_ORIGIN}/${reference.replace(/^\//, "")}`;
 }
 

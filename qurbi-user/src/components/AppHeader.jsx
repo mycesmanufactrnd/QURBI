@@ -1,6 +1,7 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
-import { ArrowLeft, Bell, Leaf, User } from "lucide-react";
+import { ArrowLeft, Bell, Leaf, LogOut, User } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/AuthContext";
 import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
@@ -9,6 +10,8 @@ import { recentPageOr } from "@/lib/navigation";
 
 const HEADER_SHRINK_SCROLL_Y = 12;
 const HEADER_EXPAND_SCROLL_Y = 4;
+const useIsomorphicLayoutEffect =
+  typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 /** Shared QURBI page header for normal in-app screens. */
 export default function AppHeader({
@@ -29,35 +32,50 @@ export default function AppHeader({
 }) {
   const { t } = useTranslation("common");
   const location = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const { unreadCount } = useNotifications();
-  const { isContracting, beginIconTransition, navigateWithTransition } = useHeaderTransition();
+  const showNotificationAction =
+    location.pathname !== "/profile" &&
+    location.pathname !== "/notifications";
+  const isProfilePage = location.pathname === "/profile";
+  const {
+    isContracting,
+    beginIconTransition,
+    navigateWithTransition,
+    requestIconClose,
+  } = useHeaderTransition();
   const hasExpandableContent = Boolean(search || children);
   const [extraVisible, setExtraVisible] = useState(false);
   const [headerEntered, setHeaderEntered] = useState(false);
   const [isScrollShrunk, setIsScrollShrunk] = useState(false);
   const [expandedHeight, setExpandedHeight] = useState(0);
   const headerRef = useRef(null);
+  const profileButtonRef = useRef(null);
+  const pendingProfileActionRef = useRef(null);
+  const [profileMenu, setProfileMenu] = useState(null);
   const shrinkEnabled = progressiveShrink || thresholdShrink;
-  const headerExpanded = headerEntered && !isContracting;
+  const headerExpanded = headerEntered;
+  const routeContentVisible = headerEntered && !isContracting;
   const headerCopyAnimation = isContracting
     ? "animate-header-copy-exit"
     : headerEntered
       ? "animate-header-copy-enter"
       : "header-copy-pending";
 
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setHeaderEntered(true));
-    return () => cancelAnimationFrame(frame);
+  useIsomorphicLayoutEffect(() => {
+    // Commit the entered state before the browser's first paint. Waiting for a
+    // normal effect/RAF briefly painted the newly mounted route with a compact,
+    // empty header and caused a visible flash between pages.
+    setHeaderEntered(true);
   }, []);
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (!hasExpandableContent) {
       setExtraVisible(false);
       return undefined;
     }
-    const frame = requestAnimationFrame(() => setExtraVisible(true));
-    return () => cancelAnimationFrame(frame);
+    setExtraVisible(true);
+    return undefined;
   }, [hasExpandableContent]);
 
   useEffect(() => {
@@ -96,7 +114,7 @@ export default function AppHeader({
     return () => window.clearTimeout(timer);
   }, [shrinkEnabled, headerEntered, extraVisible, title]);
 
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (!shrinkEnabled || !expandedHeight || !headerRef.current) return undefined;
     const page = headerRef.current.closest(".aisyah-page");
     if (!page) return undefined;
@@ -141,6 +159,67 @@ export default function AppHeader({
       }
     : undefined;
 
+  const openProfileMenu = useCallback((button) => {
+    if (!button) return;
+    beginIconTransition("profile", button);
+    const bounds = button.getBoundingClientRect();
+    const width = 176;
+    const left = Math.min(
+      Math.max(12, bounds.right - width),
+      Math.max(12, window.innerWidth - width - 12),
+    );
+    const top = Math.min(bounds.bottom + 8, window.innerHeight - 132);
+    pendingProfileActionRef.current = null;
+    setProfileMenu({
+      phase: "opening",
+      left,
+      top,
+      originX: bounds.left + bounds.width / 2 - left,
+      originY: bounds.top + bounds.height / 2 - top,
+    });
+  }, [beginIconTransition]);
+
+  const closeProfileMenu = useCallback((action = null) => {
+    pendingProfileActionRef.current = action;
+    setProfileMenu((current) =>
+      current ? { ...current, phase: "closing" } : current,
+    );
+  }, []);
+
+  useEffect(() => {
+    if (profileMenu?.phase !== "closing") return undefined;
+    const timer = window.setTimeout(() => {
+      const action = pendingProfileActionRef.current;
+      pendingProfileActionRef.current = null;
+      setProfileMenu(null);
+
+      if (action === "profile") {
+        if (location.pathname !== "/profile") {
+          beginIconTransition("profile", profileButtonRef.current);
+          navigateWithTransition("/profile", { transitionType: "profile" });
+        }
+      } else if (action === "logout") {
+        logout();
+      }
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [beginIconTransition, location.pathname, logout, navigateWithTransition, profileMenu?.phase]);
+
+  useEffect(() => {
+    if (!profileMenu) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") closeProfileMenu();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [closeProfileMenu, profileMenu]);
+
+  useEffect(() => {
+    if (!isProfilePage || !profileMenu) return;
+    pendingProfileActionRef.current = null;
+    setProfileMenu(null);
+  }, [isProfilePage, profileMenu]);
+
   const headerMarkup = (
     <header
       ref={headerRef}
@@ -150,7 +229,7 @@ export default function AppHeader({
       style={{ viewTransitionName: "qurbi-header", ...shrinkStyle }}
     >
       <div
-        className={`relative z-10 flex origin-top flex-col items-center text-center transition-transform duration-500 ease-in-out ${headerExpanded ? "scale-100" : "scale-[0.96]"}`}
+        className="relative z-10 flex flex-col items-center text-center"
       >
         <div className="absolute left-0 top-0 z-20 flex flex-row items-center gap-1">
           {!isAuthenticated && guestActionsOnLeft && (
@@ -201,12 +280,14 @@ export default function AppHeader({
               </Link>
             </>
           )}
-          {isAuthenticated && (
+          {isAuthenticated && showNotificationAction && (
             <Link
               to="/notifications"
-              onClick={(event) =>
-                beginIconTransition("notification", event.currentTarget)
-              }
+              onClick={(event) => {
+                if (!event.defaultPrevented) {
+                  beginIconTransition("notification", event.currentTarget);
+                }
+              }}
               aria-label={
                 unreadCount
                   ? t("appHeader.notificationsUnread", { count: unreadCount })
@@ -223,53 +304,75 @@ export default function AppHeader({
             </Link>
           )}
           {isAuthenticated && (
-            <Link
-              to="/profile"
-              onClick={(event) =>
-                beginIconTransition("profile", event.currentTarget)
+            <button
+              ref={profileButtonRef}
+              type="button"
+              data-profile-trigger
+              data-profile-action-trigger={!isProfilePage ? "" : undefined}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+
+                if (isProfilePage) {
+                  beginIconTransition("profile", event.currentTarget);
+                  if (!requestIconClose("profile")) {
+                    navigateWithTransition(recentPageOr("/"), {
+                      transitionType: "profile",
+                    });
+                  }
+                  return;
+                }
+
+                if (profileMenu) closeProfileMenu();
+                else openProfileMenu(event.currentTarget);
+              }}
+              aria-expanded={isProfilePage ? undefined : Boolean(profileMenu)}
+              aria-haspopup={isProfilePage ? undefined : "menu"}
+              aria-label={
+                isProfilePage
+                  ? t("appHeader.closeProfile")
+                  : t("appHeader.openProfile")
               }
-              aria-label={t("appHeader.openProfile")}
               className="relative flex h-11 w-11 flex-none items-center justify-center transition-transform active:scale-90"
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/30 bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] shadow-lg">
                 <User className="h-5 w-5 text-[#41362D]" />
               </div>
-            </Link>
+            </button>
           )}
         </div>
 
-        <div
-          className={`pointer-events-none flex w-full flex-col items-center text-center ${headerCopyAnimation}`}
-        >
-          <div className="flex items-center justify-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#F7EDE2]/70 bg-white/10 shadow-sm backdrop-blur-sm">
-              <Leaf className="h-3.5 w-3.5 text-white" />
-            </div>
-            {eyebrow ? (
-              <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white/80">
-                {eyebrow}
-              </p>
-            ) : (
+        <div className="qurbi-header-static-brand pointer-events-none flex items-center justify-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#F7EDE2]/70 bg-white/10 shadow-sm backdrop-blur-sm">
+            <Leaf className="h-3.5 w-3.5 text-white" />
+          </div>
+          {eyebrow && (
+            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white/80">
+              {eyebrow}
+            </p>
+          )}
+        </div>
+
+        {title && (
+          <div
+            className={`qurbi-header-route-copy grid w-full ${routeContentVisible ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+            aria-hidden={!routeContentVisible}
+          >
+            <div className="min-h-0 overflow-hidden">
               <h1
-                className={`max-w-[65%] text-xl font-bold leading-tight tracking-tight text-white sm:max-w-none ${titleClassName}`}
+                className={`mx-auto mt-1 max-w-[65%] text-xl font-bold leading-tight tracking-tight text-white sm:max-w-none ${headerCopyAnimation} ${titleClassName}`}
               >
                 {title}
               </h1>
-            )}
+            </div>
           </div>
-          {eyebrow && title && (
-            <h1
-              className={`mt-1 max-w-[65%] text-xl font-bold leading-tight tracking-tight text-white sm:max-w-none ${titleClassName}`}
-            >
-              {title}
-            </h1>
-          )}
-        </div>
+        )}
       </div>
 
       {subtitle && (
         <div
-          className={`relative z-10 grid transition-[grid-template-rows] duration-500 ease-in-out ${headerEntered && !isContracting ? "grid-rows-[1fr] delay-0" : "grid-rows-[0fr]"}`}
+          className={`qurbi-header-route-copy relative z-10 grid ${routeContentVisible ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+          aria-hidden={!routeContentVisible}
         >
           <div
             className="min-h-0 overflow-hidden"
@@ -285,7 +388,7 @@ export default function AppHeader({
       )}
 
       <div
-        className={`relative z-10 grid ${shrinkEnabled ? "transition-[grid-template-rows]" : "transition-[grid-template-rows,opacity]"} duration-500 ease-in-out ${extraVisible && !isContracting ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+        className={`qurbi-header-route-copy relative z-10 grid ${extraVisible && !isContracting ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
         aria-hidden={!hasExpandableContent}
       >
         <div
@@ -303,14 +406,78 @@ export default function AppHeader({
     </header>
   );
 
-  if (!shrinkEnabled) return headerMarkup;
+  const profileActionMenu = !isProfilePage && profileMenu && typeof document !== "undefined"
+    ? createPortal(
+        <div className="qurbi-profile-action-layer">
+          <button
+            type="button"
+            className="qurbi-profile-action-backdrop"
+            aria-label={t("appHeader.profileMenu.close")}
+            onClick={() => closeProfileMenu()}
+          />
+          <div
+            role="menu"
+            aria-label={t("appHeader.profileMenu.label")}
+            className={`qurbi-profile-action-menu qurbi-profile-action-menu-${profileMenu.phase}`}
+            style={
+              /** @type {React.CSSProperties} */ ({
+                left: `${profileMenu.left}px`,
+                top: `${profileMenu.top}px`,
+                "--profile-menu-origin-x": `${profileMenu.originX}px`,
+                "--profile-menu-origin-y": `${profileMenu.originY}px`,
+              })
+            }
+            onAnimationEnd={() => {
+              setProfileMenu((current) =>
+                current?.phase === "opening"
+                  ? { ...current, phase: "open" }
+                  : current,
+              );
+            }}
+          >
+            <button
+              type="button"
+              role="menuitem"
+              className="qurbi-profile-action-item"
+              onClick={() => closeProfileMenu("profile")}
+            >
+              <User className="h-4 w-4" />
+              <span>{t("appHeader.profileMenu.profile")}</span>
+            </button>
+            <div className="mx-3 h-px bg-[#41362D]/15" />
+            <button
+              type="button"
+              role="menuitem"
+              className="qurbi-profile-action-item text-[#B42318]"
+              onClick={() => closeProfileMenu("logout")}
+            >
+              <LogOut className="h-4 w-4" />
+              <span>{t("appHeader.profileMenu.logout")}</span>
+            </button>
+          </div>
+        </div>,
+        document.body,
+      )
+    : null;
+
+  if (!shrinkEnabled) {
+    return (
+      <>
+        {headerMarkup}
+        {profileActionMenu}
+      </>
+    );
+  }
 
   return (
-    <div
-      className={`qurbi-shrinkable-header-shell ${sticky ? "sticky top-0 z-30" : "relative"} w-full`}
-      style={expandedHeight ? { height: `${expandedHeight}px` } : undefined}
-    >
-      {headerMarkup}
-    </div>
+    <>
+      <div
+        className={`qurbi-shrinkable-header-shell ${sticky ? "sticky top-0 z-30" : "relative"} w-full`}
+        style={expandedHeight ? { height: `${expandedHeight}px` } : undefined}
+      >
+        {headerMarkup}
+      </div>
+      {profileActionMenu}
+    </>
   );
 }

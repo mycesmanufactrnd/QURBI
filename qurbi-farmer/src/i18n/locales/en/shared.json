@@ -21,6 +21,10 @@
   "formField": {
     "optional": "(optional)"
   },
+  "progressiveList": {
+    "loadMore_one": "Load {{count}} more",
+    "loadMore_other": "Load {{count}} more"
+  },
   "confirmDialog": {
     "title": "Are you sure?",
     "confirm": "Confirm",

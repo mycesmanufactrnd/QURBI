@@ -8,7 +8,6 @@ import { useTranslation } from "react-i18next";
 import {
   ShoppingCart,
   Check,
-  PackageCheck,
   MapPin,
   RefreshCw,
   AlertCircle,
@@ -196,7 +195,12 @@ export default function LivestockDetail() {
   const [previewImage, setPreviewImage] = useState("");
   const [availabilityModal, setAvailabilityModal] = useState("");
   const [detailsRaised, setDetailsRaised] = useState(false);
-  const [orderCheck, setOrderCheck] = useState({ loading: false, ordered: false });
+  const [orderCheck, setOrderCheck] = useState({
+    loading: true,
+    checked: false,
+    ordered: false,
+    livestockId: "",
+  });
 
   const load = () => {
     setLoading(true);
@@ -267,12 +271,18 @@ export default function LivestockDetail() {
 
   useEffect(() => {
     let active = true;
+    const livestockId = String(id || "");
     if (!authChecked || !isAuthenticated || !user?.id) {
-      setOrderCheck({ loading: !authChecked, ordered: false });
+      setOrderCheck({
+        loading: !authChecked,
+        checked: authChecked,
+        ordered: false,
+        livestockId,
+      });
       return () => { active = false; };
     }
 
-    setOrderCheck({ loading: true, ordered: false });
+    setOrderCheck({ loading: true, checked: false, ordered: false, livestockId });
     qurbiApi.functions.invoke("fetchMyOrders", {})
       .then((response) => {
         if (!active) return;
@@ -281,10 +291,14 @@ export default function LivestockDetail() {
             (item) => String(item.livestock_id || item.livestockId || "") === String(id),
           ),
         );
-        setOrderCheck({ loading: false, ordered });
+        setOrderCheck({ loading: false, checked: true, ordered, livestockId });
       })
       .catch(() => {
-        if (active) setOrderCheck({ loading: false, ordered: false });
+        if (active) {
+          // Fail closed: do not expose purchase controls when the app could
+          // not confirm whether this livestock is already in an order.
+          setOrderCheck({ loading: false, checked: false, ordered: false, livestockId });
+        }
       });
 
     return () => { active = false; };
@@ -453,6 +467,11 @@ export default function LivestockDetail() {
   const selectedMedia = media[activeMedia] || media[0];
   const price = formatRM(livestock.price);
   const listedState = listingState(livestock);
+  const showPurchaseActions =
+    orderCheck.livestockId === String(livestock.id) &&
+    orderCheck.checked &&
+    !orderCheck.loading &&
+    !orderCheck.ordered;
 
   const infoItems = [
     {
@@ -557,7 +576,7 @@ export default function LivestockDetail() {
         )}
       </div>
 
-      <DetailOuterSheet raised={detailsRaised} withActionBar>
+      <DetailOuterSheet raised={detailsRaised} withActionBar={showPurchaseActions}>
         {/* Title + price + status */}
         <section className={reveal()} style={{ animationDelay: "80ms" }} aria-labelledby="livestock-title">
           <h1 id="livestock-title" className="break-words text-2xl font-extrabold leading-tight text-white sm:text-3xl">
@@ -714,26 +733,13 @@ export default function LivestockDetail() {
         )}
       </DetailOuterSheet>
 
-      {/* Primary actions stay reachable above the bottom nav */}
-      <StickyActionBar tone="light" label={tf("detail.actionsLabel")} className="gap-2">
-        <div className="min-w-0 flex-none">
-          <p className="text-xs font-semibold text-[#6B594A]">{tf("detail.price")}</p>
-          <p className="whitespace-nowrap text-lg font-extrabold leading-tight text-[#41362D]">{price}</p>
-        </div>
-        {orderCheck.loading ? (
-          <div className="flex min-h-12 min-w-0 flex-1 items-center justify-center rounded-xl border-2 border-[#E3C19F] bg-[#F7EDE2] px-3 text-center text-sm font-bold text-[#41362D]">
-            {t("livestockDetail.checkingOrders")}
+      {/* Purchase UI is absent until the order check confirms repurchase is allowed. */}
+      {showPurchaseActions && (
+        <StickyActionBar tone="light" label={tf("detail.actionsLabel")} className="gap-2">
+          <div className="min-w-0 flex-none">
+            <p className="text-xs font-semibold text-[#6B594A]">{tf("detail.price")}</p>
+            <p className="whitespace-nowrap text-lg font-extrabold leading-tight text-[#41362D]">{price}</p>
           </div>
-        ) : orderCheck.ordered ? (
-          <button
-            type="button"
-            onClick={() => navigateWithTransition("/orders")}
-            className="flex min-h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] px-3 text-sm font-bold text-white"
-          >
-            <PackageCheck aria-hidden="true" className="h-4 w-4 flex-none" />
-            {t("livestockDetail.alreadyOrdered")}
-          </button>
-        ) : (
           <>
             <button
               type="button"
@@ -760,8 +766,8 @@ export default function LivestockDetail() {
               <span className="text-center leading-tight">{t("livestockDetail.buyNow")}</span>
             </button>
           </>
-        )}
-      </StickyActionBar>
+        </StickyActionBar>
+      )}
 
       <ImageLightbox
         image={previewImage}

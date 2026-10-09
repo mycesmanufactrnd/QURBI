@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   BarChart3,
+  ChevronDown,
   ChevronRight,
   Eye,
   MousePointerClick,
@@ -26,6 +27,8 @@ export default function Analytics() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showAllListings, setShowAllListings] = useState(false);
+  const [showAllActivity, setShowAllActivity] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -46,6 +49,10 @@ export default function Analytics() {
   const chartDays = useMemo(() => (data?.daily || []).slice(days > 14 ? -14 : 0), [data, days]);
   const chartMax = Math.max(1, ...chartDays.map((row) => row.views));
   const totals = data?.totals || {};
+  const topListings = data?.topListings || [];
+  const recentActivity = data?.recentActivity || [];
+  const visibleListings = showAllListings ? topListings : topListings.slice(0, 5);
+  const visibleActivity = showAllActivity ? recentActivity : recentActivity.slice(0, 5);
 
   return (
     <div className="animate-fade-in">
@@ -126,9 +133,9 @@ export default function Analytics() {
         <h2 id="top-listings-title" className="text-lg font-extrabold">{t("top.title")}</h2>
         <p className="mt-0.5 text-sm text-muted-foreground">{t("top.subtitle")}</p>
         <div className="mt-3 space-y-2.5">
-          {!loading && !data?.topListings?.length ? (
+          {!loading && !topListings.length ? (
             <EmptyAnalytics title={t("top.emptyTitle")} body={t("top.emptyBody")} />
-          ) : (data?.topListings || []).map((item, index) => (
+          ) : visibleListings.map((item, index) => (
             <button
               key={`${item.targetType}:${item.targetId}`}
               type="button"
@@ -149,15 +156,16 @@ export default function Analytics() {
             </button>
           ))}
         </div>
+        {topListings.length > 5 && <ExpandButton expanded={showAllListings} count={topListings.length} onClick={() => setShowAllListings((shown) => !shown)} t={t} />}
       </section>
 
       <section className="mt-7" aria-labelledby="activity-title">
         <h2 id="activity-title" className="text-lg font-extrabold">{t("activity.title")}</h2>
         <p className="mt-0.5 text-sm text-muted-foreground">{t("activity.privacy")}</p>
         <div className="soft-card mt-3 divide-y divide-border/60 overflow-hidden">
-          {!loading && !data?.recentActivity?.length ? (
+          {!loading && !recentActivity.length ? (
             <EmptyAnalytics title={t("activity.emptyTitle")} body={t("activity.emptyBody")} />
-          ) : (data?.recentActivity || []).map((item) => {
+          ) : visibleActivity.map((item) => {
             const config = activityConfig(item.eventType, t);
             const Icon = config.icon;
             return (
@@ -172,6 +180,7 @@ export default function Analytics() {
             );
           })}
         </div>
+        {recentActivity.length > 5 && <ExpandButton expanded={showAllActivity} count={recentActivity.length} onClick={() => setShowAllActivity((shown) => !shown)} t={t} />}
       </section>
     </div>
   );
@@ -215,6 +224,10 @@ function EmptyAnalytics({ title, body }) {
       <p className="mt-1 max-w-sm text-sm text-muted-foreground">{body}</p>
     </div>
   );
+}
+
+function ExpandButton({ expanded, count, onClick, t }) {
+  return <button type="button" onClick={onClick} aria-expanded={expanded} className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-bold text-primary transition-colors hover:bg-muted/40">{expanded ? t("showLess") : t("viewAll", { count })}<ChevronDown className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`} /></button>;
 }
 
 function activityConfig(type, t) {

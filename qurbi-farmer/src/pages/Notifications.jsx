@@ -5,6 +5,7 @@ import { qurbi } from "@/api/qurbiClient";
 import { Bell, CheckCheck, CheckCircle2, ChevronRight, Loader2, PackageCheck, ShieldAlert, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import EmptyState from "@/components/agri/EmptyState";
+import LoadMoreButton from "@/components/agri/LoadMoreButton";
 import { formatDateTime, formatRelative } from "@/lib/agri";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +16,7 @@ export default function Notifications() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [marking, setMarking] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(10);
 
   const load = () => {
     setLoading(true);
@@ -77,7 +79,7 @@ export default function Notifications() {
         )}
         {loading ? (
           <div className="flex justify-center py-16"><Loader2 className="h-7 w-7 animate-spin text-primary" /></div>
-        ) : items.length ? items.map((notification) => {
+        ) : items.length ? <>{items.slice(0, visibleCount).map((notification) => {
           const approved = notification.type?.includes("Approved");
           const rejected = notification.type?.includes("Rejected");
           const newOrder = notification.type === "New Order";
@@ -113,7 +115,7 @@ export default function Notifications() {
               {linked && <ChevronRight className="mt-3 h-5 w-5 shrink-0 text-muted-foreground" />}
             </button>
           );
-        }) : !loadError ? (
+        })}<LoadMoreButton shown={visibleCount} total={items.length} onClick={() => setVisibleCount((count) => count + 10)} /></> : !loadError ? (
           <EmptyState icon={Bell} title={t("emptyTitle")} description={t("emptyDescription")} />
         ) : null}
       </div>

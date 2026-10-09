@@ -4,8 +4,15 @@
     "signUp": "Daftar",
     "goBack": "Kembali",
     "openProfile": "Buka profil",
+    "closeProfile": "Tutup profil",
     "notifications": "Buka notifikasi",
-    "notificationsUnread": "Buka notifikasi, {{count}} belum dibaca"
+    "notificationsUnread": "Buka notifikasi, {{count}} belum dibaca",
+    "profileMenu": {
+      "label": "Tindakan akaun",
+      "profile": "Profil",
+      "logout": "Log Keluar",
+      "close": "Tutup tindakan akaun"
+    }
   },
   "bottomNav": {
     "browse": "Lihat",

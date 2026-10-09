@@ -7,6 +7,8 @@
   "overview": "Ringkasan prestasi",
   "loadError": "Analitik tidak dapat dimuatkan. Sila cuba lagi.",
   "retry": "Cuba lagi",
+  "viewAll": "Lihat semua ({{count}})",
+  "showLess": "Tunjuk sedikit",
   "metrics": {
     "views": "Paparan ternakan",
     "visitors": "Pelawat unik",

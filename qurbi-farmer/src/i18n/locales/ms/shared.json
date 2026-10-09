@@ -21,6 +21,9 @@
   "formField": {
     "optional": "(pilihan)"
   },
+  "progressiveList": {
+    "loadMore": "Muat {{count}} lagi"
+  },
   "confirmDialog": {
     "title": "Adakah anda pasti?",
     "confirm": "Sahkan",

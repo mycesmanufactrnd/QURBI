@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import StatusBadge from "@/components/agri/StatusBadge";
 import EmptyState from "@/components/agri/EmptyState";
 import NotificationBell from "@/components/agri/NotificationBell";
+import LoadMoreButton from "@/components/agri/LoadMoreButton";
 import { formatMYR, orderItemTitle, orderPhotoStage, orderStatusMeta } from "@/lib/agri";
 import { cn } from "@/lib/utils";
 import { reconcileOrderLivestockStatuses } from "@/lib/orderLivestockStatus";
@@ -168,11 +169,12 @@ export default function Orders() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [orders, setOrders] = useState([]);
+  const [visibleCount, setVisibleCount] = useState(8);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const requested = searchParams.get("filter");
   const filter = FILTERS.some((item) => item.key === requested) ? requested : "all";
-  const setFilter = (key) => setSearchParams(key === "all" ? {} : { filter: key }, { replace: true });
+  const setFilter = (key) => { setVisibleCount(8); setSearchParams(key === "all" ? {} : { filter: key }, { replace: true }); };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -246,7 +248,7 @@ export default function Orders() {
       )}
 
       {loading ? <LoadingCards /> : !error && filtered.length ? (
-        <div className="mt-4 grid min-w-0 justify-items-center gap-4 xl:grid-cols-2">{filtered.map((order) => <PackageCard key={order.id} order={order} onOpen={(id) => navigate(`/orders/${id}`)} />)}</div>
+        <><div className="mt-4 grid min-w-0 justify-items-center gap-4 xl:grid-cols-2">{filtered.slice(0, visibleCount).map((order) => <PackageCard key={order.id} order={order} onOpen={(id) => navigate(`/orders/${id}`)} />)}</div><LoadMoreButton shown={visibleCount} total={filtered.length} onClick={() => setVisibleCount((count) => count + 8)} /></>
       ) : !error ? (
         <div className="mt-4">
           <EmptyState

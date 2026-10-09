@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UploadedFile, UploadVisibility, UserRole } from '../entities';
+import { Order, UploadedFile, UploadVisibility, UserRole } from '../entities';
 import { StorageService } from './storage/storage.service';
 import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 
@@ -47,6 +47,8 @@ export class UploadsService {
     private readonly storage: StorageService,
     @InjectRepository(UploadedFile)
     private readonly uploadedFileRepository: Repository<UploadedFile>,
+    @InjectRepository(Order)
+    private readonly orderRepository: Repository<Order>,
   ) {}
 
   async upload(
@@ -101,21 +103,34 @@ export class UploadsService {
     };
   }
 
-  // Ownership check for the private-file GET route: the uploader or an
-  // admin, nobody else. Same principle as order ownership — 404 either way a
-  // non-owner asks, so a stranger can't tell a private verification document
-  // exists at all, let alone that it belongs to someone specific.
+  // Private uploads stay private. Besides the uploader and admins, a farmer
+  // may read a buyer's received-proof image only when that exact file is
+  // attached to one of the farmer's orders.
   async getPrivateFileForViewer(
     id: string,
     viewer: AuthenticatedUser,
   ): Promise<UploadedFile> {
     const file = await this.uploadedFileRepository.findOne({ where: { id } });
-    const isOwner = file?.uploaderId === viewer.id;
-    if (
-      !file ||
-      file.visibility !== UploadVisibility.PRIVATE ||
-      (!isOwner && viewer.role !== UserRole.ADMIN)
-    ) {
+    if (!file || file.visibility !== UploadVisibility.PRIVATE) {
+      throw new NotFoundException('File not found');
+    }
+
+    const isOwner = file.uploaderId === viewer.id;
+    const isAdmin = viewer.role === UserRole.ADMIN;
+    let isOrderFarmer = false;
+
+    if (!isOwner && !isAdmin && viewer.role === UserRole.FARMER) {
+      const proofUrl = `/uploads/private/${file.id}`;
+      const farmerOrders = await this.orderRepository.find({
+        where: { farmerId: viewer.id },
+        select: { id: true, receivedProofImages: true },
+      });
+      isOrderFarmer = farmerOrders.some((order) =>
+        (order.receivedProofImages || []).includes(proofUrl),
+      );
+    }
+
+    if (!isOwner && !isAdmin && !isOrderFarmer) {
       throw new NotFoundException('File not found');
     }
     return file;

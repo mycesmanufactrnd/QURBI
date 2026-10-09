@@ -13,7 +13,7 @@ import { useAuth } from "@/lib/AuthContext";
 import NotificationBanner from "@/components/NotificationBanner";
 
 const NotificationContext = createContext(null);
-const POLL_INTERVAL_MS = 30000;
+const POLL_INTERVAL_MS = 5000;
 const bannerStorageKey = (userId) =>
   `qurbi_notification_banners_seen_${userId}`;
 
@@ -124,15 +124,22 @@ export function NotificationProvider({ children }) {
 
   useEffect(() => {
     if (!isAuthenticated) return undefined;
+    const refreshVisibleInbox = () => {
+      if (document.visibilityState === "visible") {
+        refreshNotifications({ silent: true });
+      }
+    };
     const interval = window.setInterval(
-      () => refreshNotifications({ silent: true }),
+      refreshVisibleInbox,
       POLL_INTERVAL_MS,
     );
     const onFocus = () => refreshNotifications({ silent: true });
     window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", refreshVisibleInbox);
     return () => {
       window.clearInterval(interval);
       window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", refreshVisibleInbox);
     };
   }, [isAuthenticated, refreshNotifications]);
 
@@ -220,7 +227,12 @@ export function NotificationProvider({ children }) {
       closeBanner();
       if (!notification.is_read) await markAsRead(notification.id);
       if (notification.order_id) {
-        navigate(`/orders/${encodeURIComponent(notification.order_id)}`);
+        navigate(`/orders/${encodeURIComponent(notification.order_id)}`, {
+          state: {
+            fromNotification: true,
+            refreshOrderAt: Date.now(),
+          },
+        });
       } else {
         navigate("/notifications");
       }
