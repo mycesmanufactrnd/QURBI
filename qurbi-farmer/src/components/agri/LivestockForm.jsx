@@ -10,11 +10,14 @@ import BreedSelector from "@/components/agri/BreedSelector";
 import SpeciesSelector from "@/components/agri/SpeciesSelector";
 import FormField, { scrollToField } from "@/components/agri/FormField";
 import StickyActionBar from "@/components/agri/StickyActionBar";
+import IndividualOcrImporter from "@/components/agri/IndividualOcrImporter";
 import StepIndicator from "@/components/agri/StepIndicator";
 import {
   GENDERS,
   FARMER_LISTING_STATUSES,
   MALAYSIA_STATES,
+  MIN_MARKETPLACE_AGE_MONTHS,
+  ageInMonths,
   formatAge,
   marketplaceEligibleFrom,
   marketplaceVisibility,
@@ -37,7 +40,7 @@ function legacyAge(initial) {
 
 const LivestockForm = forwardRef(
   /**
-   * @param {{ initial?: any, registeredState?: string, onSubmit: (data: any) => void | Promise<void>, submitting?: boolean, submitLabel?: string, hideActions?: boolean, onValidationChange?: (state: { missing: MissingField[], attempted: boolean }) => void }} props
+   * @param {{ initial?: any, registeredState?: string, onSubmit: (data: any) => void | Promise<void>, submitting?: boolean, submitLabel?: string, hideActions?: boolean, enableOcr?: boolean, onValidationChange?: (state: { missing: MissingField[], attempted: boolean }) => void }} props
    * @param {React.ForwardedRef<{ submit: () => boolean }>} ref
    */
   function LivestockForm({
@@ -47,6 +50,7 @@ const LivestockForm = forwardRef(
   submitting,
   submitLabel,
   hideActions = false,
+  enableOcr = false,
   onValidationChange,
 }, ref) {
   const display = useLivestockDisplay();
@@ -99,6 +103,21 @@ const LivestockForm = forwardRef(
     const data = { ...form, ageRecordedAt };
     return { age: display.age(data), visibility: marketplaceVisibility(data) };
   }, [form, ageTouched, t]);
+
+  const ageRecordedAt = ageTouched ? todayForInput() : form.ageRecordedAt;
+  const agePolicyData = { ...form, ageRecordedAt };
+  const minimumMarketplaceAge = MIN_MARKETPLACE_AGE_MONTHS[form.species];
+  const currentAgeMonths = ageInMonths(agePolicyData);
+  const isBelowMarketplaceAge = Boolean(
+    minimumMarketplaceAge &&
+    currentAgeMonths !== null &&
+    currentAgeMonths < minimumMarketplaceAge
+  );
+  const eligibleFrom = isBelowMarketplaceAge ? marketplaceEligibleFrom(agePolicyData) : "";
+  const eligibleFromLabel = eligibleFrom
+    ? new Intl.DateTimeFormat(display.locale, { day: "numeric", month: "short", year: "numeric" })
+      .format(new Date(`${eligibleFrom}T00:00:00`))
+    : "";
 
   const validAge = form.ageInputMode === "Birth Date"
     ? Boolean(form.birthDate) && form.birthDate <= todayForInput()
@@ -171,6 +190,34 @@ const LivestockForm = forwardRef(
     }));
   };
 
+  const applyOcrResult = (result) => {
+    const validBirthDate = result.birthDate && result.birthDate <= todayForInput() ? result.birthDate : "";
+    setForm((current) => {
+      const speciesChanged = Boolean(result.species && current.species !== result.species);
+      return {
+        ...current,
+        species: result.species || current.species,
+        speciesRequestId: result.species ? "" : current.speciesRequestId,
+        speciesApprovalStatus: result.species ? "Approved" : current.speciesApprovalStatus,
+        breed: result.breed || (speciesChanged ? "" : current.breed),
+        breedId: result.breed ? result.breedId || "" : (speciesChanged ? "" : current.breedId),
+        breedRequestId: result.breed ? "" : (speciesChanged ? "" : current.breedRequestId),
+        breedApprovalStatus: result.breed ? "Approved" : (speciesChanged ? "Unspecified" : current.breedApprovalStatus),
+        gender: result.gender || current.gender,
+        state: result.state || current.state,
+        color: result.color || current.color,
+        tagNumber: result.animalId || current.tagNumber,
+        weight: result.weight || current.weight,
+        ageInputMode: validBirthDate ? "Birth Date" : current.ageInputMode,
+        birthDate: validBirthDate || current.birthDate,
+        ageValue: validBirthDate ? "" : current.ageValue,
+        ageRecordedAt: validBirthDate ? todayForInput() : current.ageRecordedAt,
+      };
+    });
+    if (validBirthDate) setAgeTouched(true);
+    if (result.animalId || result.weight) setShowAdvanced(true);
+  };
+
   const sectionDone = {
     1: images.length > 0,
     2: Boolean(form.species && form.gender && form.breed && form.state),
@@ -222,6 +269,7 @@ const LivestockForm = forwardRef(
 
       <div className="mx-auto mt-5 max-w-3xl space-y-5">
         {currentStep === 1 && <>
+        {enableOcr && <IndividualOcrImporter onApply={applyOcrResult} />}
         <Section title={t("form.sections.aboutTitle")} step={2} done={sectionDone[2]}>
           <div className="space-y-4">
             <Grid>
@@ -344,6 +392,23 @@ const LivestockForm = forwardRef(
             )}
 
             <p className="rounded-xl bg-muted/60 px-3 py-2.5 text-sm text-muted-foreground">{t("form.fields.buyersWillSee")} <span className="font-semibold text-foreground">{preview.age}</span>. {t("form.fields.ageAutoUpdates")}</p>
+            {minimumMarketplaceAge && (
+              <div className={cn(
+                "rounded-xl border px-3 py-3 text-sm leading-5",
+                isBelowMarketplaceAge
+                  ? "border-amber-200 bg-amber-50 text-amber-900"
+                  : "border-sky-200 bg-sky-50 text-sky-900"
+              )}>
+                <p className="font-bold">{t("form.agePolicy.title")}</p>
+                <p className="mt-0.5">{t("form.agePolicy.minimum", {
+                  species: display.species(form.species),
+                  count: minimumMarketplaceAge,
+                })}</p>
+                {isBelowMarketplaceAge && eligibleFromLabel && (
+                  <p className="mt-1 font-semibold">{t("form.agePolicy.underage", { date: eligibleFromLabel })}</p>
+                )}
+              </div>
+            )}
           </div>
         </Section>
 

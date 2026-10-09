@@ -3,6 +3,7 @@ import {
   IsDateString,
   IsEnum,
   IsInt,
+  Min,
   IsNumberString,
   IsObject,
   IsOptional,
@@ -46,6 +47,7 @@ export class CreateLivestockDto {
 
   @IsOptional()
   @IsInt()
+  @Min(0)
   ageMonths?: number;
 
   @IsOptional()
@@ -75,10 +77,6 @@ export class CreateLivestockDto {
   @IsOptional()
   @IsEnum(LivestockStatus)
   status?: LivestockStatus;
-
-  @IsOptional()
-  @IsDateString()
-  marketplaceEligibleFrom?: string;
 
   @IsOptional()
   @IsObject()

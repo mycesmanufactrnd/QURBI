@@ -92,6 +92,11 @@ export default function LivestockDetail() {
   const paymentReserved = hasActivePaymentReservation(item);
   const expiry = listingExpiry(item);
   const listingExpired = item.status === "Available" && expiry.expired;
+  const eligibleFrom = item.marketplaceEligibleFrom ? new Date(item.marketplaceEligibleFrom) : null;
+  const waitingForMinimumAge = Boolean(eligibleFrom && eligibleFrom > new Date());
+  const eligibleFromLabel = waitingForMinimumAge
+    ? new Intl.DateTimeFormat(display.locale, { day: "numeric", month: "short", year: "numeric" }).format(eligibleFrom)
+    : "";
   const status = display.status(item.status, item);
   const title = display.title(item);
   const subtitle = display.subtitle(item);
@@ -162,7 +167,8 @@ export default function LivestockDetail() {
 
           {!paymentReserved && item.status === "Draft" && <section className="rounded-2xl bg-sky-50 p-4 text-sky-900"><p className="text-sm font-extrabold">{t("detail.draftTitle")}</p><p className="mt-1 text-sm leading-6">{t("detail.draftText")}</p></section>}
           {!paymentReserved && item.status === "Unavailable" && <section className="rounded-2xl bg-muted p-4"><p className="text-sm font-extrabold">{t("detail.hiddenTitle")}</p><p className="mt-1 text-sm leading-6 text-muted-foreground">{t("detail.hiddenText")}</p></section>}
-          {!paymentReserved && item.status === "Available" && !expiry.expired && expiry.expiresAt && <section className="soft-card p-4"><p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">{t("detail.visibleTitle")}</p><p className="mt-1 text-sm font-semibold">{t("detail.visibleText", { date: display.expiryLabel(item), count: expiry.daysRemaining })}</p></section>}
+          {!paymentReserved && item.status === "Available" && waitingForMinimumAge && <section className="rounded-2xl bg-amber-100/75 p-4 text-amber-900"><p className="text-sm font-extrabold">{t("detail.minimumAgeTitle")}</p><p className="mt-1 text-sm leading-6">{t("detail.minimumAgeText", { date: eligibleFromLabel })}</p></section>}
+          {!paymentReserved && item.status === "Available" && !waitingForMinimumAge && !expiry.expired && expiry.expiresAt && <section className="soft-card p-4"><p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">{t("detail.visibleTitle")}</p><p className="mt-1 text-sm font-semibold">{t("detail.visibleText", { date: display.expiryLabel(item), count: expiry.daysRemaining })}</p></section>}
 
           {paymentReserved && <section className="rounded-2xl bg-amber-100/75 p-4 text-amber-900"><p className="text-sm font-extrabold">{t("detail.reservedTitle")}</p><p className="mt-1 text-sm leading-6">{t("detail.reservedText", { time: reservationExpiryLabel(item) })}</p></section>}
 

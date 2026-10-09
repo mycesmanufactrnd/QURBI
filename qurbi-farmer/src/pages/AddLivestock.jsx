@@ -52,6 +52,7 @@ export default function AddLivestock() {
         <LivestockForm
           initial={initial}
           registeredState={registeredState}
+          enableOcr
           onSubmit={handleNext}
           submitting={false}
           submitLabel={t("add.next")}

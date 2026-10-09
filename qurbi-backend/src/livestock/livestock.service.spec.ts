@@ -4,6 +4,7 @@ import {
   VerificationStatus,
 } from '../entities';
 import {
+  computeMarketplaceEligibleFrom,
   computeMarketplaceVisibility,
   LISTING_LIFETIME_MS,
   LivestockService,
@@ -13,6 +14,51 @@ jest.mock('@nestjs/typeorm', () => ({
   InjectDataSource: () => () => undefined,
   InjectRepository: () => () => undefined,
 }));
+
+describe('computeMarketplaceEligibleFrom', () => {
+  const now = new Date('2026-10-09T00:00:00.000Z');
+
+  it('holds a calf until it reaches the six-month cow threshold', () => {
+    expect(
+      computeMarketplaceEligibleFrom({
+        speciesName: 'Cow',
+        birthDate: '2026-07-15',
+        now,
+      }),
+    ).toEqual(new Date('2027-01-15T00:00:00.000Z'));
+  });
+
+  it('holds a three-month-old goat for one more month', () => {
+    expect(
+      computeMarketplaceEligibleFrom({
+        speciesName: 'Goat',
+        ageMonths: 3,
+        ageRecordedAt: '2026-10-09',
+        now,
+      }),
+    ).toEqual(new Date('2026-11-09T00:00:00.000Z'));
+  });
+
+  it('returns null when the animal already meets the minimum age', () => {
+    expect(
+      computeMarketplaceEligibleFrom({
+        speciesName: 'Cow',
+        ageMonths: 6,
+        now,
+      }),
+    ).toBeNull();
+  });
+
+  it('rejects a future birth date', () => {
+    expect(() =>
+      computeMarketplaceEligibleFrom({
+        speciesName: 'Goat',
+        birthDate: '2026-10-10',
+        now,
+      }),
+    ).toThrow('Birth date must be a valid past date');
+  });
+});
 
 describe('computeMarketplaceVisibility', () => {
   const now = Date.now();
