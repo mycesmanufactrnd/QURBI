@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
 
 export default function IconRouteOverlay({ type, children }) {
@@ -6,8 +6,14 @@ export default function IconRouteOverlay({ type, children }) {
     completeIconClose,
     iconOrigin,
     isIconClosing,
+    transitionType,
+    usesNativeProfileSlide,
   } = useHeaderTransition();
-  const [motionState, setMotionState] = useState("preparing");
+  const isProfileNavigation = transitionType === "profile-navigation";
+  const enteredFromProfileNavigationRef = useRef(isProfileNavigation);
+  const [motionState, setMotionState] = useState(() =>
+    isProfileNavigation ? "open" : "preparing",
+  );
   const origin =
     iconOrigin?.type === type
       ? iconOrigin
@@ -27,6 +33,10 @@ export default function IconRouteOverlay({ type, children }) {
   const scaleY = Math.max(0.001, (origin.height || 44) / viewportHeight);
 
   useLayoutEffect(() => {
+    if (isProfileNavigation || enteredFromProfileNavigationRef.current) {
+      setMotionState("open");
+      return undefined;
+    }
     let secondFrame = 0;
     const firstFrame = window.requestAnimationFrame(() => {
       secondFrame = window.requestAnimationFrame(() => {
@@ -37,7 +47,7 @@ export default function IconRouteOverlay({ type, children }) {
       window.cancelAnimationFrame(firstFrame);
       if (secondFrame) window.cancelAnimationFrame(secondFrame);
     };
-  }, []);
+  }, [isProfileNavigation]);
 
   useEffect(() => {
     if (isIconClosing) setMotionState("closing");
@@ -54,7 +64,7 @@ export default function IconRouteOverlay({ type, children }) {
 
   return (
     <div
-      className={`qurbi-icon-route-overlay qurbi-icon-route-overlay-${motionState}`}
+      className={`qurbi-icon-route-overlay qurbi-icon-route-overlay-${motionState} ${isProfileNavigation && !usesNativeProfileSlide ? "animate-profile-navigation-slide-enter" : ""}`}
       style={
         /** @type {React.CSSProperties} */ ({
           "--icon-origin-x": `${origin.x}px`,
@@ -63,6 +73,12 @@ export default function IconRouteOverlay({ type, children }) {
           "--icon-origin-top": `${origin.top ?? origin.y - (origin.height || 44) / 2}px`,
           "--icon-origin-scale-x": scaleX,
           "--icon-origin-scale-y": scaleY,
+          viewTransitionName:
+            type === "profile" &&
+            transitionType === "profile-navigation" &&
+            usesNativeProfileSlide
+              ? "qurbi-profile-navigation-page"
+              : undefined,
         })
       }
       data-icon-overlay={type}

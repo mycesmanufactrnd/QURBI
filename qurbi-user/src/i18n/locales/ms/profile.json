@@ -5,6 +5,13 @@
     "english": "English",
     "malay": "Bahasa Melayu"
   },
+  "displayMode": {
+    "title": "Mod Paparan",
+    "subtitle": "Pilih susun atur QURBI untuk peranti ini.",
+    "auto": "Auto",
+    "desktop": "Desktop",
+    "mobile": "Mudah Alih"
+  },
   "profile": {
     "pageTitle": "Profil",
     "pageSubtitle": "Urus butiran anda",

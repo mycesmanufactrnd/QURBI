@@ -5,6 +5,13 @@
     "english": "English",
     "malay": "Bahasa Melayu"
   },
+  "displayMode": {
+    "title": "Display Mode",
+    "subtitle": "Choose how QURBI is arranged on this device.",
+    "auto": "Auto",
+    "desktop": "Desktop",
+    "mobile": "Mobile"
+  },
   "profile": {
     "pageTitle": "Profile",
     "pageSubtitle": "Manage your details",

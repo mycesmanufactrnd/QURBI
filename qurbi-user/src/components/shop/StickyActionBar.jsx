@@ -1,6 +1,7 @@
 import React from "react";
 import { createPortal } from "react-dom";
 import { useMounted } from "@/hooks/useMounted";
+import { useDisplayMode } from "@/lib/display-mode-context";
 
 const TONES = {
   // Cream bar: stands out on the dark detail sheets.
@@ -17,11 +18,13 @@ const TONES = {
  */
 export default function StickyActionBar({ children, tone = "dark", label, className = "" }) {
   const mounted = useMounted();
+  const { isDesktop, sidebarWidth } = useDisplayMode();
   // Portals are browser-only: skip them on the server and during hydration.
   if (!mounted) return null;
   return createPortal(
     <div
-      className="qurbi-above-nav pointer-events-none fixed inset-x-0 z-40 px-3 sm:px-4 lg:left-[260px]"
+      className="qurbi-above-nav pointer-events-none fixed inset-x-0 z-40 px-3 transition-[left] duration-300 ease-out sm:px-4"
+      style={{ left: isDesktop ? sidebarWidth : 0 }}
       role="region"
       aria-label={label}
     >

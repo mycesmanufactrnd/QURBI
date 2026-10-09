@@ -43,6 +43,7 @@
   },
   "sidebar": {
     "notifications": "Notifications",
+    "transactionHistory": "Transaction History",
     "profile": "Profile"
   }
 }

@@ -38,6 +38,7 @@ import { AuthPromptProvider } from "@/lib/auth-prompt-context";
 import AppErrorBoundary from "@/components/AppErrorBoundary";
 import RouteSeo from "@/components/RouteSeo";
 import IconRouteOverlay from "@/components/IconRouteOverlay";
+import { DisplayModeProvider } from "@/lib/display-mode-context";
 
 function LegacyAuthRedirect({ mode }) {
   const location = useLocation();
@@ -117,6 +118,7 @@ function ApplicationRoutes() {
 // in the browser it is always the normal BrowserRouter.
 function App({ Router = BrowserRouter, routerProps = {} }) {
   return (
+    <DisplayModeProvider>
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         <UserProfileProvider>
@@ -138,6 +140,7 @@ function App({ Router = BrowserRouter, routerProps = {} }) {
         <Toaster />
       </QueryClientProvider>
     </AuthProvider>
+    </DisplayModeProvider>
   );
 }
 

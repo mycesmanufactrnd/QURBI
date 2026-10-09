@@ -15,7 +15,7 @@
     }
   },
   "bottomNav": {
-    "browse": "Lihat",
+    "browse": "Beli Ternakan",
     "bulkBuy": "Beli Pukal",
     "home": "Utama",
     "cart": "Troli",
@@ -43,6 +43,7 @@
   },
   "sidebar": {
     "notifications": "Notifikasi",
+    "transactionHistory": "Sejarah Transaksi",
     "profile": "Profil"
   }
 }

@@ -977,6 +977,33 @@ html {
   animation: spin 0.9s linear infinite;
 }
 
+@keyframes profileNavigationSlideIn {
+  from {
+    transform: translate3d(100%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes profileNavigationSlideOut {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    opacity: 0.92;
+    transform: translate3d(-10%, 0, 0);
+  }
+}
+
+.animate-profile-navigation-slide-enter {
+  animation: profileNavigationSlideIn 320ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-in-up {
     animation: none;
@@ -1011,7 +1038,8 @@ html {
     > :first-child
     > :not(header):not(.qurbi-shrinkable-header-shell):not(.qurbi-page-header):not(.fixed),
   .animate-header-copy-enter,
-  .animate-header-copy-exit {
+  .animate-header-copy-exit,
+  .animate-profile-navigation-slide-enter {
     animation: none;
   }
 }
@@ -1019,6 +1047,43 @@ html {
 ::view-transition-group(qurbi-header) {
   animation-duration: 700ms;
   animation-timing-function: ease-in-out;
+}
+
+html.qurbi-profile-navigation-active::view-transition-old(root),
+html.qurbi-profile-navigation-active::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+html.qurbi-profile-navigation-active::view-transition-group(qurbi-profile-navigation-page) {
+  animation-duration: 320ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html.qurbi-profile-navigation-active::view-transition-old(qurbi-profile-navigation-page) {
+  animation: profileNavigationSlideOut 320ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+  mix-blend-mode: normal;
+}
+
+html.qurbi-profile-navigation-active::view-transition-new(qurbi-profile-navigation-page) {
+  animation: profileNavigationSlideIn 320ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+  mix-blend-mode: normal;
+}
+
+html.qurbi-profile-navigation-active::view-transition-group(qurbi-desktop-sidebar),
+html.qurbi-profile-navigation-active::view-transition-old(qurbi-desktop-sidebar),
+html.qurbi-profile-navigation-active::view-transition-new(qurbi-desktop-sidebar) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.qurbi-profile-navigation-active::view-transition-old(qurbi-profile-navigation-page),
+  html.qurbi-profile-navigation-active::view-transition-new(qurbi-profile-navigation-page) {
+    animation: none;
+  }
 }
 
 /* Splash screen transitions */
@@ -1332,4 +1397,66 @@ html {
 
 .product-name-scroll {
   animation: product-name-scroll 10s ease-in-out infinite;
+}
+
+/* Manual display modes override the responsive navigation breakpoint. */
+html[data-qurbi-display-mode="desktop"] {
+  --qurbi-nav-clearance: 1rem;
+}
+
+html[data-qurbi-display-mode="mobile"] {
+  --qurbi-nav-clearance: calc(5.5rem + env(safe-area-inset-bottom));
+}
+
+/* The desktop header stays anchored at the collapsed edge. The expanded
+   sidebar overlays its left portion instead of pushing the header sideways. */
+html[data-qurbi-display-mode="desktop"] .qurbi-desktop-content .qurbi-header-background {
+  width: calc(100% + var(--qurbi-sidebar-width) - 88px);
+  margin-left: calc(88px - var(--qurbi-sidebar-width));
+  transition-property: margin-left, width, padding, border-radius, box-shadow;
+  transition-duration: 300ms;
+  transition-timing-function: ease-out;
+}
+
+html[data-qurbi-display-preference="desktop"] body,
+html[data-qurbi-display-preference="desktop"] #root {
+  min-width: 1024px;
+}
+
+html[data-qurbi-display-preference="mobile"] body {
+  background: #41362d;
+}
+
+html[data-qurbi-display-preference="mobile"] #root {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100dvh;
+  margin-inline: auto;
+  box-shadow: 0 0 42px rgba(34, 27, 22, 0.35);
+}
+
+html[data-qurbi-display-preference="mobile"] .qurbi-forced-mobile-shell {
+  overflow-x: hidden;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="fixed"][class~="left-0"][class~="right-0"],
+html[data-qurbi-display-preference="mobile"] #root [class~="fixed"][class~="inset-x-0"],
+html[data-qurbi-display-preference="mobile"] #root [class~="fixed"][class~="inset-0"] {
+  width: 100%;
+  max-width: 480px;
+  margin-inline: auto;
+}
+
+/* Keep the familiar two-column mobile product layout on wide screens. */
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:grid-cols-3"],
+html[data-qurbi-display-preference="mobile"] #root [class~="md:grid-cols-3"],
+html[data-qurbi-display-preference="mobile"] #root [class~="lg:grid-cols-3"],
+html[data-qurbi-display-preference="mobile"] #root [class~="lg:grid-cols-4"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="hidden"][class~="lg:block"],
+html[data-qurbi-display-preference="mobile"] #root [class~="hidden"][class~="lg:flex"],
+html[data-qurbi-display-preference="mobile"] #root [class~="hidden"][class~="lg:grid"] {
+  display: none !important;
 }

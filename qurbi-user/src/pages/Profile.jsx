@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
+import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   User,
@@ -14,6 +15,9 @@ import {
   FileText,
   LifeBuoy,
   Languages,
+  Monitor,
+  Smartphone,
+  Sparkles,
   Tractor,
   ArrowLeftRight,
 } from "lucide-react";
@@ -30,8 +34,10 @@ import { SettingsGroup, SettingsRow } from "@/components/account/SettingsGroup";
 import { primaryBtn } from "@/components/account/buttons";
 import { registerAsFarmer, switchToFarmerPortal } from "@/lib/portalSwitch";
 import { useMounted } from "@/hooks/useMounted";
+import { useDisplayMode } from "@/lib/display-mode-context";
 
 export default function Profile() {
+  const location = useLocation();
   const { navigateFromIconPage } = useHeaderTransition();
   const requireAuth = useRequireAuth();
   const { authChecked, isAuthenticated, user } = useAuth();
@@ -48,7 +54,21 @@ export default function Profile() {
   const [switchError, setSwitchError] = useState("");
   const [switching, setSwitching] = useState(false);
   const mounted = useMounted();
+  const { displayMode, isDesktop, setDisplayMode } = useDisplayMode();
   const isFarmerAccount = user?.availableRoles?.includes("farmer");
+  const originalLocation =
+    location.state?.profileReturnLocation || location.state?.backgroundLocation;
+  const hasValidOriginalLocation = Boolean(
+    originalLocation?.pathname &&
+      originalLocation.pathname.startsWith("/") &&
+      originalLocation.pathname !== "/profile",
+  );
+  const profileReturnTo = hasValidOriginalLocation
+    ? `${originalLocation.pathname}${originalLocation.search || ""}${originalLocation.hash || ""}`
+    : "/";
+  const profileReturnState = hasValidOriginalLocation
+    ? originalLocation.state
+    : undefined;
 
   const goToFarmerSide = async () => {
     if (switching) return;
@@ -121,6 +141,9 @@ export default function Profile() {
         <AppHeader
           title={t("profile.pageTitle")}
           subtitle={t("profile.pageSubtitle")}
+          backTo={isDesktop ? profileReturnTo : ""}
+          backState={profileReturnState}
+          preferRecentBack={false}
         />
         <PageLoading contentOnly message={t("profile.loading")} />
       </div>
@@ -146,6 +169,11 @@ export default function Profile() {
     { code: "en", label: t("language.english") },
     { code: "ms", label: t("language.malay") },
   ];
+  const displayModes = [
+    { value: "auto", icon: Sparkles, label: t("displayMode.auto") },
+    { value: "desktop", icon: Monitor, label: t("displayMode.desktop") },
+    { value: "mobile", icon: Smartphone, label: t("displayMode.mobile") },
+  ];
 
   return (
     <div className="aisyah-page">
@@ -167,6 +195,9 @@ export default function Profile() {
       <AppHeader
         title={t("profile.pageTitle")}
         subtitle={t("profile.pageSubtitle")}
+        backTo={isDesktop ? profileReturnTo : ""}
+        backState={profileReturnState}
+        preferRecentBack={false}
       />
 
       <div className="aisyah-content mx-auto max-w-2xl space-y-6">
@@ -430,6 +461,44 @@ export default function Profile() {
                   >
                     {selected && <Check className="h-4 w-4 flex-none" aria-hidden="true" />}
                     {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* Display mode */}
+        <section
+          className={reveal()}
+          style={{ animationDelay: "230ms" }}
+          aria-labelledby="display-mode-title"
+        >
+          <h2 id="display-mode-title" className="mb-2 px-1 text-sm font-bold text-[#41362D]/80">
+            {t("displayMode.title")}
+          </h2>
+          <div className="aisyah-card rounded-2xl p-4">
+            <p className="mb-3 text-sm leading-relaxed text-white/80">
+              {t("displayMode.subtitle")}
+            </p>
+            <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-labelledby="display-mode-title">
+              {displayModes.map(({ value, icon: Icon, label }) => {
+                const selected = displayMode === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => setDisplayMode(value)}
+                    className={`flex min-h-[72px] min-w-0 flex-col items-center justify-center gap-1.5 rounded-xl border-2 px-2 py-2 text-center text-xs font-bold transition-all duration-200 sm:text-sm ${
+                      selected
+                        ? "border-[#E3C19F] bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] text-[#41362D] shadow-md"
+                        : "border-white/25 bg-white/10 text-white hover:border-white/50 hover:bg-white/15"
+                    }`}
+                  >
+                    <Icon className="h-5 w-5 flex-none" aria-hidden="true" />
+                    <span className="max-w-full truncate">{label}</span>
                   </button>
                 );
               })}

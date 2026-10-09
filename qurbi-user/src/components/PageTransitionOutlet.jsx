@@ -5,7 +5,13 @@ import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
 export default function PageTransitionOutlet() {
   const location = useLocation();
   const outlet = useOutlet();
-  const { phase, isIconClosing, iconOrigin, transitionType } =
+  const {
+    phase,
+    isIconClosing,
+    iconOrigin,
+    transitionType,
+    usesNativeProfileSlide,
+  } =
     useHeaderTransition();
   const hasIconOverlay = Boolean(location.state?.qurbiIconOverlay);
   const pageType =
@@ -21,8 +27,15 @@ export default function PageTransitionOutlet() {
     !pageType &&
       (transitionType === "profile" || transitionType === "notification"),
   );
+  const isProfileNavigation = transitionType === "profile-navigation";
+  const profileOverlayIsTopRoute =
+    typeof window !== "undefined" && window.location.pathname === "/profile";
 
-  const animationClass = hasIconOverlay || keepsBackgroundStable
+  const animationClass = isProfileNavigation
+    ? phase === "entering" && !usesNativeProfileSlide
+      ? "animate-profile-navigation-slide-enter"
+      : ""
+    : hasIconOverlay || keepsBackgroundStable
     ? ""
     : usesIconOrigin
     ? isIconClosing
@@ -36,9 +49,13 @@ export default function PageTransitionOutlet() {
 
   return (
     <div
-      className={animationClass}
+      className={`qurbi-page-transition-outlet ${animationClass}`}
       style={
-        usesIconOrigin
+        isProfileNavigation &&
+        usesNativeProfileSlide &&
+        !profileOverlayIsTopRoute
+          ? { viewTransitionName: "qurbi-profile-navigation-page" }
+          : usesIconOrigin
           ? {
               "--icon-origin-x": `${iconOrigin.x}px`,
               "--icon-origin-y": `${iconOrigin.y}px`,

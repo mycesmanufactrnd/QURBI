@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
 import { useNotifications } from "@/lib/notification-context";
 import { recentPageOr } from "@/lib/navigation";
+import { useDisplayMode } from "@/lib/display-mode-context";
 
 const HEADER_SHRINK_SCROLL_Y = 12;
 const HEADER_EXPAND_SCROLL_Y = 4;
@@ -29,10 +30,12 @@ export default function AppHeader({
   titleClassName = "",
   subtitleClassName = "",
   preferRecentBack = true,
+  backState = undefined,
 }) {
   const { t } = useTranslation("common");
   const location = useLocation();
   const { isAuthenticated, logout } = useAuth();
+  const { isDesktop } = useDisplayMode();
   const { unreadCount } = useNotifications();
   const showNotificationAction =
     location.pathname !== "/profile" &&
@@ -251,9 +254,17 @@ export default function AppHeader({
           {backTo && (
             <button
               type="button"
-              onClick={() =>
-                navigateWithTransition(preferRecentBack ? recentPageOr(backTo) : backTo)
-              }
+              onClick={() => {
+                const destination = preferRecentBack
+                  ? recentPageOr(backTo)
+                  : backTo;
+                navigateWithTransition(destination, {
+                  navigateOptions:
+                    !preferRecentBack && backState !== undefined
+                      ? { state: backState }
+                      : undefined,
+                });
+              }}
               aria-label={t("appHeader.goBack")}
               className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#F7EDE2]/60 bg-white/10 text-white transition-transform active:scale-90"
             >
@@ -303,7 +314,7 @@ export default function AppHeader({
               )}
             </Link>
           )}
-          {isAuthenticated && (
+          {isAuthenticated && !isDesktop && (
             <button
               ref={profileButtonRef}
               type="button"
