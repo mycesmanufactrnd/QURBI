@@ -85,7 +85,7 @@ export default function NotificationBell() {
     if (!unread.length || marking) return;
     setMarking(true);
     try {
-      await Promise.all(unread.map((item) => qurbi.entities.FarmerNotification.update(item.id, { isRead: true })));
+      await qurbi.entities.FarmerNotification.markAllRead();
       setItems((current) => current.map((item) => ({ ...item, isRead: true })));
     } finally {
       setMarking(false);
