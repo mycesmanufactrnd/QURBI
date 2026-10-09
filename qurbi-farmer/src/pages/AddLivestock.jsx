@@ -67,6 +67,7 @@ export default function AddLivestock() {
           ref={formRef}
           initial={initial}
           registeredState={registeredState}
+          enableOcr
           onSubmit={handleNext}
           submitting={false}
           hideActions

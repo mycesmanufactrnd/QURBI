@@ -12,6 +12,7 @@ import ImageUploader from "@/components/agri/ImageUploader";
 import VideoUploader from "@/components/agri/VideoUploader";
 import StickyActionBar from "@/components/agri/StickyActionBar";
 import SpeciesSelector from "@/components/agri/SpeciesSelector";
+import BulkOcrImporter from "@/components/agri/BulkOcrImporter";
 import { MALAYSIA_STATES, breedsFor } from "@/lib/agri";
 
 const newBreakdown = () => ({ species: "", breed: "", maleCount: "", femaleCount: "" });
@@ -94,6 +95,16 @@ export default function AddBulkListing() {
     breedBreakdown: current.breedBreakdown.map((row, rowIndex) => rowIndex === index ? { ...row, ...changes } : row),
   }));
 
+  const applyOcrResult = (result) => {
+    setForm((current) => ({
+      ...current,
+      state: result.state || current.state,
+      breedBreakdown: result.groups?.length
+        ? result.groups.map((group) => ({ species: group.species, breed: group.breed, maleCount: String(group.maleCount || 0), femaleCount: String(group.femaleCount || 0) }))
+        : current.breedBreakdown,
+    }));
+  };
+
   const submit = async () => {
     if (submitting) return;
     if (!valid) { setAttempted(true); return; }
@@ -134,6 +145,8 @@ export default function AddBulkListing() {
         <button type="button" onClick={() => navigate(editing ? `/bulk/${id}` : "/bulk")} aria-label={t("form.back")} className="soft-card flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"><ArrowLeft className="h-5 w-5" /></button>
         <div className="min-w-0"><h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{editing ? t("form.editTitle") : t("form.addTitle")}</h1><p className="mt-1 text-sm text-muted-foreground">{editing ? t("form.editSubtitle") : t("form.addSubtitle")}</p></div>
       </div>
+
+      {!editing && <BulkOcrImporter managedBreeds={managedBreeds} onApply={applyOcrResult} />}
 
       <Section title={t("form.sections.media")}>
         <p className="text-sm font-semibold">{t("form.photos")} <span className="text-destructive" aria-hidden="true">*</span></p>

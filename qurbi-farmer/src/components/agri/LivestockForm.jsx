@@ -10,6 +10,7 @@ import BreedSelector from "@/components/agri/BreedSelector";
 import SpeciesSelector from "@/components/agri/SpeciesSelector";
 import FormField, { scrollToField } from "@/components/agri/FormField";
 import StickyActionBar from "@/components/agri/StickyActionBar";
+import IndividualOcrImporter from "@/components/agri/IndividualOcrImporter";
 import {
   GENDERS,
   FARMER_LISTING_STATUSES,
@@ -36,7 +37,7 @@ function legacyAge(initial) {
 
 const LivestockForm = forwardRef(
   /**
-   * @param {{ initial?: any, registeredState?: string, onSubmit: (data: any) => void | Promise<void>, submitting?: boolean, submitLabel?: string, hideActions?: boolean, onValidationChange?: (state: { missing: MissingField[], attempted: boolean }) => void }} props
+   * @param {{ initial?: any, registeredState?: string, onSubmit: (data: any) => void | Promise<void>, submitting?: boolean, submitLabel?: string, hideActions?: boolean, enableOcr?: boolean, onValidationChange?: (state: { missing: MissingField[], attempted: boolean }) => void }} props
    * @param {React.ForwardedRef<{ submit: () => boolean }>} ref
    */
   function LivestockForm({
@@ -46,6 +47,7 @@ const LivestockForm = forwardRef(
   submitting,
   submitLabel,
   hideActions = false,
+  enableOcr = false,
   onValidationChange,
 }, ref) {
   const display = useLivestockDisplay();
@@ -166,6 +168,34 @@ const LivestockForm = forwardRef(
     }));
   };
 
+  const applyOcrResult = (result) => {
+    const validBirthDate = result.birthDate && result.birthDate <= todayForInput() ? result.birthDate : "";
+    setForm((current) => {
+      const speciesChanged = Boolean(result.species && current.species !== result.species);
+      return {
+        ...current,
+        species: result.species || current.species,
+        speciesRequestId: result.species ? "" : current.speciesRequestId,
+        speciesApprovalStatus: result.species ? "Approved" : current.speciesApprovalStatus,
+        breed: result.breed || (speciesChanged ? "" : current.breed),
+        breedId: result.breed ? result.breedId || "" : (speciesChanged ? "" : current.breedId),
+        breedRequestId: result.breed ? "" : (speciesChanged ? "" : current.breedRequestId),
+        breedApprovalStatus: result.breed ? "Approved" : (speciesChanged ? "Unspecified" : current.breedApprovalStatus),
+        gender: result.gender || current.gender,
+        state: result.state || current.state,
+        color: result.color || current.color,
+        tagNumber: result.animalId || current.tagNumber,
+        weight: result.weight || current.weight,
+        ageInputMode: validBirthDate ? "Birth Date" : current.ageInputMode,
+        birthDate: validBirthDate || current.birthDate,
+        ageValue: validBirthDate ? "" : current.ageValue,
+        ageRecordedAt: validBirthDate ? todayForInput() : current.ageRecordedAt,
+      };
+    });
+    if (validBirthDate) setAgeTouched(true);
+    if (result.animalId || result.weight) setShowAdvanced(true);
+  };
+
   const sectionDone = {
     1: images.length > 0,
     2: Boolean(form.species && form.gender && form.breed && form.state),
@@ -189,6 +219,7 @@ const LivestockForm = forwardRef(
       </div>
 
       <div className="space-y-5">
+        {enableOcr && <IndividualOcrImporter onApply={applyOcrResult} />}
         <Section title={t("form.sections.aboutTitle")} step={2} done={sectionDone[2]}>
           <div className="space-y-4">
             <Grid>
