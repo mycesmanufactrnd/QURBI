@@ -167,6 +167,8 @@
     "visibleTitle": "Visible to buyers",
     "visibleText_one": "Visible to buyers until {{date}} ({{count}} day left).",
     "visibleText_other": "Visible to buyers until {{date}} ({{count}} days left).",
+    "minimumAgeTitle": "Waiting for minimum marketplace age",
+    "minimumAgeText": "This listing is saved but hidden from buyers. It will appear automatically on {{date}}, then remain listed for 14 days.",
     "reservedTitle": "Temporary payment reservation",
     "reservedText": "A buyer is completing payment. This listing cannot be edited, deleted, or sold again until {{time}}.",
     "farmAddress": "Farm address",
@@ -196,6 +198,7 @@
   "card": {
     "notePaymentReserved": "A buyer is paying for this animal. Locked until {{time}}.",
     "noteExpired": "Expired {{date}}. Buyers can't see it — check the details and renew.",
+    "noteUnderageUntil": "Hidden from buyers until {{date}} · waiting for minimum age",
     "noteAvailableNoDate": "Buyers will see it for 14 days once published.",
     "noteAvailable_one": "Buyers can see it · {{count}} day left before renewal",
     "noteAvailable_other": "Buyers can see it · {{count}} days left before renewal",
@@ -241,6 +244,12 @@
       "moreTitle": "More details",
       "moreOptional": "(optional)",
       "moreDescription": "Weight, size, tag number and feeding"
+    },
+    "agePolicy": {
+      "title": "Buyer marketplace minimum age",
+      "minimum_one": "{{species}} must be at least {{count}} month old before buyers can see it.",
+      "minimum_other": "{{species}} must be at least {{count}} months old before buyers can see it.",
+      "underage": "You can save this listing now, but it will stay hidden from buyers until {{date}}."
     },
     "fields": {
       "photos": "Photos",

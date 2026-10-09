@@ -34,6 +34,13 @@ export type LivestockWithVisibility = Livestock & DerivedMarketplaceVisibility;
 
 export const LISTING_LIFETIME_MS = 14 * 24 * 60 * 60 * 1000;
 
+// Marketplace policy, enforced by the API rather than trusted from clients.
+export const MIN_MARKETPLACE_AGE_MONTHS: Readonly<Record<string, number>> = {
+  Cow: 6,
+  Goat: 4,
+  Sheep: 3,
+};
+
 export interface LivestockQuery extends PageQuery {
   farmerId?: string;
   speciesId?: string;
@@ -280,21 +287,38 @@ export class LivestockService extends BaseCrudService<Livestock> {
         'A new listing cannot start as reserved or sold',
       );
     }
-    await this.validateReferenceData(data.speciesId, data.breedId);
+    const species = await this.validateReferenceData(
+      data.speciesId,
+      data.breedId,
+    );
     const attributes = data.attributes ?? {};
     const speciesPending = Boolean(attributes.speciesRequestId);
     const breedPending = Boolean(attributes.breedRequestId);
-    const status = speciesPending || breedPending ? LivestockStatus.DRAFT : data.status;
+    const status =
+      speciesPending || breedPending ? LivestockStatus.DRAFT : data.status;
+    this.normalizeAgeFields(data);
+    this.requireAgeWhenPublishing(status, data.birthDate, data.ageMonths);
+    const marketplaceEligibleFrom = computeMarketplaceEligibleFrom({
+      speciesName: species.name,
+      birthDate: data.birthDate,
+      ageMonths: data.ageMonths,
+      ageRecordedAt: this.ageRecordedAt(attributes),
+    });
     return this.create({
       ...data,
       status,
       farmerId,
+      marketplaceEligibleFrom,
       marketplaceExpiresAt:
         status === LivestockStatus.AVAILABLE
-          ? new Date(Date.now() + LISTING_LIFETIME_MS)
+          ? listingExpiryFromEligibility(marketplaceEligibleFrom)
           : null,
-      speciesApprovalStatus: speciesPending ? RequestStatus.PENDING : RequestStatus.APPROVED,
-      breedApprovalStatus: breedPending ? RequestStatus.PENDING : RequestStatus.APPROVED,
+      speciesApprovalStatus: speciesPending
+        ? RequestStatus.PENDING
+        : RequestStatus.APPROVED,
+      breedApprovalStatus: breedPending
+        ? RequestStatus.PENDING
+        : RequestStatus.APPROVED,
     });
   }
 
@@ -312,12 +336,14 @@ export class LivestockService extends BaseCrudService<Livestock> {
     let speciesApprovalStatus = listing.speciesApprovalStatus;
     let breedApprovalStatus = listing.breedApprovalStatus;
     const attributes = data.attributes ?? {};
+    const speciesId = data.speciesId ?? listing.speciesId;
+    const breedId = data.breedId === undefined ? listing.breedId : data.breedId;
+    const species = await this.validateReferenceData(speciesId, breedId);
     if (data.speciesId !== undefined || data.breedId !== undefined) {
-      const speciesId = data.speciesId ?? listing.speciesId;
-      const breedId =
-        data.breedId === undefined ? listing.breedId : data.breedId;
-      await this.validateReferenceData(speciesId, breedId);
-      if (data.speciesId !== undefined && data.speciesId !== listing.speciesId) {
+      if (
+        data.speciesId !== undefined &&
+        data.speciesId !== listing.speciesId
+      ) {
         speciesApprovalStatus = RequestStatus.APPROVED;
         data.speciesApprovalStatus = speciesApprovalStatus;
       }
@@ -336,26 +362,86 @@ export class LivestockService extends BaseCrudService<Livestock> {
     }
     if (data.status === LivestockStatus.AVAILABLE) {
       if (speciesApprovalStatus !== RequestStatus.APPROVED) {
-        throw new ConflictException('This livestock cannot be published until its species is approved');
+        throw new ConflictException(
+          'This livestock cannot be published until its species is approved',
+        );
       }
       if (breedApprovalStatus !== RequestStatus.APPROVED) {
-        throw new ConflictException('This livestock cannot be published until an approved breed is selected');
+        throw new ConflictException(
+          'This livestock cannot be published until an approved breed is selected',
+        );
       }
-      data.marketplaceExpiresAt = new Date(Date.now() + LISTING_LIFETIME_MS);
       data.soldAt = null;
     }
+    this.normalizeAgeFields(data);
+    const effectiveBirthDate =
+      data.birthDate !== undefined ? data.birthDate : listing.birthDate;
+    const effectiveAgeMonths =
+      data.ageMonths !== undefined ? data.ageMonths : listing.ageMonths;
+    const effectiveStatus = data.status ?? listing.status;
+    this.requireAgeWhenPublishing(
+      effectiveStatus,
+      effectiveBirthDate,
+      effectiveAgeMonths,
+    );
+    const effectiveAttributes = {
+      ...(listing.attributes ?? {}),
+      ...(data.attributes ?? {}),
+    };
+    data.marketplaceEligibleFrom = computeMarketplaceEligibleFrom({
+      speciesName: species.name,
+      birthDate: effectiveBirthDate,
+      ageMonths: effectiveAgeMonths,
+      ageRecordedAt: this.ageRecordedAt(effectiveAttributes),
+    });
+    if (data.status === LivestockStatus.AVAILABLE) {
+      data.marketplaceExpiresAt = listingExpiryFromEligibility(
+        data.marketplaceEligibleFrom as Date | null,
+      );
+    }
     return super.update(listing.id, data);
+  }
+
+  private normalizeAgeFields(data: DeepPartial<Livestock>): void {
+    if (data.birthDate !== undefined && data.birthDate !== null) {
+      data.ageMonths = null;
+    } else if (data.ageMonths !== undefined && data.ageMonths !== null) {
+      data.birthDate = null;
+    }
+  }
+
+  private requireAgeWhenPublishing(
+    status: LivestockStatus | undefined,
+    birthDate: string | null | undefined,
+    ageMonths: number | null | undefined,
+  ): void {
+    if (
+      status === LivestockStatus.AVAILABLE &&
+      !birthDate &&
+      (ageMonths === null || ageMonths === undefined)
+    ) {
+      throw new BadRequestException(
+        'Enter a birth date or current age before publishing this livestock',
+      );
+    }
+  }
+
+  private ageRecordedAt(
+    attributes: DeepPartial<Record<string, any>> | null | undefined,
+  ): string | null {
+    const value = attributes?.ageRecordedAt;
+    return typeof value === 'string' ? value : null;
   }
 
   private async validateReferenceData(
     speciesId: string,
     breedId?: string | null,
-  ): Promise<void> {
+  ): Promise<Species> {
     const species = await this.dataSource
       .getRepository(Species)
       .findOne({ where: { id: speciesId, isActive: true } });
     if (!species) throw new BadRequestException('Select an active species');
-    if (!breedId) return;
+    if (!breedId) return species;
     const breed = await this.dataSource
       .getRepository(Breed)
       .findOne({ where: { id: breedId, speciesId, isActive: true } });
@@ -363,6 +449,7 @@ export class LivestockService extends BaseCrudService<Livestock> {
       throw new BadRequestException(
         'Select an active breed that belongs to this species',
       );
+    return species;
   }
 
   async removeOwned(id: string, viewer: AuthenticatedUser): Promise<void> {
@@ -520,7 +607,7 @@ export function computeMarketplaceVisibility(
         listing.breedApprovalStatus === RequestStatus.REJECTED
           ? 'Breed request was rejected'
           : 'Breed is pending approval',
-    };    
+    };
   }
   if (
     listing.marketplaceEligibleFrom &&
@@ -541,4 +628,78 @@ export function computeMarketplaceVisibility(
     };
   }
   return { marketplaceVisible: true, marketplaceVisibilityReason: null };
+}
+
+export interface MarketplaceAgeInput {
+  speciesName: string;
+  birthDate?: string | null;
+  ageMonths?: number | null;
+  ageRecordedAt?: string | null;
+  now?: Date;
+}
+
+/**
+ * Returns the first instant at which an animal may appear to buyers.
+ * A null result means it already meets the policy or the species has no rule.
+ * The client never supplies the stored eligibility date; the API derives it
+ * from age evidence every time the relevant listing data is saved.
+ */
+export function computeMarketplaceEligibleFrom({
+  speciesName,
+  birthDate,
+  ageMonths,
+  ageRecordedAt,
+  now = new Date(),
+}: MarketplaceAgeInput): Date | null {
+  const minimum = MIN_MARKETPLACE_AGE_MONTHS[speciesName];
+  if (!minimum) return null;
+
+  let eligibleFrom: Date | null = null;
+  if (birthDate) {
+    const born = parseDateOnly(birthDate);
+    if (!born || born > now) {
+      throw new BadRequestException('Birth date must be a valid past date');
+    }
+    eligibleFrom = addCalendarMonthsUtc(born, minimum);
+  } else if (ageMonths !== null && ageMonths !== undefined) {
+    if (!Number.isInteger(ageMonths) || ageMonths < 0) {
+      throw new BadRequestException('Age in months must be a positive integer');
+    }
+    if (ageMonths >= minimum) return null;
+    const recordedAt = ageRecordedAt ? parseDateOnly(ageRecordedAt) : null;
+    const base = recordedAt && recordedAt <= now ? recordedAt : now;
+    eligibleFrom = addCalendarMonthsUtc(base, minimum - ageMonths);
+  }
+
+  return eligibleFrom && eligibleFrom > now ? eligibleFrom : null;
+}
+
+function parseDateOnly(value: string): Date | null {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const result = new Date(Date.UTC(year, month - 1, day));
+  if (
+    result.getUTCFullYear() !== year ||
+    result.getUTCMonth() !== month - 1 ||
+    result.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return result;
+}
+
+function addCalendarMonthsUtc(date: Date, months: number): Date {
+  const targetMonth = date.getUTCMonth() + months;
+  const year = date.getUTCFullYear() + Math.floor(targetMonth / 12);
+  const month = ((targetMonth % 12) + 12) % 12;
+  const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(year, month, Math.min(date.getUTCDate(), lastDay)));
+}
+
+function listingExpiryFromEligibility(eligibleFrom: Date | null): Date {
+  const windowStartsAt = Math.max(Date.now(), eligibleFrom?.getTime() ?? 0);
+  return new Date(windowStartsAt + LISTING_LIFETIME_MS);
 }

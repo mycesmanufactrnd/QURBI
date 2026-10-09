@@ -165,6 +165,8 @@
     "visibleTitle": "Kelihatan kepada pembeli",
     "visibleText_one": "Kelihatan kepada pembeli sehingga {{date}} ({{count}} hari lagi).",
     "visibleText_other": "Kelihatan kepada pembeli sehingga {{date}} ({{count}} hari lagi).",
+    "minimumAgeTitle": "Menunggu umur minimum pasaran",
+    "minimumAgeText": "Senarai ini telah disimpan tetapi disembunyikan daripada pembeli. Ia akan dipaparkan secara automatik pada {{date}}, kemudian disenaraikan selama 14 hari.",
     "reservedTitle": "Tempahan pembayaran sementara",
     "reservedText": "Seorang pembeli sedang melengkapkan pembayaran. Senarai ini tidak boleh disunting, dipadam atau dijual semula sehingga {{time}}.",
     "farmAddress": "Alamat ladang",
@@ -194,6 +196,7 @@
   "card": {
     "notePaymentReserved": "Seorang pembeli sedang membayar untuk haiwan ini. Dikunci sehingga {{time}}.",
     "noteExpired": "Tamat tempoh {{date}}. Pembeli tidak dapat melihatnya — semak butiran dan baharuinya.",
+    "noteUnderageUntil": "Disembunyikan daripada pembeli sehingga {{date}} · menunggu umur minimum",
     "noteAvailableNoDate": "Pembeli akan melihatnya selama 14 hari selepas diterbitkan.",
     "noteAvailable_one": "Pembeli boleh melihatnya · {{count}} hari lagi sebelum pembaharuan",
     "noteAvailable_other": "Pembeli boleh melihatnya · {{count}} hari lagi sebelum pembaharuan",
@@ -238,6 +241,11 @@
       "moreTitle": "Butiran lanjut",
       "moreOptional": "(pilihan)",
       "moreDescription": "Berat, saiz, nombor tag dan pemakanan"
+    },
+    "agePolicy": {
+      "title": "Umur minimum pasaran pembeli",
+      "minimum": "{{species}} mesti berumur sekurang-kurangnya {{count}} bulan sebelum dapat dilihat oleh pembeli.",
+      "underage": "Anda boleh menyimpan senarai ini sekarang, tetapi ia akan disembunyikan daripada pembeli sehingga {{date}}."
     },
     "fields": {
       "photos": "Gambar",

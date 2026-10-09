@@ -9,9 +9,18 @@ import { cn } from "@/lib/utils";
 import { hasActivePaymentReservation, reservationExpiryLabel } from "@/lib/livestockReservation";
 
 /** One plain sentence telling the farmer where this listing stands. */
-function statusNote(livestock, { paymentReserved, listingExpired, daysRemaining }, { t, expiryLabel }) {
+function statusNote(livestock, { paymentReserved, listingExpired, daysRemaining }, { t, expiryLabel, locale }) {
   if (paymentReserved) return { text: t("card.notePaymentReserved", { time: reservationExpiryLabel(livestock) }), tone: "text-amber-800" };
   if (listingExpired) return { text: t("card.noteExpired", { date: expiryLabel(livestock) }), tone: "text-destructive" };
+  const eligibleFrom = livestock.marketplaceEligibleFrom ? new Date(livestock.marketplaceEligibleFrom) : null;
+  if (livestock.status === "Available" && eligibleFrom && eligibleFrom > new Date()) {
+    return {
+      text: t("card.noteUnderageUntil", {
+        date: new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric" }).format(eligibleFrom),
+      }),
+      tone: "text-amber-800",
+    };
+  }
   switch (livestock.status) {
     case "Available":
       if (daysRemaining === null) return { text: t("card.noteAvailableNoDate"), tone: "text-muted-foreground" };

@@ -16,6 +16,8 @@ import {
   GENDERS,
   FARMER_LISTING_STATUSES,
   MALAYSIA_STATES,
+  MIN_MARKETPLACE_AGE_MONTHS,
+  ageInMonths,
   formatAge,
   marketplaceEligibleFrom,
   marketplaceVisibility,
@@ -101,6 +103,21 @@ const LivestockForm = forwardRef(
     const data = { ...form, ageRecordedAt };
     return { age: display.age(data), visibility: marketplaceVisibility(data) };
   }, [form, ageTouched, t]);
+
+  const ageRecordedAt = ageTouched ? todayForInput() : form.ageRecordedAt;
+  const agePolicyData = { ...form, ageRecordedAt };
+  const minimumMarketplaceAge = MIN_MARKETPLACE_AGE_MONTHS[form.species];
+  const currentAgeMonths = ageInMonths(agePolicyData);
+  const isBelowMarketplaceAge = Boolean(
+    minimumMarketplaceAge &&
+    currentAgeMonths !== null &&
+    currentAgeMonths < minimumMarketplaceAge
+  );
+  const eligibleFrom = isBelowMarketplaceAge ? marketplaceEligibleFrom(agePolicyData) : "";
+  const eligibleFromLabel = eligibleFrom
+    ? new Intl.DateTimeFormat(display.locale, { day: "numeric", month: "short", year: "numeric" })
+      .format(new Date(`${eligibleFrom}T00:00:00`))
+    : "";
 
   const validAge = form.ageInputMode === "Birth Date"
     ? Boolean(form.birthDate) && form.birthDate <= todayForInput()
@@ -375,6 +392,23 @@ const LivestockForm = forwardRef(
             )}
 
             <p className="rounded-xl bg-muted/60 px-3 py-2.5 text-sm text-muted-foreground">{t("form.fields.buyersWillSee")} <span className="font-semibold text-foreground">{preview.age}</span>. {t("form.fields.ageAutoUpdates")}</p>
+            {minimumMarketplaceAge && (
+              <div className={cn(
+                "rounded-xl border px-3 py-3 text-sm leading-5",
+                isBelowMarketplaceAge
+                  ? "border-amber-200 bg-amber-50 text-amber-900"
+                  : "border-sky-200 bg-sky-50 text-sky-900"
+              )}>
+                <p className="font-bold">{t("form.agePolicy.title")}</p>
+                <p className="mt-0.5">{t("form.agePolicy.minimum", {
+                  species: display.species(form.species),
+                  count: minimumMarketplaceAge,
+                })}</p>
+                {isBelowMarketplaceAge && eligibleFromLabel && (
+                  <p className="mt-1 font-semibold">{t("form.agePolicy.underage", { date: eligibleFromLabel })}</p>
+                )}
+              </div>
+            )}
           </div>
         </Section>
 
