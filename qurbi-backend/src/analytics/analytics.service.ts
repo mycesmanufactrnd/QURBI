@@ -113,7 +113,7 @@ export class AnalyticsService {
         )
         .getRawOne<{ count: string }>(),
       base()
-        .select('DATE(activity.createdAt)', 'date')
+        .select("DATE_FORMAT(activity.createdAt, '%Y-%m-%d')", 'date')
         .addSelect(
           `SUM(CASE WHEN activity.eventType = '${BuyerActivityType.LISTING_VIEW}' THEN 1 ELSE 0 END)`,
           'views',
@@ -126,7 +126,7 @@ export class AnalyticsService {
           `SUM(CASE WHEN activity.eventType = '${BuyerActivityType.BUY_NOW}' THEN 1 ELSE 0 END)`,
           'buyNow',
         )
-        .groupBy('DATE(activity.createdAt)')
+        .groupBy("DATE_FORMAT(activity.createdAt, '%Y-%m-%d')")
         .orderBy('date', 'ASC')
         .getRawMany<{ date: string; views: string; addToCart: string; buyNow: string }>(),
       base()
@@ -322,6 +322,14 @@ function dateKeys(from: Date, days: number): string[] {
   return Array.from({ length: days }, (_, index) => {
     const date = new Date(from);
     date.setDate(from.getDate() + index);
-    return date.toISOString().slice(0, 10);
+    return localDateKey(date);
   });
+}
+
+function localDateKey(date: Date): string {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-');
 }
