@@ -5,6 +5,7 @@ import {
   Notification,
   NotificationAudience,
   NotificationType,
+  Order,
   OrderTrackingEvent,
   UserRole,
 } from '../entities';
@@ -17,6 +18,8 @@ export class NotificationsService extends BaseCrudService<Notification> {
     @InjectRepository(Notification) repository: Repository<Notification>,
     @InjectRepository(OrderTrackingEvent)
     private readonly trackingEventRepository: Repository<OrderTrackingEvent>,
+    @InjectRepository(Order)
+    private readonly orderRepository: Repository<Order>,
   ) {
     super(repository);
   }
@@ -41,7 +44,13 @@ export class NotificationsService extends BaseCrudService<Notification> {
           notification.relatedId,
       )
       .map((notification) => notification.relatedId as string);
-    const orderIds = deliveryNotifications
+    const deliveryOrderIds = deliveryNotifications
+      .filter(
+        (notification) =>
+          notification.relatedType === 'order' && notification.relatedId,
+      )
+      .map((notification) => notification.relatedId as string);
+    const directlyRelatedOrderIds = notifications
       .filter(
         (notification) =>
           notification.relatedType === 'order' && notification.relatedId,
@@ -51,15 +60,16 @@ export class NotificationsService extends BaseCrudService<Notification> {
     const exactEventsPromise: Promise<OrderTrackingEvent[]> = eventIds.length
       ? this.trackingEventRepository.find({ where: { id: In(eventIds) } })
       : Promise.resolve([]);
-    const legacyEventsPromise: Promise<OrderTrackingEvent[]> = orderIds.length
-      ? this.trackingEventRepository.find({
-          where: {
-            orderId: In(orderIds),
-            images: Not(IsNull()),
-          },
-          order: { createdAt: 'DESC' },
-        })
-      : Promise.resolve([]);
+    const legacyEventsPromise: Promise<OrderTrackingEvent[]> =
+      deliveryOrderIds.length
+        ? this.trackingEventRepository.find({
+            where: {
+              orderId: In(deliveryOrderIds),
+              images: Not(IsNull()),
+            },
+            order: { createdAt: 'DESC' },
+          })
+        : Promise.resolve([]);
     const [exactEvents, legacyEvents] = await Promise.all([
       exactEventsPromise,
       legacyEventsPromise,
@@ -67,8 +77,29 @@ export class NotificationsService extends BaseCrudService<Notification> {
     const exactById = new Map(exactEvents.map((event) => [event.id, event]));
     const latestByOrder = new Map<string, OrderTrackingEvent>();
     for (const event of legacyEvents) {
-      if (!latestByOrder.has(event.orderId)) latestByOrder.set(event.orderId, event);
+      if (!latestByOrder.has(event.orderId))
+        latestByOrder.set(event.orderId, event);
     }
+
+    const relatedOrderIds = [
+      ...new Set([
+        ...directlyRelatedOrderIds,
+        ...exactEvents.map((event) => event.orderId),
+      ]),
+    ];
+    const relatedOrders = relatedOrderIds.length
+      ? await this.orderRepository.find({
+          where: { id: In(relatedOrderIds) },
+          relations: { items: true },
+        })
+      : [];
+    const productImageByOrder = new Map(
+      relatedOrders.map((order) => [
+        order.id,
+        order.items.find((item) => Boolean(item.imageSnapshot))
+          ?.imageSnapshot || null,
+      ]),
+    );
 
     return notifications.map((notification) => {
       const event =
@@ -77,7 +108,15 @@ export class NotificationsService extends BaseCrudService<Notification> {
           : notification.relatedType === 'order'
             ? latestByOrder.get(notification.relatedId || '')
             : undefined;
-      const imageUrl = Array.isArray(event?.images) ? event.images[0] || null : null;
+      const orderId =
+        notification.relatedType === 'order'
+          ? notification.relatedId || ''
+          : event?.orderId || '';
+      const trackingImage = Array.isArray(event?.images)
+        ? event.images[0] || null
+        : null;
+      const imageUrl =
+        trackingImage || productImageByOrder.get(orderId) || null;
       return Object.assign(notification, { imageUrl });
     });
   }

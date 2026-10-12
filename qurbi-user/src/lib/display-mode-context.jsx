@@ -1,41 +1,59 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from "react";
 
 const STORAGE_KEY = "qurbi_display_mode";
 const VALID_MODES = new Set(["auto", "desktop", "mobile"]);
+const DESKTOP_QUERY = "(min-width: 1024px)";
+const useIsomorphicLayoutEffect =
+  typeof window === "undefined" ? useEffect : useLayoutEffect;
+
+function readSavedMode() {
+  if (typeof window === "undefined") return "auto";
+  try {
+    const savedMode = window.localStorage.getItem(STORAGE_KEY);
+    return VALID_MODES.has(savedMode) ? savedMode : "auto";
+  } catch {
+    return "auto";
+  }
+}
+
+function readViewportDesktop() {
+  return typeof window !== "undefined" && window.matchMedia(DESKTOP_QUERY).matches;
+}
 
 const DisplayModeContext = createContext({
   displayMode: "auto",
   effectiveMode: "mobile",
   isDesktop: false,
-  sidebarExpanded: false,
-  sidebarWidth: 88,
   setDisplayMode: (_mode) => {},
-  setSidebarExpanded: (_expanded) => {},
 });
 
 export function DisplayModeProvider({ children }) {
+  // Match the server-rendered shell during hydration, then restore the saved
+  // preference in a layout effect (before paint). The previous normal effect
+  // visibly rendered the opposite layout for one frame after refresh.
   const [displayMode, setDisplayModeState] = useState("auto");
   const [viewportDesktop, setViewportDesktop] = useState(false);
-  const [sidebarExpanded, setSidebarExpandedState] = useState(false);
+
+  useIsomorphicLayoutEffect(() => {
+    setDisplayModeState(readSavedMode());
+    setViewportDesktop(readViewportDesktop());
+  }, []);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+    const mediaQuery = window.matchMedia(DESKTOP_QUERY);
     const updateViewport = () => setViewportDesktop(mediaQuery.matches);
     updateViewport();
     mediaQuery.addEventListener?.("change", updateViewport);
 
-    try {
-      const savedMode = window.localStorage.getItem(STORAGE_KEY);
-      if (VALID_MODES.has(savedMode)) setDisplayModeState(savedMode);
-    } catch {
-      // The app still follows Auto when storage is unavailable.
-    }
-
     return () => mediaQuery.removeEventListener?.("change", updateViewport);
-  }, []);
-
-  const setSidebarExpanded = useCallback((expanded) => {
-    setSidebarExpandedState(Boolean(expanded));
   }, []);
 
   const setDisplayMode = useCallback((nextMode) => {
@@ -55,9 +73,8 @@ export function DisplayModeProvider({ children }) {
         : "mobile"
       : displayMode;
   const isDesktop = effectiveMode === "desktop";
-  const sidebarWidth = sidebarExpanded ? 260 : 88;
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const root = document.documentElement;
     root.dataset.qurbiDisplayPreference = displayMode;
     root.dataset.qurbiDisplayMode = effectiveMode;
@@ -73,18 +90,12 @@ export function DisplayModeProvider({ children }) {
       effectiveMode,
       isDesktop,
       setDisplayMode,
-      sidebarExpanded,
-      sidebarWidth,
-      setSidebarExpanded,
     }),
     [
       displayMode,
       effectiveMode,
       isDesktop,
       setDisplayMode,
-      setSidebarExpanded,
-      sidebarExpanded,
-      sidebarWidth,
     ],
   );
 

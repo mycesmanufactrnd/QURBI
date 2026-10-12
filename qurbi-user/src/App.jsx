@@ -39,6 +39,7 @@ import AppErrorBoundary from "@/components/AppErrorBoundary";
 import RouteSeo from "@/components/RouteSeo";
 import IconRouteOverlay from "@/components/IconRouteOverlay";
 import { DisplayModeProvider } from "@/lib/display-mode-context";
+import AgreementGate from "@/components/AgreementGate";
 
 function LegacyAuthRedirect({ mode }) {
   const location = useLocation();
@@ -129,7 +130,9 @@ function App({ Router = BrowserRouter, routerProps = {} }) {
                 <NotificationProvider>
                   <HeaderTransitionProvider>
                   <AppErrorBoundary>
-                  <ApplicationRoutes />
+                  <AgreementGate>
+                    <ApplicationRoutes />
+                  </AgreementGate>
                   </AppErrorBoundary>
                   </HeaderTransitionProvider>
                 </NotificationProvider>

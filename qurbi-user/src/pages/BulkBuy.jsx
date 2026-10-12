@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { MapPin, Package, Search, Users } from "lucide-react";
@@ -15,6 +15,7 @@ import {
 } from "@/lib/cart-animation";
 import { formatRM } from "@/lib/format";
 import { resolvedBreakdown, useBreedNames } from "@/lib/breed-names";
+import { useVisiblePageRefresh } from "@/hooks/useVisiblePageRefresh";
 
 const lotTotal = (listing) =>
   listing.totalAnimals ??
@@ -51,6 +52,9 @@ export default function BulkBuy() {
   const [state, setState] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const requestRef = useRef(/** @type {Promise<void> | null} */ (null));
+  const mountedRef = useRef(true);
+  const hasListingsRef = useRef(false);
   const { addToCart, buyNow } = useCart();
   const requireAuth = useRequireAuth();
   const { navigateWithTransition } = useHeaderTransition();
@@ -63,22 +67,46 @@ export default function BulkBuy() {
     return tf("bulk.breedSplit", { breed: row.breed, male: row.maleCount, female: row.femaleCount });
   };
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-
-    try {
-      setListings(await loadBulkListings());
-    } catch (requestError) {
-      setError(requestError.message || t("bulkBuy.loadError"));
-    } finally {
-      setLoading(false);
-    }
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const load = useCallback(({ silent = false } = {}) => {
+    if (requestRef.current) return requestRef.current;
+
+    if (!silent) {
+      setLoading(true);
+      setError("");
+    }
+
+    const request = (async () => {
+      try {
+        const nextListings = await loadBulkListings();
+        if (!mountedRef.current) return;
+        hasListingsRef.current = nextListings.length > 0;
+        setListings(nextListings);
+        setError("");
+      } catch (requestError) {
+        if (!mountedRef.current) return;
+        if (!silent || !hasListingsRef.current) {
+          setError(requestError.message || t("bulkBuy.loadError"));
+        }
+      } finally {
+        if (mountedRef.current && !silent) setLoading(false);
+      }
+    })();
+
+    requestRef.current = request;
+    request.finally(() => {
+      if (requestRef.current === request) requestRef.current = null;
+    });
+    return request;
+  }, [t]);
+
+  useVisiblePageRefresh(load);
 
   const states = useMemo(
     () =>
@@ -175,7 +203,7 @@ export default function BulkBuy() {
         </div>
       </AppHeader>
 
-      <main className="aisyah-content grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <main className="aisyah-content grid grid-cols-1 gap-3 sm:grid-cols-2 lg:mx-auto lg:w-full lg:max-w-5xl lg:grid-cols-2">
         {loading && !listings.length && (
           <PageLoading contentOnly message={t("bulkBuy.loading")} />
         )}
@@ -186,7 +214,7 @@ export default function BulkBuy() {
             <p className="mt-1 text-sm text-[#6B594A]">{error}</p>
             <button
               type="button"
-              onClick={load}
+              onClick={() => load()}
               className="mt-4 aisyah-primary-button min-h-12 px-6"
             >
               {t("bulkBuy.retry")}

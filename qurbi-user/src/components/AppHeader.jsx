@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { ArrowLeft, Bell, Leaf, LogOut, User } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/AuthContext";
@@ -8,6 +8,7 @@ import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
 import { useNotifications } from "@/lib/notification-context";
 import { recentPageOr } from "@/lib/navigation";
 import { useDisplayMode } from "@/lib/display-mode-context";
+import { useAuthPrompt } from "@/lib/auth-prompt-context";
 
 const HEADER_SHRINK_SCROLL_Y = 12;
 const HEADER_EXPAND_SCROLL_Y = 4;
@@ -24,7 +25,6 @@ export default function AppHeader({
   search = null,
   children = null,
   sticky = false,
-  guestActionsOnLeft = false,
   progressiveShrink = false,
   thresholdShrink = false,
   titleClassName = "",
@@ -36,6 +36,7 @@ export default function AppHeader({
   const location = useLocation();
   const { isAuthenticated, logout } = useAuth();
   const { isDesktop } = useDisplayMode();
+  const { requestSignIn } = useAuthPrompt();
   const { unreadCount } = useNotifications();
   const showNotificationAction =
     location.pathname !== "/profile" &&
@@ -235,22 +236,6 @@ export default function AppHeader({
         className="relative z-10 flex flex-col items-center text-center"
       >
         <div className="absolute left-0 top-0 z-20 flex flex-row items-center gap-1">
-          {!isAuthenticated && guestActionsOnLeft && (
-            <>
-              <Link
-                to="/auth?mode=login"
-                className="flex min-h-10 items-center rounded-md px-1.5 text-xs font-bold text-white"
-              >
-                {t("appHeader.login")}
-              </Link>
-              <Link
-                to="/auth?mode=register"
-                className="flex min-h-10 items-center rounded-md border border-white/30 bg-white/15 px-2 text-xs font-bold text-white"
-              >
-                {t("appHeader.signUp")}
-              </Link>
-            </>
-          )}
           {backTo && (
             <button
               type="button"
@@ -275,44 +260,43 @@ export default function AppHeader({
         </div>
 
         <div className="absolute right-0 top-0 z-20 flex flex-row items-center gap-1">
-          {!isAuthenticated && !guestActionsOnLeft && (
-            <>
-              <Link
-                to="/auth?mode=login"
-                className="flex min-h-10 items-center rounded-md px-1.5 text-xs font-bold text-white"
-              >
-                {t("appHeader.login")}
-              </Link>
-              <Link
-                to="/auth?mode=register"
-                className="flex min-h-10 items-center rounded-md border border-white/30 bg-white/15 px-2 text-xs font-bold text-white"
-              >
-                {t("appHeader.signUp")}
-              </Link>
-            </>
+          {!isAuthenticated && !isDesktop && (
+            <button
+              type="button"
+              onClick={() => requestSignIn({ returnTo: `${location.pathname}${location.search}${location.hash}` })}
+              aria-label={t("appHeader.openProfile")}
+              className="relative flex h-11 w-11 flex-none items-center justify-center transition-transform active:scale-90"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/30 bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] shadow-lg">
+                <User className="h-5 w-5 text-[#41362D]" />
+              </div>
+            </button>
           )}
           {isAuthenticated && showNotificationAction && (
-            <Link
-              to="/notifications"
+            <button
+              type="button"
               onClick={(event) => {
-                if (!event.defaultPrevented) {
-                  beginIconTransition("notification", event.currentTarget);
-                }
+                event.preventDefault();
+                event.stopPropagation();
+                beginIconTransition("notification", event.currentTarget);
+                navigateWithTransition("/notifications", {
+                  transitionType: "notification",
+                });
               }}
               aria-label={
                 unreadCount
                   ? t("appHeader.notificationsUnread", { count: unreadCount })
                   : t("appHeader.notifications")
               }
-              className="relative flex h-11 w-11 items-center justify-center rounded-full bg-transparent text-white transition-transform active:scale-90"
+              className="group relative flex h-11 w-11 items-center justify-center rounded-full bg-transparent text-white transition-all duration-200 ease-out hover:-translate-y-0.5 hover:text-[#E3C19F] active:scale-90"
             >
-              <Bell className="h-5 w-5" />
+              <Bell className="h-10 w-6 transition-transform duration-200 group-hover:scale-110" />
               {unreadCount > 0 && (
                 <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-white bg-[#DC2626] px-1 text-[11px] font-bold leading-none text-white">
                   {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               )}
-            </Link>
+            </button>
           )}
           {isAuthenticated && !isDesktop && (
             <button
@@ -353,16 +337,18 @@ export default function AppHeader({
           )}
         </div>
 
-        <div className="qurbi-header-static-brand pointer-events-none flex items-center justify-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#F7EDE2]/70 bg-white/10 shadow-sm backdrop-blur-sm">
-            <Leaf className="h-3.5 w-3.5 text-white" />
+        {!isDesktop ? (
+          <div className="qurbi-header-static-brand pointer-events-none flex items-center justify-center gap-2 self-center">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#F7EDE2]/70 bg-white/10 shadow-sm backdrop-blur-sm">
+              <Leaf className="h-3.5 w-3.5 text-white" />
+            </div>
+            {eyebrow && (
+              <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white/80">
+                {eyebrow}
+              </p>
+            )}
           </div>
-          {eyebrow && (
-            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white/80">
-              {eyebrow}
-            </p>
-          )}
-        </div>
+        ) : null}
 
         {title && (
           <div

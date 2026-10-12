@@ -21,6 +21,7 @@ import {
   genderLabel,
   listingState,
 } from "@/lib/listing-display";
+import { useVisiblePageRefresh } from "@/hooks/useVisiblePageRefresh";
 
 const BROWSE_FILTERS_KEY = "qurbi_browse_filters";
 
@@ -65,6 +66,9 @@ export default function Browse() {
   const { t: tf } = useTranslation("shopflow");
   const location = useLocation();
   const searchInputRef = useRef(/** @type {HTMLInputElement | null} */ (null));
+  const requestRef = useRef(/** @type {Promise<void> | null} */ (null));
+  const mountedRef = useRef(true);
+  const hasLivestockRef = useRef(false);
   const [savedFilters] = useState(readBrowseFilters);
 
   const [livestock, setLivestock] = useState([]);
@@ -153,23 +157,48 @@ export default function Browse() {
    * =========================================================
    */
 
-  const loadData = useCallback(() => {
-    setLoading(true);
-    setError(null);
-
-    loadLivestockWithFarmers()
-      .then(setLivestock)
-      .catch((e) =>
-        setError(
-          e.message || t("browse.error.defaultMessage"),
-        ),
-      )
-      .finally(() => setLoading(false));
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const loadData = useCallback(({ silent = false } = {}) => {
+    if (requestRef.current) return requestRef.current;
+
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    }
+
+    const request = (async () => {
+      try {
+        const nextLivestock = await loadLivestockWithFarmers();
+        if (!mountedRef.current) return;
+        hasLivestockRef.current = nextLivestock.length > 0;
+        setLivestock(nextLivestock);
+        setError(null);
+      } catch (requestError) {
+        if (!mountedRef.current) return;
+        // A background refresh must never discard valid products or replace
+        // the page with a disruptive error state.
+        if (!silent || !hasLivestockRef.current) {
+          setError(requestError.message || t("browse.error.defaultMessage"));
+        }
+      } finally {
+        if (mountedRef.current && !silent) setLoading(false);
+      }
+    })();
+
+    requestRef.current = request;
+    request.finally(() => {
+      if (requestRef.current === request) requestRef.current = null;
+    });
+    return request;
+  }, [t]);
+
+  useVisiblePageRefresh(loadData);
 
   /*
    * =========================================================
@@ -475,7 +504,7 @@ export default function Browse() {
 
         <button
           type="button"
-          onClick={loadData}
+          onClick={() => loadData()}
           className="aisyah-primary-button flex min-h-12 items-center gap-2 px-6"
         >
           <RefreshCw className="h-4 w-4" />
@@ -623,7 +652,7 @@ export default function Browse() {
             ) : (
               <div
                 key={`${searchQuery}-${activeSpecies}`}
-                className="grid animate-fade-in-up grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4"
+                className="grid animate-fade-in-up grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:mx-auto lg:w-full lg:max-w-5xl"
               >
                 {filtered.map((l, idx) => (
                   <LivestockCard

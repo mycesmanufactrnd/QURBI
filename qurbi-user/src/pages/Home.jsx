@@ -302,7 +302,7 @@ export default function Home() {
               <Link
                 key={label}
                 to="/browse"
-                state={{ species: label }}
+                state={{ filter: label }}
                 className={`
                     flex
                     min-h-[88px]
