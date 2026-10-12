@@ -56,6 +56,10 @@ export async function recognizeLivestockFiles(files, onProgress) {
         }
       },
     });
+    await worker.setParameters({
+      preserve_interword_spaces: "1",
+      tessedit_pageseg_mode: "3",
+    });
     const results = [];
     for (let index = 0; index < files.length; index += 1) {
       activeFile = index;

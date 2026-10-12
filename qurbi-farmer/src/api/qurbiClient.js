@@ -238,7 +238,12 @@ function requestEntity(path, isBreed) {
 }
 
 const FarmerNotification = {
-  /** @type {ListFn} */ list: async () => (await data(apiClient.get("/notifications", { params: { audience: "farmer" } }))).map(normalizeNotification), update: async (id, input) => input.isRead ? normalizeNotification(await data(apiClient.patch(`/notifications/${id}/read`))) : null, create: async (input) => normalizeNotification(await data(apiClient.post("/notifications", { userId: input.userId || input.farmerId, audience: "farmer", type: "request_update", title: input.title || "QURBI update", body: input.message || input.body || "", linkUrl: input.linkUrl || undefined, relatedType: input.orderId ? "order" : input.livestockId ? "livestock" : undefined, relatedId: input.orderId || input.livestockId || undefined }))),
+  /** @type {ListFn} */ list: async () => (await data(apiClient.get("/notifications", { params: { audience: "farmer" } }))).map(normalizeNotification),
+  update: async (id, input) => input.isRead ? normalizeNotification(await data(apiClient.patch(`/notifications/${id}/read`))) : null,
+  delete: async (id) => normalizeNotification(await data(apiClient.patch(`/notifications/${id}/clear`))),
+  markAllRead: async () => data(apiClient.patch("/notifications/read-all", { audience: "farmer" })),
+  clearAll: async () => data(apiClient.patch("/notifications/clear-all", { audience: "farmer" })),
+  create: async (input) => normalizeNotification(await data(apiClient.post("/notifications", { userId: input.userId || input.farmerId, audience: "farmer", type: "request_update", title: input.title || "QURBI update", body: input.message || input.body || "", linkUrl: input.linkUrl || undefined, relatedType: input.orderId ? "order" : input.livestockId ? "livestock" : undefined, relatedId: input.orderId || input.livestockId || undefined }))),
   /** @type {SubscribeFn} */ subscribe: (callback) => {
     if (typeof window === "undefined" || !callback) return () => {};
     const refresh = () => callback();

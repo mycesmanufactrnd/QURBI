@@ -9,7 +9,7 @@
     "entryTitle": "Import ternakan dengan OCR",
     "entryDescription": "Imbas sijil veterinar, rekod kelahiran atau helaian butiran ternakan.",
     "title": "Import dokumen dengan OCR",
-    "description": "Muat naik gambar dokumen yang jelas. QURBI akan mencadangkan nilai untuk anda semak sebelum mengisi borang.",
+    "description": "Muat naik dokumen yang jelas untuk satu spesies bagi setiap senarai pukal. QURBI akan mencadangkan nilai untuk anda semak sebelum mengisi borang.",
     "privateTitle": "Diproses pada peranti ini",
     "privateDescription": "Gambar dokumen yang dipilih kekal dalam pelayar anda dan tidak dimuat naik ke QURBI.",
     "chooseImages": "Pilih gambar dokumen",
@@ -17,6 +17,12 @@
     "invalidFile": "Gunakan gambar JPG, PNG atau WebP yang tidak melebihi 10 MB setiap satu.",
     "duplicateFilesSkipped": "{{count}} gambar pendua telah diabaikan.",
     "duplicateDocumentsIgnored": "{{count}} hasil dokumen berulang telah diabaikan untuk mengelakkan kiraan berganda.",
+    "mixedSpeciesBlocked": "Data Lembu dan Kambing dikesan dalam muat naik yang sama. Satu senarai pukal hanya boleh mengandungi satu spesies. Buang dokumen yang tidak berkaitan dan imbas semula.",
+    "conflictingFields": "Beberapa dokumen mengandungi ID atau lokasi yang berbeza. Nilai ringkasan yang bercanggah dikosongkan untuk semakan manual.",
+    "invalidIdentifiersIgnored": "Perkataan tajuk seperti INFORMATION atau TOTAL telah diabaikan kerana ia bukan nombor sijil atau ID ternakan yang sah.",
+    "documentBreakdown": "Hasil mengikut dokumen",
+    "documentNumber": "Dokumen {{count}}",
+    "noCompleteGroup": "Tiada kumpulan spesies, baka dan bilangan lengkap dikesan",
     "removeFile": "Buang {{name}}",
     "processing": "Sedang membaca dokumen...",
     "failed": "Dokumen tidak dapat dibaca. Gunakan gambar yang lebih jelas dan terang, kemudian cuba lagi.",
@@ -35,7 +41,8 @@
     "documentTypes": {
       "veterinary": "Sijil kesihatan veterinar",
       "birth": "Rekod kelahiran ternakan",
-      "livestock_details": "Dokumen butiran ternakan"
+      "livestock_details": "Dokumen butiran ternakan",
+      "mixed": "Set dokumen bercampur"
     },
     "fields": {
       "documentType": "Jenis dokumen",
