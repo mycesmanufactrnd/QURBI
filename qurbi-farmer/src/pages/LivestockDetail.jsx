@@ -90,6 +90,8 @@ export default function LivestockDetail() {
   const videos = item.videos?.length ? item.videos : [];
   const location = malaysiaState(item.state, item.farmLocation, farmState);
   const paymentReserved = hasActivePaymentReservation(item);
+  const historyLocked = item.status === "Sold" || item.status === "Reserved";
+  const actionsLocked = paymentReserved || historyLocked;
   const expiry = listingExpiry(item);
   const listingExpired = item.status === "Available" && expiry.expired;
   const eligibleFrom = item.marketplaceEligibleFrom ? new Date(item.marketplaceEligibleFrom) : null;
@@ -111,7 +113,7 @@ export default function LivestockDetail() {
             <h1 className="truncate text-xl font-extrabold tracking-tight">{t("detail.headerTitle")}</h1>
           </div>
         </div>
-        {!paymentReserved && <button type="button" onClick={() => navigate(`/livestock/${id}/edit`)} className="flex min-h-11 items-center gap-2 rounded-2xl bg-secondary/70 px-3.5 text-sm font-bold text-primary hover:bg-secondary"><Pencil className="h-4 w-4" /><span className="hidden sm:inline">{t("detail.edit")}</span></button>}
+        {!actionsLocked && <button type="button" onClick={() => navigate(`/livestock/${id}/edit`)} className="flex min-h-11 items-center gap-2 rounded-2xl bg-secondary/70 px-3.5 text-sm font-bold text-primary hover:bg-secondary"><Pencil className="h-4 w-4" /><span className="hidden sm:inline">{t("detail.edit")}</span></button>}
       </header>
 
       <div className="mt-5 grid items-start gap-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(22rem,.92fr)] lg:gap-8">
@@ -191,7 +193,7 @@ export default function LivestockDetail() {
         </div>
       </div>
 
-      {!paymentReserved && (
+      {!actionsLocked && (
         <StickyActionBar>
           <button type="button" onClick={() => navigate(`/livestock/${id}/edit`)} className="brand-gradient flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl px-4 text-base font-bold text-white shadow-[0_4px_12px_rgba(65,54,45,0.15)]"><Pencil className="h-[18px] w-[18px]" />{listingExpired ? t("detail.updateRenew") : t("detail.editListing")}</button>
           <button type="button" onClick={() => setConfirmDelete(true)} aria-label={t("detail.deleteAria")} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-card text-destructive ring-1 ring-destructive/30 transition-colors hover:bg-destructive/10"><Trash2 className="h-5 w-5" /></button>

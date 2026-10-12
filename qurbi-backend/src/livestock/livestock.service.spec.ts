@@ -1,6 +1,7 @@
 import {
   LivestockStatus,
   RequestStatus,
+  ReservationStatus,
   VerificationStatus,
 } from '../entities';
 import {
@@ -176,5 +177,100 @@ describe('LivestockService publishing approval rules', () => {
     ).rejects.toThrow(
       'This livestock cannot be published until an approved breed is selected',
     );
+  });
+
+  it.each([LivestockStatus.SOLD, LivestockStatus.RESERVED])(
+    'rejects farmer edits when the current listing is %s',
+    async (status) => {
+      const listing = {
+        id: 'livestock-1',
+        farmerId: 'farmer-1',
+        status,
+      };
+      const repository = {
+        findOne: jest.fn().mockResolvedValue(listing),
+      };
+      const service = new LivestockService(
+        repository as never,
+        {} as never,
+        {} as never,
+      );
+
+      await expect(
+        service.updateOwned(
+          listing.id,
+          { id: listing.farmerId, role: 'farmer' } as never,
+          { title: 'Attempted edit' },
+        ),
+      ).rejects.toThrow(
+        status === LivestockStatus.SOLD
+          ? 'Sold livestock cannot be edited or republished'
+          : 'Reserved livestock cannot be edited',
+      );
+    },
+  );
+});
+
+describe('LivestockService deletion safeguards', () => {
+  const listing = {
+    id: 'livestock-1',
+    farmerId: 'farmer-1',
+    status: LivestockStatus.SOLD,
+  };
+
+  function setup(reservations: Array<{ status: ReservationStatus }>) {
+    const repository = {
+      findOne: jest.fn().mockResolvedValue(listing),
+    };
+    const queryBuilder = {
+      setLock: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      getOne: jest.fn().mockResolvedValue(listing),
+    };
+    const manager = {
+      createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
+      find: jest.fn().mockResolvedValue(reservations),
+      remove: jest.fn().mockResolvedValue(listing),
+    };
+    const dataSource = {
+      transaction: jest.fn(
+        (work: (activeManager: typeof manager) => Promise<unknown>) =>
+          work(manager),
+      ),
+    };
+    const reservationsService = {
+      expireDue: jest.fn().mockResolvedValue(0),
+    };
+    const service = new LivestockService(
+      repository as never,
+      dataSource as never,
+      reservationsService as never,
+    );
+    return { service, manager };
+  }
+
+  it('returns a clear conflict instead of a database error for sold livestock', async () => {
+    const { service, manager } = setup([
+      { status: ReservationStatus.COMPLETED },
+    ]);
+
+    await expect(
+      service.removeOwned(listing.id, {
+        id: listing.farmerId,
+        role: 'farmer',
+      } as never),
+    ).rejects.toThrow('completed order and cannot be deleted');
+    expect(manager.remove).not.toHaveBeenCalled();
+  });
+
+  it('deletes a listing that has no reservation history', async () => {
+    const { service, manager } = setup([]);
+
+    await service.removeOwned(listing.id, {
+      id: listing.farmerId,
+      role: 'farmer',
+    } as never);
+
+    expect(manager.remove).toHaveBeenCalledWith(listing);
   });
 });
