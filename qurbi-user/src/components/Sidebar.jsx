@@ -77,6 +77,7 @@ export default function Sidebar() {
           <>
             <NavLink
               to="/profile"
+              data-profile-trigger
               aria-label={displayName}
               className={({ isActive }) =>
                 `group block min-w-0 px-3 py-3 transition-transform duration-200 ease-out hover:translate-x-1 ${isActive ? "text-white" : "text-white/90"}`

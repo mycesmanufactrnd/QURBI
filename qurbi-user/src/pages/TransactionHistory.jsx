@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { PackageCheck, ReceiptText } from "lucide-react";
 import { qurbiApi } from "@/api/qurbiClient";
 import AppHeader from "@/components/AppHeader";
+import { useDisplayMode } from "@/lib/display-mode-context";
 import PageLoading from "@/components/PageLoading";
 import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
 import { useAuth } from "@/lib/AuthContext";
@@ -151,6 +152,7 @@ function orderFarmName(order, t) {
 export default function TransactionHistory() {
   const { t } = useTranslation("transaction");
   const { user, isAuthenticated, authChecked } = useAuth();
+  const { isDesktop } = useDisplayMode();
   const { requestSignIn } = useAuthPrompt();
   const { navigateWithTransition } = useHeaderTransition();
   const [orders, setOrders] = useState([]);
@@ -180,13 +182,13 @@ export default function TransactionHistory() {
   const groups = useMemo(() => groupTransactions(orders, t), [orders, t]);
 
   if (!authChecked) {
-    return <div className="aisyah-page"><AppHeader title={t("title")} backTo="/orders" /><PageLoading contentOnly message={t("loading")} /></div>;
+    return <div className="aisyah-page"><AppHeader title={t("title")} backTo={isDesktop ? "" : "/orders"} /><PageLoading contentOnly message={t("loading")} /></div>;
   }
 
   if (!isAuthenticated) {
     return (
       <div className="aisyah-page min-h-screen pb-28">
-        <AppHeader title={t("title")} backTo="/orders" />
+        <AppHeader title={t("title")} backTo={isDesktop ? "" : "/orders"} />
         <div className="aisyah-content flex flex-col items-center justify-center gap-3 py-20 text-center">
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gray-100"><ReceiptText className="h-10 w-10 text-gray-300" /></div>
           <p className="text-sm text-[#41362D]/65">{t("signInPrompt")}</p>
@@ -198,7 +200,7 @@ export default function TransactionHistory() {
 
   return (
     <div className="aisyah-page">
-      <AppHeader title={t("title")} backTo="/orders" />
+      <AppHeader title={t("title")} backTo={isDesktop ? "" : "/orders"} />
       <main className="aisyah-content space-y-5">
         {loading ? <PageLoading contentOnly message={t("loading")} /> : error ? (
           <div className="py-16 text-center"><p className="text-sm text-gray-500">{error}</p><button type="button" onClick={loadTransactions} className="mt-3 text-sm font-bold text-[#5A493C]">{t("retry")}</button></div>

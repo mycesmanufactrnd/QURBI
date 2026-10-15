@@ -12,6 +12,7 @@ import { useAuthPrompt } from "@/lib/auth-prompt-context";
 
 const HEADER_SHRINK_SCROLL_Y = 12;
 const HEADER_EXPAND_SCROLL_Y = 4;
+const HEADER_COLLAPSED_HEIGHT = 108;
 const useIsomorphicLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
 
@@ -21,6 +22,7 @@ export default function AppHeader({
   eyebrow = "QURBI",
   subtitle = "",
   backTo = "",
+  onBack = null,
   leftAction = null,
   search = null,
   children = null,
@@ -59,8 +61,11 @@ export default function AppHeader({
   const [profileMenu, setProfileMenu] = useState(null);
   const shrinkEnabled = progressiveShrink || thresholdShrink;
   const headerExpanded = headerEntered;
-  const routeContentVisible = headerEntered && !isContracting;
-  const headerCopyAnimation = isContracting
+  const routeContentVisible =
+    headerEntered && !isContracting && !isScrollShrunk;
+  const expandedContentVisible =
+    extraVisible && !isContracting && !isScrollShrunk;
+  const headerCopyAnimation = isContracting || isScrollShrunk
     ? "animate-header-copy-exit"
     : headerEntered
       ? "animate-header-copy-enter"
@@ -125,7 +130,7 @@ export default function AppHeader({
 
     page.style.setProperty(
       "--qurbi-header-collapse-offset",
-      `${Math.max(0, expandedHeight - 108 - HEADER_SHRINK_SCROLL_Y)}px`,
+      `${Math.max(0, expandedHeight - HEADER_COLLAPSED_HEIGHT - HEADER_SHRINK_SCROLL_Y)}px`,
     );
     page.classList.toggle("qurbi-header-is-shrunk", isScrollShrunk);
 
@@ -138,7 +143,10 @@ export default function AppHeader({
   const shrinkStyle = shrinkEnabled
     ? expandedHeight
       ? {
-          height: isScrollShrunk || isContracting ? "108px" : `${expandedHeight}px`,
+          height:
+            isScrollShrunk || isContracting
+              ? `${HEADER_COLLAPSED_HEIGHT}px`
+              : `${expandedHeight}px`,
           paddingTop: isScrollShrunk || isContracting ? "12px" : "28px",
           paddingBottom: isScrollShrunk || isContracting ? "8px" : "16px",
           transition:
@@ -147,7 +155,7 @@ export default function AppHeader({
         }
       : isScrollShrunk || isContracting
         ? {
-            height: "108px",
+            height: `${HEADER_COLLAPSED_HEIGHT}px`,
             paddingTop: "12px",
             paddingBottom: "8px",
           }
@@ -235,11 +243,15 @@ export default function AppHeader({
       <div
         className="relative z-10 flex flex-col items-center text-center"
       >
-        <div className="absolute left-0 top-0 z-20 flex flex-row items-center gap-1">
-          {backTo && (
+        <div className="absolute -top-2 left-0 z-30 flex flex-row items-center gap-1">
+          {(backTo || onBack) && (
             <button
               type="button"
               onClick={() => {
+                if (onBack) {
+                  onBack();
+                  return;
+                }
                 const destination = preferRecentBack
                   ? recentPageOr(backTo)
                   : backTo;
@@ -256,10 +268,10 @@ export default function AppHeader({
               <ArrowLeft className="h-5 w-5" />
             </button>
           )}
-          {!backTo && leftAction}
+          {!backTo && !onBack && leftAction}
         </div>
 
-        <div className="absolute right-0 top-0 z-20 flex flex-row items-center gap-1">
+        <div className="absolute -top-2 right-0 z-30 flex flex-row items-center gap-1">
           {!isAuthenticated && !isDesktop && (
             <button
               type="button"
@@ -357,7 +369,7 @@ export default function AppHeader({
           >
             <div className="min-h-0 overflow-hidden">
               <h1
-                className={`mx-auto mt-1 max-w-[65%] text-xl font-bold leading-tight tracking-tight text-white sm:max-w-none ${headerCopyAnimation} ${titleClassName}`}
+                className={`mx-auto mt-1 max-w-[calc(100%-9rem)] text-xl font-bold leading-tight tracking-tight text-white sm:max-w-none ${headerCopyAnimation} ${titleClassName}`}
               >
                 {title}
               </h1>
@@ -385,15 +397,15 @@ export default function AppHeader({
       )}
 
       <div
-        className={`qurbi-header-route-copy relative z-10 grid ${extraVisible && !isContracting ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
-        aria-hidden={!hasExpandableContent}
+        className={`qurbi-header-route-copy relative z-10 grid ${expandedContentVisible ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+        aria-hidden={!expandedContentVisible}
       >
         <div
           className="min-h-0 overflow-hidden"
           style={shrinkingContentStyle}
         >
           <div
-            className={`pt-2 text-center transition-all duration-500 ease-in-out ${extraVisible && !isContracting ? "translate-y-0" : "-translate-y-2"}`}
+            className={`pt-2 text-center transition-all duration-500 ease-in-out ${expandedContentVisible ? "translate-y-0" : "-translate-y-2"}`}
           >
             {search && <div className="mx-auto max-w-xl">{search}</div>}
             {children && <div className="mt-2">{children}</div>}

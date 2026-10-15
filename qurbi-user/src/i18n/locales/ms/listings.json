@@ -148,6 +148,11 @@
   "imageLightbox": {
     "imagePreview": "Pratonton imej",
     "closePreview": "Tutup pratonton imej",
-    "loadError": "Imej ini tidak dapat dimuatkan."
+    "loadError": "Imej ini tidak dapat dimuatkan.",
+    "zoomIn": "Zum masuk",
+    "zoomOut": "Zum keluar",
+    "resetZoom": "Tetapkan semula zum",
+    "previousImage": "Imej sebelumnya",
+    "nextImage": "Imej seterusnya"
   }
 }

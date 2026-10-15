@@ -16,6 +16,7 @@ import { useReveal } from "@/hooks/useReveal";
 import CancelOrderModal from "@/components/CancelOrderModal";
 import AppHeader from "@/components/AppHeader";
 import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
+import { useDisplayMode } from "@/lib/display-mode-context";
 import { orderDateKey, orderTimestamp } from "@/lib/order-date";
 import { formatRM } from "@/lib/format";
 import { groupedOrderQuery, groupOrdersByCheckout, groupItemsByFarm } from "@/lib/order-groups";
@@ -308,6 +309,7 @@ export default function Orders() {
   const { t } = useTranslation("orders");
   const { t: ta } = useTranslation("account");
   const { user, isAuthenticated, authChecked } = useAuth();
+  const { isDesktop } = useDisplayMode();
   const navigate = useNavigate();
   const { navigateWithTransition } = useHeaderTransition();
   const { reveal } = useReveal();
@@ -489,9 +491,9 @@ export default function Orders() {
         sticky
         title={t("orders.title")}
         subtitle={t("orders.subtitle")}
-        leftAction={
+        leftAction={!isDesktop ? (
           <TransactionHeaderButton onOpen={() => navigateWithTransition("/transaction-history")} />
-        }
+        ) : null}
       >
         <div className="flex w-full min-w-0 items-center gap-2">
           <div className="horizontal-filter-scroll no-scrollbar min-w-0 flex-1 overflow-x-auto">

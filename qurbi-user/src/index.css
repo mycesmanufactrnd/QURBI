@@ -161,6 +161,7 @@
   background: url("./assets/abstract-header-nav.webp") right bottom / cover no-repeat;
   opacity: 0.2;
   mix-blend-mode: multiply;
+  border-radius: inherit;
   -webkit-mask-image: linear-gradient(
     to top right,
     #000 0%,
@@ -997,11 +998,46 @@ html {
   }
 }
 
+@keyframes profileNavigationBackIn {
+  from {
+    transform: translate3d(-10%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes profileNavigationBackOut {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    opacity: 0.92;
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
 .animate-profile-navigation-slide-enter {
   animation: profileNavigationSlideIn 320ms cubic-bezier(0.22, 1, 0.36, 1)
     both;
   backface-visibility: hidden;
   will-change: transform;
+}
+
+.animate-profile-navigation-back-enter {
+  animation: profileNavigationBackIn 320ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+.animate-profile-navigation-back-exit {
+  animation: profileNavigationBackOut 320ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+  pointer-events: none;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1042,6 +1078,12 @@ html {
   .animate-profile-navigation-slide-enter {
     animation: none;
   }
+  .animate-profile-navigation-back-enter {
+    animation: none;
+  }
+  .animate-profile-navigation-back-exit {
+    animation: none;
+  }
 }
 
 ::view-transition-group(qurbi-header) {
@@ -1070,6 +1112,16 @@ html.qurbi-profile-navigation-active::view-transition-new(qurbi-profile-navigati
   animation: profileNavigationSlideIn 320ms cubic-bezier(0.22, 1, 0.36, 1)
     both;
   mix-blend-mode: normal;
+}
+
+html.qurbi-profile-navigation-back-active::view-transition-old(qurbi-profile-navigation-page) {
+  animation: profileNavigationBackOut 320ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+}
+
+html.qurbi-profile-navigation-back-active::view-transition-new(qurbi-profile-navigation-page) {
+  animation: profileNavigationBackIn 320ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
 }
 
 html.qurbi-profile-navigation-active::view-transition-group(qurbi-desktop-sidebar),
@@ -1432,7 +1484,7 @@ html[data-qurbi-display-preference="mobile"] #root .qurbi-header-background[clas
 }
 
 html[data-qurbi-display-preference="mobile"] #root .qurbi-header-route-copy h1 {
-  max-width: 65% !important;
+  max-width: calc(100% - 9rem) !important;
 }
 
 html[data-qurbi-display-preference="mobile"] #root [class~="sm:grid-cols-2"] {

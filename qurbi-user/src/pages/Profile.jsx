@@ -38,7 +38,11 @@ import { useDisplayMode } from "@/lib/display-mode-context";
 
 export default function Profile() {
   const location = useLocation();
-  const { navigateFromIconPage } = useHeaderTransition();
+  const {
+    navigateFromIconPage,
+    navigateWithTransition,
+    requestIconClose,
+  } = useHeaderTransition();
   const requireAuth = useRequireAuth();
   const { authChecked, isAuthenticated, user } = useAuth();
   const { profile, profileLoading, updateProfile } = useUserProfile();
@@ -69,6 +73,18 @@ export default function Profile() {
   const profileReturnState = hasValidOriginalLocation
     ? originalLocation.state
     : undefined;
+  const isDesktopIconOverlay = Boolean(
+    isDesktop && location.state?.qurbiIconOverlay,
+  );
+  const handleDesktopProfileReturn = () => {
+    if (requestIconClose("profile")) return;
+    navigateWithTransition(profileReturnTo, {
+      navigateOptions:
+        profileReturnState !== undefined
+          ? { state: profileReturnState }
+          : undefined,
+    });
+  };
 
   const goToFarmerSide = async () => {
     if (switching) return;
@@ -142,6 +158,7 @@ export default function Profile() {
           title={t("profile.pageTitle")}
           subtitle={t("profile.pageSubtitle")}
           backTo={isDesktop ? profileReturnTo : ""}
+          onBack={isDesktopIconOverlay ? handleDesktopProfileReturn : null}
           backState={profileReturnState}
           preferRecentBack={false}
         />
@@ -196,6 +213,7 @@ export default function Profile() {
         title={t("profile.pageTitle")}
         subtitle={t("profile.pageSubtitle")}
         backTo={isDesktop ? profileReturnTo : ""}
+        onBack={isDesktopIconOverlay ? handleDesktopProfileReturn : null}
         backState={profileReturnState}
         preferRecentBack={false}
       />
@@ -315,27 +333,7 @@ export default function Profile() {
                     </div>
                     {fieldErrors.name && <p className={errorCls}>{fieldErrors.name}</p>}
                   </div>
-                  <div>
-                    <label htmlFor="profile-email" className={labelCls}>
-                      {t("profile.accountInfo.email")}
-                    </label>
-                    <div className={inputWrapCls}>
-                      <Mail className={inputIconCls} aria-hidden="true" />
-                    <input
-                      id="profile-email"
-                      value={profile.email}
-                      placeholder={t("profile.editModal.emailPlaceholder")}
-                      type="email"
-                      readOnly
-                      aria-readonly="true"
-                      aria-describedby="profile-email-help"
-                      className={`${inputCls} cursor-not-allowed text-white/75`}
-                    />
-                    </div>
-                    <p id="profile-email-help" className="mt-1 text-[13px] text-[#5A493C]">
-                      {ta("profile.emailLocked")}
-                    </p>
-                  </div>
+
                   <div>
                     <label htmlFor="profile-phone" className={labelCls}>
                       {t("profile.accountInfo.phone")}
@@ -357,6 +355,28 @@ export default function Profile() {
                     />
                     </div>
                     {fieldErrors.phone && <p className={errorCls}>{fieldErrors.phone}</p>}
+                  </div>
+
+                  <div>
+                    <label htmlFor="profile-email" className={labelCls}>
+                      {t("profile.accountInfo.email")}
+                    </label>
+                    <div className={inputWrapCls}>
+                      <Mail className={inputIconCls} aria-hidden="true" />
+                    <input
+                      id="profile-email"
+                      value={profile.email}
+                      placeholder={t("profile.editModal.emailPlaceholder")}
+                      type="email"
+                      readOnly
+                      aria-readonly="true"
+                      aria-describedby="profile-email-help"
+                      className={`${inputCls} cursor-not-allowed text-white/75`}
+                    />
+                    </div>
+                    <p id="profile-email-help" className="mt-1 text-[13px] text-[#5A493C]">
+                      {ta("profile.emailLocked")}
+                    </p>
                   </div>
                   {saveError && (
                     <p role="alert" className="rounded-xl bg-[#FBE4E1] px-3 py-2 text-center text-sm font-semibold text-[#8A1C12]">
@@ -394,7 +414,13 @@ export default function Profile() {
             icon={MapPin}
             title={t("profile.addressBookCard.title")}
             subtitle={t("profile.addressBookCard.subtitle")}
-            onClick={() => requireAuth(() => navigateFromIconPage("/address-book"))}
+            onClick={() =>
+              requireAuth(() =>
+                navigateFromIconPage("/address-book", {
+                  state: { addressBookFromProfile: true },
+                }),
+              )
+            }
           />
           <SettingsRow
             icon={Package}

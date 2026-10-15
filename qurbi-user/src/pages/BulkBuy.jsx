@@ -203,7 +203,7 @@ export default function BulkBuy() {
         </div>
       </AppHeader>
 
-      <main className="aisyah-content grid grid-cols-1 gap-3 sm:grid-cols-2 lg:mx-auto lg:w-full lg:max-w-5xl lg:grid-cols-2">
+      <main className="aisyah-content grid auto-rows-fr grid-cols-1 gap-3 sm:grid-cols-2 lg:mx-auto lg:w-full lg:max-w-5xl lg:grid-cols-2">
         {loading && !listings.length && (
           <PageLoading contentOnly message={t("bulkBuy.loading")} />
         )}
@@ -257,11 +257,11 @@ export default function BulkBuy() {
               <article
                 data-cart-product
                 key={listing.id}
-                className="aisyah-card overflow-hidden transition-all duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.99]"
+                className="aisyah-card flex h-full flex-col overflow-hidden transition-all duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.99]"
               >
                 <Link
                   to={`/bulk-buy/${encodeURIComponent(listing.id)}`}
-                  className="flex gap-3 p-3"
+                  className="flex flex-1 gap-3 p-3"
                   aria-label={tf("bulk.openAria", { title: listing.name, price: formatRM(listing.totalPrice) })}
                 >
                   <div className="h-24 w-24 flex-none overflow-hidden rounded-xl bg-[#F7EDE2]">
@@ -320,7 +320,7 @@ export default function BulkBuy() {
                   </div>
                 </Link>
 
-                <div className="grid grid-cols-2 gap-2 border-t border-[#E3C19F]/50 p-3">
+                <div className="mt-auto grid grid-cols-2 gap-2 border-t border-[#E3C19F]/50 p-3">
                   <Link
                     to={`/bulk-buy/${encodeURIComponent(listing.id)}`}
                     className="flex min-h-12 items-center justify-center rounded-xl border-2 border-[#E3C19F]/80 px-3 text-center text-sm font-bold text-white"

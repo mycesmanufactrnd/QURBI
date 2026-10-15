@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MapPin, Mars, Star, Venus } from "lucide-react";
 import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
@@ -16,13 +16,22 @@ export default function LivestockCard({ livestock, index = 0, className = "", sh
   const { t } = useTranslation("shop");
   const { t: tf } = useTranslation("shopflow");
   const { navigateFromProductCard } = useHeaderTransition();
-  const imageReferences = [livestock.coverImage, ...(livestock.images || [])]
-    .map((image) => {
-      if (typeof image === "string") return image.trim();
-      return image?.url || image?.file_url || image?.src || "";
-    })
-    .filter((image, position, images) => image && images.indexOf(image) === position);
+  const imageReferences = useMemo(() => {
+    const additionalImages = Array.isArray(livestock.images)
+      ? livestock.images
+      : livestock.images
+        ? [livestock.images]
+        : [];
+
+    return [livestock.coverImage, ...additionalImages]
+      .map((image) => {
+        if (typeof image === "string") return image.trim();
+        return image?.url || image?.file_url || image?.src || "";
+      })
+      .filter((image, position, images) => image && images.indexOf(image) === position);
+  }, [livestock.coverImage, livestock.images]);
   const [imageIndex, setImageIndex] = useState(0);
+  const cardRef = useRef(null);
   const img = imageReferences[imageIndex] || "";
 
   useEffect(() => {
@@ -36,29 +45,32 @@ export default function LivestockCard({ livestock, index = 0, className = "", sh
   const age = ageLabel(tf, livestock);
   const price = formatRM(livestock.price);
 
-  const open = (event) =>
-    navigateFromProductCard(`/livestock/${livestock.id}`, event.currentTarget, { image: img, label: title });
+  const open = () =>
+    navigateFromProductCard(`/livestock/${livestock.id}`, cardRef.current, { image: img, label: title });
 
   return (
-    <button
-      type="button"
-      onClick={open}
-      aria-label={tf("card.openAria", { title, price })}
-      className={`group relative flex min-h-[248px] w-full flex-col overflow-hidden rounded-2xl bg-gradient-to-br from-[#41362D] to-[#6B594A] text-left shadow-lg shadow-[#41362D]/30 animate-fade-in-up transition-transform focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#41362D] active:scale-[0.98] sm:min-h-[300px] ${className}`}
+    <article
+      ref={cardRef}
+      className={`group relative flex min-h-[232px] w-full flex-col overflow-hidden rounded-2xl bg-gradient-to-br from-[#41362D] to-[#6B594A] text-left shadow-lg shadow-[#41362D]/30 animate-fade-in-up transition-transform focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#41362D] active:scale-[0.98] sm:min-h-[280px] ${className}`}
       style={{ animationDelay: `${Math.min(index * 40, 300)}ms` }}
     >
-      <span className="relative block min-h-[128px] w-full flex-1 overflow-hidden bg-[#E3C19F] sm:min-h-[170px]">
+      <button
+        type="button"
+        onClick={open}
+        aria-label={tf("card.openAria", { title, price })}
+        className="relative block aspect-[3/2] w-full flex-none overflow-hidden bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-[#41362D]"
+      >
         {img ? (
           <img
             src={img}
-            alt=""
+            alt={title}
             loading="lazy"
             onError={() => setImageIndex((current) => current + 1)}
-            className="absolute inset-0 h-full w-full object-cover"
+            className="absolute inset-0 h-full w-full object-fill"
           />
         ) : (
           <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-[#41362D]">
-            {livestock.species || t("browse.livestockFallback")}
+            {t("listings:livestockDetail.noImage")}
           </span>
         )}
         <span className="absolute bottom-2 left-2 inline-flex max-w-[calc(100%-1rem)] items-center gap-1 rounded-full border border-[#41362D]/40 bg-[#F7EDE2]/95 px-2 py-1 text-xs font-bold leading-none text-[#41362D] shadow-sm">
@@ -78,9 +90,14 @@ export default function LivestockCard({ livestock, index = 0, className = "", sh
             {t("listings:livestockDetail.inCart")}
           </span>
         )}
-      </span>
+      </button>
 
-      <span className="flex min-w-0 flex-col gap-1 px-3 pb-3 pt-2.5 text-white sm:px-4 sm:pb-4">
+      <button
+        type="button"
+        onClick={open}
+        aria-label={tf("card.openAria", { title, price })}
+        className="flex min-w-0 flex-1 flex-col gap-1 px-3 pb-3 pt-2.5 text-left text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-[#E3C19F] sm:px-4 sm:pb-4"
+      >
         <span className="line-clamp-2 min-h-[2.5rem] break-words text-base font-extrabold leading-tight sm:min-h-[3rem] sm:text-lg">
           {title}
         </span>
@@ -101,7 +118,7 @@ export default function LivestockCard({ livestock, index = 0, className = "", sh
           )}
         </span>
         <span className="mt-1 block text-lg font-extrabold leading-tight text-[#F7EDE2] sm:text-xl">{price}</span>
-      </span>
-    </button>
+      </button>
+    </article>
   );
 }

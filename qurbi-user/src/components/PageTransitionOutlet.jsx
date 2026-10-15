@@ -1,6 +1,7 @@
 import React from "react";
 import { useLocation, useOutlet } from "react-router-dom";
 import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
+import { useDisplayMode } from "@/lib/display-mode-context";
 
 export default function PageTransitionOutlet() {
   const location = useLocation();
@@ -11,8 +12,10 @@ export default function PageTransitionOutlet() {
     iconOrigin,
     transitionType,
     usesNativeProfileSlide,
+    isProfileNavigationBack,
   } =
     useHeaderTransition();
+  const { isDesktop } = useDisplayMode();
   const hasIconOverlay = Boolean(location.state?.qurbiIconOverlay);
   const pageType =
     location.pathname === "/notifications"
@@ -21,20 +24,22 @@ export default function PageTransitionOutlet() {
         ? "profile"
         : null;
   const usesIconOrigin = Boolean(
-    pageType && iconOrigin?.type === pageType && transitionType === pageType,
+    !isDesktop && pageType && iconOrigin?.type === pageType && transitionType === pageType,
   );
   const keepsBackgroundStable = Boolean(
     !pageType &&
       (transitionType === "profile" || transitionType === "notification"),
   );
   const isProfileNavigation = transitionType === "profile-navigation";
-  const profileOverlayIsTopRoute =
-    typeof window !== "undefined" && window.location.pathname === "/profile";
 
   const animationClass = isProfileNavigation
-    ? phase === "entering" && !usesNativeProfileSlide
-      ? "animate-profile-navigation-slide-enter"
-      : ""
+    ? !usesNativeProfileSlide && isProfileNavigationBack && phase === "exiting"
+      ? "animate-profile-navigation-back-exit"
+      : phase === "entering" && !usesNativeProfileSlide
+        ? isProfileNavigationBack
+          ? "animate-profile-navigation-back-enter"
+          : "animate-profile-navigation-slide-enter"
+        : ""
     : hasIconOverlay || keepsBackgroundStable
     ? ""
     : usesIconOrigin
@@ -53,7 +58,7 @@ export default function PageTransitionOutlet() {
       style={
         isProfileNavigation &&
         usesNativeProfileSlide &&
-        !profileOverlayIsTopRoute
+        !hasIconOverlay
           ? { viewTransitionName: "qurbi-profile-navigation-page" }
           : usesIconOrigin
           ? {

@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   Plus,
@@ -20,6 +20,8 @@ import AppHeader from "@/components/AppHeader";
 import PageLoading from "@/components/PageLoading";
 import { useAuth } from "@/lib/AuthContext";
 import { useAuthPrompt } from "@/lib/auth-prompt-context";
+import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
+import { recentPageOr } from "@/lib/navigation";
 import {
   dangerBtn,
   ghostOnDarkBtn,
@@ -478,6 +480,7 @@ function DeleteAddressModal({ address, deleting, onCancel, onConfirm }) {
 }
 
 export default function AddressBook() {
+  const location = useLocation();
   const { authChecked, isAuthenticated } = useAuth();
   const { requestSignIn } = useAuthPrompt();
   const {
@@ -491,6 +494,7 @@ export default function AddressBook() {
   } = useUserProfile();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { navigateWithTransition } = useHeaderTransition();
   const { reveal } = useReveal();
   const { t } = useTranslation("profile");
   const { t: ta } = useTranslation("account");
@@ -505,6 +509,7 @@ export default function AddressBook() {
     : requestedReturnTo.startsWith("/payment")
       ? requestedReturnTo
       : "/profile";
+  const openedFromProfile = location.state?.addressBookFromProfile === true;
   const [showForm, setShowForm] = useState(openedFromPayment || isOnboarding);
   const [editingAddress, setEditingAddress] = useState(null);
   const [deleteCandidate, setDeleteCandidate] = useState(null);
@@ -512,6 +517,29 @@ export default function AddressBook() {
   const [formError, setFormError] = useState("");
   const [pageError, setPageError] = useState("");
   const [notice, setNotice] = useState("");
+
+  const handleReturn = useCallback(() => {
+    if (isOnboarding || openedFromPayment) {
+      navigate(returnTo, { replace: true });
+      return;
+    }
+
+    if (openedFromProfile) {
+      navigateWithTransition(recentPageOr("/profile"), {
+        profileNavigationBack: true,
+      });
+      return;
+    }
+
+    navigateWithTransition("/");
+  }, [
+    isOnboarding,
+    navigate,
+    navigateWithTransition,
+    openedFromPayment,
+    openedFromProfile,
+    returnTo,
+  ]);
 
   const flash = (text) => {
     setNotice(text);
@@ -561,6 +589,7 @@ export default function AddressBook() {
         <AppHeader
           title={t("addressBook.pageTitle")}
           backTo={returnTo}
+          onBack={handleReturn}
           preferRecentBack={false}
           subtitle={t("addressBook.pageSubtitle")}
         />
@@ -575,6 +604,7 @@ export default function AddressBook() {
         <AppHeader
           title={t("addressBook.pageTitle")}
           backTo={returnTo}
+          onBack={handleReturn}
           preferRecentBack={false}
           subtitle={t("addressBook.pageSubtitle")}
         />
@@ -603,6 +633,7 @@ export default function AddressBook() {
       <AppHeader
         title={t("addressBook.pageTitle")}
         backTo={returnTo}
+        onBack={handleReturn}
         preferRecentBack={false}
         subtitle={isOnboarding
           ? t("addressBook.onboardingSubtitle")

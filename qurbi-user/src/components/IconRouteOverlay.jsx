@@ -8,6 +8,7 @@ export default function IconRouteOverlay({ type, children }) {
     isIconClosing,
     transitionType,
     usesNativeProfileSlide,
+    isProfileNavigationBack,
   } = useHeaderTransition();
   const isProfileNavigation = transitionType === "profile-navigation";
   const enteredFromProfileNavigationRef = useRef(isProfileNavigation);
@@ -64,7 +65,7 @@ export default function IconRouteOverlay({ type, children }) {
 
   return (
     <div
-      className={`qurbi-icon-route-overlay qurbi-icon-route-overlay-${motionState} ${isProfileNavigation && !usesNativeProfileSlide ? "animate-profile-navigation-slide-enter" : ""}`}
+      className={`qurbi-icon-route-overlay qurbi-icon-route-overlay-${motionState} ${isProfileNavigation && !usesNativeProfileSlide ? isProfileNavigationBack ? "animate-profile-navigation-back-enter" : "animate-profile-navigation-slide-enter" : ""}`}
       style={
         /** @type {React.CSSProperties} */ ({
           "--icon-origin-x": `${origin.x}px`,

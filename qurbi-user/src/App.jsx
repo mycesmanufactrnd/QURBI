@@ -53,11 +53,13 @@ function ApplicationRoutes() {
   const backgroundLocation = location.state?.qurbiIconOverlay
     ? location.state.backgroundLocation
     : null;
+  const profileFlow =
+    location.pathname === "/profile" || location.state?.profileFlow === true;
 
   return (
     <>
       <Routes location={backgroundLocation || location}>
-        <Route element={<AppLayout />}>
+        <Route element={<AppLayout profileFlow={profileFlow} />}>
           <Route path="/" element={<Home />} />
           <Route path="/browse" element={<Browse />} />
           <Route path="/livestock/:id" element={<LivestockDetail />} />

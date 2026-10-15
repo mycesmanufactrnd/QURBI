@@ -87,6 +87,11 @@ const COLOR_VALUE_KEYS = {
   "red & white": "redAndWhite",
 };
 
+const mediaUrl = (value) => {
+  if (typeof value === "string") return value.trim();
+  return value?.url || value?.file_url || value?.src || "";
+};
+
 function translatedListingValue(t, group, keyMap, value) {
   const original = String(value || "").trim();
   if (!original) return "";
@@ -186,13 +191,16 @@ export default function LivestockDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeMedia, setActiveMedia] = useState(0);
+  const [failedImageUrls, setFailedImageUrls] = useState(() => new Set());
+  const [previewImage, setPreviewImage] = useState("");
   const farmSectionRef = React.useRef(null);
   const farmViewTracked = React.useRef(false);
   useEffect(() => {
     setActiveMedia(0);
+    setFailedImageUrls(new Set());
+    setPreviewImage("");
     farmViewTracked.current = false;
   }, [id]);
-  const [previewImage, setPreviewImage] = useState("");
   const [availabilityModal, setAvailabilityModal] = useState("");
   const [detailsRaised, setDetailsRaised] = useState(false);
   const [orderCheck, setOrderCheck] = useState({
@@ -457,9 +465,12 @@ export default function LivestockDetail() {
   if (!livestock) return null;
 
   const title = listingTitle(livestock, t("livestockDetail.livestockFallback"));
-  const allImages = [livestock.coverImage, ...(livestock.images || [])].filter(
-    (image, index, images) => image && images.indexOf(image) === index,
-  );
+  const allImages = [
+    livestock.coverImage,
+    ...(Array.isArray(livestock.images) ? livestock.images : []),
+  ]
+    .map(mediaUrl)
+    .filter((image, index, images) => image && images.indexOf(image) === index);
   const media = [
     ...allImages.map((url) => ({ type: "image", url })),
     ...(livestock.videos || []).filter(Boolean).map((url) => ({ type: "video", url })),
@@ -517,9 +528,9 @@ export default function LivestockDetail() {
       data-cart-product
       className="min-h-screen bg-gradient-to-br from-[#41362D] to-[#6B594A]"
     >
-      {/* Shared image/video gallery. Bottom space keeps controls above the raised sheet. */}
+      {/* Shared image/video gallery. */}
       <div
-        className={`qurbi-page-header relative pb-24 bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] ${reveal()}`}
+        className={`qurbi-page-header relative pb-14 bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] ${reveal()}`}
       >
         <button
           type="button"
@@ -539,25 +550,30 @@ export default function LivestockDetail() {
         </div>
         {selectedMedia?.type === "video" ? (
           <video key={selectedMedia.url} src={selectedMedia.url} controls playsInline preload="metadata"
-            className="block h-72 w-full bg-[#41362D] object-contain sm:h-96">
+            className="block h-[clamp(15rem,50vw,22rem)] w-full bg-[#41362D] object-contain">
             {t("livestockDetail.videoUnsupported")}
           </video>
-        ) : selectedMedia ? (
+        ) : selectedMedia && !failedImageUrls.has(selectedMedia.url) ? (
           <button
             type="button"
             onClick={() => setPreviewImage(selectedMedia.url)}
             aria-label={tf("detail.enlargePhoto")}
-            className="block h-72 w-full sm:h-96"
+            className="block h-[clamp(15rem,50vw,22rem)] w-full"
           >
             <img
               data-cart-product-image
               src={selectedMedia.url}
               alt={title}
-              className="h-full w-full object-cover"
+              onError={() => setFailedImageUrls((current) => {
+                const next = new Set(current);
+                next.add(selectedMedia.url);
+                return next;
+              })}
+              className="h-full w-full object-fill"
             />
           </button>
         ) : (
-          <div className="flex h-72 w-full items-center justify-center bg-[#F7EDE2] text-sm font-bold text-[#41362D]">
+          <div className="flex h-[clamp(15rem,50vw,22rem)] w-full items-center justify-center bg-[#F7EDE2] text-sm font-bold text-[#41362D]">
             {t("livestockDetail.noImage")}
           </div>
         )}
@@ -569,7 +585,24 @@ export default function LivestockDetail() {
                 aria-label={item.type === "video" ? t("livestockDetail.videos") + " " + (index - allImages.length + 1) : tf("detail.showPhoto", { number: index + 1, total: allImages.length })}
                 aria-pressed={selectedMedia === item}
                 className={`flex h-16 w-16 flex-none items-center justify-center overflow-hidden rounded-xl border-2 bg-[#41362D] text-white ${selectedMedia === item ? "border-[#41362D] ring-2 ring-[#41362D]/40" : "border-[#E3C19F] opacity-80"}`}>
-                {item.type === "image" ? <img src={item.url} alt="" className="h-full w-full object-cover" /> : <Play aria-hidden="true" className="h-6 w-6" />}
+                {item.type === "image" && !failedImageUrls.has(item.url) ? (
+                  <img
+                    src={item.url}
+                    alt=""
+                    onError={() => setFailedImageUrls((current) => {
+                      const next = new Set(current);
+                      next.add(item.url);
+                      return next;
+                    })}
+                    className="h-full w-full object-fill"
+                  />
+                ) : item.type === "image" ? (
+                  <span className="px-1 text-center text-[9px] font-bold leading-tight text-white">
+                    {t("livestockDetail.noImage")}
+                  </span>
+                ) : (
+                  <Play aria-hidden="true" className="h-6 w-6" />
+                )}
               </button>
             ))}
           </div>
@@ -595,6 +628,69 @@ export default function LivestockDetail() {
             </p>
           )}
         </section>
+
+        {relatedLivestock.length > 0 && (
+          <section
+            className={`${reveal()} border-t border-white/20 pt-5`}
+            aria-labelledby="related-products-title"
+          >
+            <div className="mb-3 flex items-end justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#E3C19F]">
+                  {t("livestockDetail.sameBreed")}
+                </p>
+                <h2
+                  id="related-products-title"
+                  className="text-xl font-extrabold text-white"
+                >
+                  {t("livestockDetail.relatedTitle")}
+                </h2>
+              </div>
+              <span className="text-xs font-semibold text-white/60">
+                {t("livestockDetail.swipeToExplore")}
+              </span>
+            </div>
+            <div className="no-scrollbar -mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-3">
+              {relatedLivestock.map((item) => {
+                const image = mediaUrl(item.coverImage || item.images?.[0]);
+                const label = item.breed || translatedListingValue(t, "speciesValues", SPECIES_VALUE_KEYS, item.species) || t("livestockDetail.livestockFallback");
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={(event) =>
+                      navigateFromProductCard(
+                        `/livestock/${encodeURIComponent(item.id)}`,
+                        event.currentTarget,
+                        { image, label },
+                      )
+                    }
+                    className="w-40 flex-none snap-start overflow-hidden rounded-2xl border border-[#E3C19F]/55 bg-gradient-to-br from-[#41362D] to-[#6B594A] text-left shadow-lg shadow-black/20 transition-transform duration-200 active:scale-[0.98] sm:w-48"
+                  >
+                    <ProductImage
+                      src={image}
+                      alt={label}
+                      fallbackLabel={t("livestockDetail.noImage")}
+                      className="h-28 w-full rounded-none border-0 sm:h-32"
+                      imageClassName="h-full w-full object-fill"
+                    />
+                    <div className="p-3">
+                      <p className="truncate text-sm font-extrabold text-white">
+                        {label}
+                      </p>
+                      <p className="mt-1 text-base font-extrabold text-[#F7EDE2]">
+                        {formatRM(item.price)}
+                      </p>
+                      <span className="mt-2 inline-flex rounded-lg border border-[#F7EDE2]/70 bg-white/10 px-2.5 py-1 text-[11px] font-bold text-white">
+                        {t("livestockDetail.viewItem")}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* Farm & location */}
         {farmRows.length > 0 && (
@@ -670,67 +766,6 @@ export default function LivestockDetail() {
           </LightDetailCard>
         )}
 
-        {relatedLivestock.length > 0 && (
-          <section
-            className={`${reveal()} mt-6 border-t border-white/20 pt-5`}
-            aria-labelledby="related-products-title"
-          >
-            <div className="mb-3 flex items-end justify-between gap-3">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#E3C19F]">
-                  {t("livestockDetail.sameBreed")}
-                </p>
-                <h2
-                  id="related-products-title"
-                  className="text-xl font-extrabold text-white"
-                >
-                  {t("livestockDetail.relatedTitle")}
-                </h2>
-              </div>
-              <span className="text-xs font-semibold text-white/60">
-                {t("livestockDetail.swipeToExplore")}
-              </span>
-            </div>
-            <div className="no-scrollbar -mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-3">
-              {relatedLivestock.map((item) => {
-                const image = item.coverImage || item.images?.[0] || "";
-                const label = item.breed || translatedListingValue(t, "speciesValues", SPECIES_VALUE_KEYS, item.species) || t("livestockDetail.livestockFallback");
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={(event) =>
-                      navigateFromProductCard(
-                        `/livestock/${encodeURIComponent(item.id)}`,
-                        event.currentTarget,
-                        { image, label },
-                      )
-                    }
-                    className="w-40 flex-none snap-start overflow-hidden rounded-2xl border border-[#E3C19F]/55 bg-gradient-to-br from-[#41362D] to-[#6B594A] text-left shadow-lg shadow-black/20 transition-transform duration-200 active:scale-[0.98] sm:w-48"
-                  >
-                    <ProductImage
-                      src={image}
-                      alt={label}
-                      fallbackLabel={t("livestockDetail.noImage")}
-                      className="h-28 w-full rounded-none border-0 sm:h-32"
-                    />
-                    <div className="p-3">
-                      <p className="truncate text-sm font-extrabold text-white">
-                        {label}
-                      </p>
-                      <p className="mt-1 text-base font-extrabold text-[#F7EDE2]">
-                        {formatRM(item.price)}
-                      </p>
-                      <span className="mt-2 inline-flex rounded-lg border border-[#F7EDE2]/70 bg-white/10 px-2.5 py-1 text-[11px] font-bold text-white">
-                        {t("livestockDetail.viewItem")}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        )}
       </DetailOuterSheet>
 
       {/* Purchase UI is absent until the order check confirms repurchase is allowed. */}
@@ -771,6 +806,7 @@ export default function LivestockDetail() {
 
       <ImageLightbox
         image={previewImage}
+        images={allImages}
         alt={title}
         onClose={() => setPreviewImage("")}
       />
