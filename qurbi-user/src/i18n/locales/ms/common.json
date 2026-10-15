@@ -21,6 +21,10 @@
     "cart": "Troli",
     "orders": "Pesanan"
   },
+  "homeHeader": {
+    "welcome": "Selamat datang, {{name}}",
+    "welcomeGuest": "Selamat datang ke QURBI"
+  },
   "pageLoading": {
     "loading": "Memuatkan...",
     "pleaseWait": "Sila tunggu..."

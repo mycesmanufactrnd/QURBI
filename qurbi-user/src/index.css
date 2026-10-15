@@ -111,7 +111,11 @@
   }
 
   .qurbi-content {
-    @apply mx-auto w-full max-w-5xl space-y-4 px-4 pt-5;
+    @apply mx-auto w-full max-w-[61.5rem] space-y-4 px-4 pt-5;
+  }
+
+  .qurbi-desktop-bounded-content {
+    @apply mx-auto;
   }
 
   .qurbi-page > :not(.qurbi-shrinkable-header-shell):not(.fixed) {
@@ -1463,6 +1467,17 @@ html[data-qurbi-display-mode="mobile"] {
 /* Desktop navigation owns a permanent grid column beside page content. */
 html[data-qurbi-display-mode="desktop"] .qurbi-desktop-content {
   min-width: 0;
+}
+
+/* Keep desktop page content inside the same horizontal range as the shared
+   61.5rem header. Smaller page-specific max-widths remain in control. */
+html[data-qurbi-display-mode="desktop"] .qurbi-content,
+html[data-qurbi-display-mode="desktop"] .qurbi-desktop-bounded-content {
+  width: calc(100% - 2.5rem);
+}
+
+html[data-qurbi-display-mode="desktop"] .qurbi-desktop-bounded-content {
+  max-width: 61.5rem;
 }
 
 /* A manually forced Mobile layout still runs inside a wide browser viewport,

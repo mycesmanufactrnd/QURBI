@@ -20,11 +20,11 @@ import {
   Sparkles,
   Tractor,
   ArrowLeftRight,
+  ArrowLeft,
 } from "lucide-react";
 import { useUserProfile } from "@/lib/user-profile-context";
 import { useReveal } from "@/hooks/useReveal";
 import AuthButtons from "@/components/AuthButtons";
-import AppHeader from "@/components/AppHeader";
 import PageLoading from "@/components/PageLoading";
 import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
@@ -49,6 +49,7 @@ export default function Profile() {
   const { reveal } = useReveal();
   const { t, i18n } = useTranslation("profile");
   const { t: ta } = useTranslation("account");
+  const { t: tc } = useTranslation("common");
   const [form, setForm] = useState(profile);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -58,7 +59,7 @@ export default function Profile() {
   const [switchError, setSwitchError] = useState("");
   const [switching, setSwitching] = useState(false);
   const mounted = useMounted();
-  const { displayMode, isDesktop, setDisplayMode } = useDisplayMode();
+  const { displayMode, setDisplayMode } = useDisplayMode();
   const isFarmerAccount = user?.availableRoles?.includes("farmer");
   const originalLocation =
     location.state?.profileReturnLocation || location.state?.backgroundLocation;
@@ -73,10 +74,7 @@ export default function Profile() {
   const profileReturnState = hasValidOriginalLocation
     ? originalLocation.state
     : undefined;
-  const isDesktopIconOverlay = Boolean(
-    isDesktop && location.state?.qurbiIconOverlay,
-  );
-  const handleDesktopProfileReturn = () => {
+  const handleProfileReturn = () => {
     if (requestIconClose("profile")) return;
     navigateWithTransition(profileReturnTo, {
       navigateOptions:
@@ -143,25 +141,42 @@ export default function Profile() {
   };
 
   const openEdit = () => {
-    requireAuth(() => {
-      setForm(profile);
-      setFieldErrors({ name: "", phone: "" });
-      setSaveError("");
-      setShowEdit(true);
-    });
+    setForm(profile);
+    setFieldErrors({ name: "", phone: "" });
+    setSaveError("");
+    setShowEdit(true);
   };
+
+  const returnButton = (
+    <header className="mx-auto w-full max-w-2xl px-4 pt-5 sm:pt-6">
+      <div className="flex gap-3">
+        <button
+          type="button"
+          onClick={handleProfileReturn}
+          aria-label={tc("appHeader.goBack")}
+          className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white shadow-sm transition-transform active:scale-95"
+        >
+          <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+        </button>
+        <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-[#41362D]/70">
+              QURBI
+            </p>
+
+            <h1 className="text-2xl font-bold leading-tight text-[#41362D]">
+              {t(
+                "profile.pageTitle"
+              )}
+            </h1>
+          </div>
+      </div>  
+    </header>
+  );
 
   if (!authChecked || profileLoading) {
     return (
       <div className="qurbi-page">
-        <AppHeader
-          title={t("profile.pageTitle")}
-          subtitle={t("profile.pageSubtitle")}
-          backTo={isDesktop ? profileReturnTo : ""}
-          onBack={isDesktopIconOverlay ? handleDesktopProfileReturn : null}
-          backState={profileReturnState}
-          preferRecentBack={false}
-        />
+        {returnButton}
         <PageLoading contentOnly message={t("profile.loading")} />
       </div>
     );
@@ -178,10 +193,16 @@ export default function Profile() {
   }
 
   const infoRows = [
-    { icon: User, label: t("profile.accountInfo.name"), value: profile.name },
     { icon: Mail, label: t("profile.accountInfo.email"), value: profile.email },
     { icon: Phone, label: t("profile.accountInfo.phone"), value: profile.phone },
   ];
+  const profileInitials = (profile.name || "")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase() || "?";
   const languages = [
     { code: "en", label: t("language.english") },
     { code: "ms", label: t("language.malay") },
@@ -209,14 +230,7 @@ export default function Profile() {
           .profile-backdrop, .profile-modal { animation: none; }
         }
       `}</style>
-      <AppHeader
-        title={t("profile.pageTitle")}
-        subtitle={t("profile.pageSubtitle")}
-        backTo={isDesktop ? profileReturnTo : ""}
-        onBack={isDesktopIconOverlay ? handleDesktopProfileReturn : null}
-        backState={profileReturnState}
-        preferRecentBack={false}
-      />
+      {returnButton}
 
       <div className="qurbi-content mx-auto max-w-2xl space-y-6">
         {/* Account */}
@@ -225,54 +239,65 @@ export default function Profile() {
           style={{ animationDelay: "80ms" }}
           aria-labelledby="account-group-title"
         >
-          <h2 id="account-group-title" className="mb-2 px-1 text-sm font-bold text-[#41362D]/80">
-            {ta("profile.groups.account")}
-          </h2>
-          <div className="qurbi-card overflow-hidden rounded-2xl">
-            <div className="flex items-center gap-4 p-4">
-              <div className="flex h-14 w-14 flex-none items-center justify-center rounded-full bg-white/15">
-                <User className="h-7 w-7 text-white" aria-hidden="true" />
+          <div className="mb-3 flex items-center justify-between gap-3 px-1">
+            <h2 id="account-group-title" className="text-sm font-bold text-[#41362D]/80">
+              {ta("profile.groups.account")}
+            </h2>
+            <button
+              type="button"
+              onClick={openEdit}
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-gradient-to-br from-[#41362D] to-[#6B594A] px-3 text-sm font-bold text-[#F7EDE2] shadow-sm transition-transform active:scale-95"
+            >
+              <Pencil className="h-4 w-4" aria-hidden="true" />
+              {ta("profile.editDetails")}
+            </button>
+          </div>
+          <div className="qurbi-card qurbi-header-background relative overflow-hidden rounded-[1.75rem] p-5 sm:p-6">
+            <div className="relative z-10 flex min-w-0 items-center gap-3.5">
+              <div className="flex h-14 w-14 flex-none items-center justify-center rounded-2xl border border-white/25 bg-white/15 text-lg font-extrabold text-white shadow-sm" aria-hidden="true">
+                {profileInitials}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="break-words text-lg font-bold text-white">
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#E3C19F]">
+                  {t("profile.buyerAccount")}
+                </p>
+                <p className="mt-1 break-words text-xl font-extrabold leading-tight text-white">
                   {profile.name || t("profile.guestBuyer")}
                 </p>
-                <p className="break-all text-sm text-white/80">
+                <p className="mt-1 break-all text-sm text-white/80">
                   {profile.email || t("profile.noEmailSet")}
+                </p>
+                <p className="mt-1 break-all text-sm text-white/80">
+                  {profile.phone || t("profile.phone")}
                 </p>
               </div>
             </div>
-            <dl className="divide-y divide-white/15 border-t border-white/15">
-              {infoRows.map(({ icon: Icon, label, value }) => (
-                <div key={label} className="flex items-center gap-3 px-4 py-3">
-                  <Icon className="h-5 w-5 flex-none text-[#E3C19F]" aria-hidden="true" />
-                  <dt className="w-16 flex-none text-sm text-white/75">{label}</dt>
-                  <dd className="min-w-0 flex-1 break-words text-[15px] font-medium text-white [overflow-wrap:anywhere]">
+          </div>
+          <dl className="mt-4 divide-y divide-white/15 overflow-hidden rounded-[1.5rem] border border-[#E3C19F]/30 bg-gradient-to-br from-[#41362D] to-[#6B594A] shadow-md shadow-[#41362D]/20">
+            {infoRows.map(({ icon: Icon, label, value }) => (
+              <div key={label} className="flex min-h-[76px] items-center gap-3 px-4 py-3 sm:px-5">
+                <span className="flex h-10 w-10 flex-none items-center justify-center rounded-xl bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2]">
+                  <Icon className="h-5 w-5 text-black" aria-hidden="true" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <dt className="text-sm text-white/75">{label}</dt>
+                  <dd className="break-words text-[15px] font-semibold text-white [overflow-wrap:anywhere]">
                     {value || ta("profile.notSet")}
                   </dd>
                 </div>
-              ))}
-            </dl>
-            <div className="border-t border-white/15 p-3">
-              <button
-                type="button"
-                onClick={openEdit}
-                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] px-4 text-[15px] font-bold text-[#41362D]"
-              >
-                <Pencil className="h-4 w-4" aria-hidden="true" /> {ta("profile.editDetails")}
-              </button>
-            </div>
-          </div>
+              </div>
+            ))}
+          </dl>
         </section>
 
         {/* Edit popup */}
         {showEdit && mounted && createPortal((
           <>
             <div
-              className="fixed inset-0 z-40 bg-[#241D18]/55 backdrop-blur-[3px] profile-backdrop"
+              className="fixed inset-0 z-[290] bg-[#241D18]/55 backdrop-blur-[3px] profile-backdrop"
               onClick={() => !saving && setShowEdit(false)}
             />
-            <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain p-4 pointer-events-none sm:p-5">
+            <div className="fixed inset-0 z-[300] flex items-center justify-center overflow-y-auto overscroll-contain p-4 pointer-events-none sm:p-5">
               <div
                 role="dialog"
                 aria-modal="true"
