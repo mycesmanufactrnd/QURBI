@@ -639,7 +639,7 @@ export default function Browse() {
         <>
           {/* Result count */}
           <div
-            className={`mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 pt-3 ${reveal()}`}
+            className={`qurbi-desktop-bounded-content flex max-w-6xl items-center justify-between gap-3 px-4 pt-3 ${reveal()}`}
             style={{ animationDelay: "120ms" }}
           >
             <p className="text-sm font-semibold text-[#41362D]" aria-live="polite">
@@ -657,7 +657,7 @@ export default function Browse() {
           </div>
 
           {/* Results */}
-          <div className="mx-auto max-w-6xl space-y-4 px-4 pt-3">
+          <div className="qurbi-desktop-bounded-content max-w-6xl space-y-4 px-4 pt-3">
             {filtered.length === 0 ? (
               <div className="flex animate-fade-in-up flex-col items-center justify-center py-16 text-center">
                 <Search aria-hidden="true" className="mb-3 h-10 w-10 text-[#6B594A]" />

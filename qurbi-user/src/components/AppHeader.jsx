@@ -19,6 +19,7 @@ const useIsomorphicLayoutEffect =
 /** Shared QURBI page header for normal in-app screens. */
 export default function AppHeader({
   title,
+  desktopTitle = "",
   eyebrow = "QURBI",
   subtitle = "",
   backTo = "",
@@ -59,13 +60,19 @@ export default function AppHeader({
   const profileButtonRef = useRef(null);
   const pendingProfileActionRef = useRef(null);
   const [profileMenu, setProfileMenu] = useState(null);
-  const shrinkEnabled = progressiveShrink || thresholdShrink;
+  const useDesktopHeaderBox = isDesktop && !isProfilePage;
+  const resolvedDesktopTitle = desktopTitle || title;
+  // Desktop follows the Farmer dashboard's fixed hero-card treatment. Header
+  // contraction remains a mobile-only interaction.
+  const shrinkEnabled = !isDesktop && (progressiveShrink || thresholdShrink);
   const headerExpanded = headerEntered;
   const routeContentVisible =
-    headerEntered && !isContracting && !isScrollShrunk;
+    useDesktopHeaderBox || (headerEntered && !isContracting && !isScrollShrunk);
   const expandedContentVisible =
-    extraVisible && !isContracting && !isScrollShrunk;
-  const headerCopyAnimation = isContracting || isScrollShrunk
+    extraVisible && (useDesktopHeaderBox || (!isContracting && !isScrollShrunk));
+  const headerCopyAnimation = useDesktopHeaderBox
+    ? ""
+    : isContracting || isScrollShrunk
     ? "animate-header-copy-exit"
     : headerEntered
       ? "animate-header-copy-enter"
@@ -232,6 +239,104 @@ export default function AppHeader({
     setProfileMenu(null);
   }, [isProfilePage, profileMenu]);
 
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+      return;
+    }
+    const destination = preferRecentBack
+      ? recentPageOr(backTo)
+      : backTo;
+    navigateWithTransition(destination, {
+      navigateOptions:
+        !preferRecentBack && backState !== undefined
+          ? { state: backState }
+          : undefined,
+    });
+  };
+
+  const notificationAction = isAuthenticated && showNotificationAction ? (
+    <button
+      type="button"
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        beginIconTransition("notification", event.currentTarget);
+        navigateWithTransition("/notifications", {
+          transitionType: "notification",
+        });
+      }}
+      aria-label={
+        unreadCount
+          ? t("appHeader.notificationsUnread", { count: unreadCount })
+          : t("appHeader.notifications")
+      }
+      className="group relative flex h-11 w-11 flex-none items-center justify-center rounded-full bg-transparent text-white transition-all duration-200 ease-out hover:-translate-y-0.5 hover:text-[#E3C19F] active:scale-90"
+    >
+      <Bell className="h-10 w-6 transition-transform duration-200 group-hover:scale-110" />
+      {unreadCount > 0 && (
+        <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-white bg-[#DC2626] px-1 text-[11px] font-bold leading-none text-white">
+          {unreadCount > 99 ? "99+" : unreadCount}
+        </span>
+      )}
+    </button>
+  ) : null;
+
+  const desktopHeaderMarkup = (
+    <header
+      ref={isDesktop ? headerRef : undefined}
+      data-page-description={subtitle || undefined}
+      data-description-class={subtitleClassName || undefined}
+      className="qurbi-desktop-page-header qurbi-header-background relative z-20 mx-auto mt-5 w-[calc(100%-2.5rem)] max-w-[61.5rem] overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-[#41362D] to-[#6B594A] px-6 py-5 text-white shadow-[0_10px_28px_rgba(65,54,45,0.18)] sm:px-8 sm:py-6"
+      style={{ viewTransitionName: "qurbi-header" }}
+    >
+      <div className="relative z-10 flex min-h-11 min-w-0 items-start justify-center px-14 text-center">
+        <div className="absolute left-0 top-0 flex items-center gap-2">
+          {(backTo || onBack) && (
+            <button
+              type="button"
+              onClick={handleBack}
+              aria-label={t("appHeader.goBack")}
+              className="flex h-11 w-11 flex-none items-center justify-center rounded-xl border border-[#F7EDE2]/60 bg-white/10 text-white transition-colors hover:bg-white/20 active:scale-95"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+          )}
+          {!backTo && !onBack && leftAction ? (
+            <div className="flex-none">{leftAction}</div>
+          ) : null}
+        </div>
+        <div className="min-w-0 max-w-3xl pt-0.5">
+          {resolvedDesktopTitle ? (
+            <h1
+              className={`truncate text-2xl font-extrabold leading-tight tracking-tight text-white sm:text-3xl ${titleClassName}`}
+              title={resolvedDesktopTitle}
+            >
+              {resolvedDesktopTitle}
+            </h1>
+          ) : null}
+          {subtitle ? (
+            <p
+              className={`mt-1.5 text-sm leading-relaxed text-white/80 ${subtitleClassName}`}
+            >
+              {subtitle}
+            </p>
+          ) : null}
+        </div>
+        {notificationAction ? (
+          <div className="absolute right-0 top-0">{notificationAction}</div>
+        ) : null}
+      </div>
+
+      {hasExpandableContent ? (
+        <div className="relative z-10 mt-4">
+          {search ? <div className="w-full">{search}</div> : null}
+          {children ? <div className={search ? "mt-3" : ""}>{children}</div> : null}
+        </div>
+      ) : null}
+    </header>
+  );
+
   const headerMarkup = (
     <header
       ref={headerRef}
@@ -247,21 +352,7 @@ export default function AppHeader({
           {(backTo || onBack) && (
             <button
               type="button"
-              onClick={() => {
-                if (onBack) {
-                  onBack();
-                  return;
-                }
-                const destination = preferRecentBack
-                  ? recentPageOr(backTo)
-                  : backTo;
-                navigateWithTransition(destination, {
-                  navigateOptions:
-                    !preferRecentBack && backState !== undefined
-                      ? { state: backState }
-                      : undefined,
-                });
-              }}
+              onClick={handleBack}
               aria-label={t("appHeader.goBack")}
               className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#F7EDE2]/60 bg-white/10 text-white transition-transform active:scale-90"
             >
@@ -284,32 +375,7 @@ export default function AppHeader({
               </div>
             </button>
           )}
-          {isAuthenticated && showNotificationAction && (
-            <button
-              type="button"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                beginIconTransition("notification", event.currentTarget);
-                navigateWithTransition("/notifications", {
-                  transitionType: "notification",
-                });
-              }}
-              aria-label={
-                unreadCount
-                  ? t("appHeader.notificationsUnread", { count: unreadCount })
-                  : t("appHeader.notifications")
-              }
-              className="group relative flex h-11 w-11 items-center justify-center rounded-full bg-transparent text-white transition-all duration-200 ease-out hover:-translate-y-0.5 hover:text-[#E3C19F] active:scale-90"
-            >
-              <Bell className="h-10 w-6 transition-transform duration-200 group-hover:scale-110" />
-              {unreadCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-white bg-[#DC2626] px-1 text-[11px] font-bold leading-none text-white">
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </span>
-              )}
-            </button>
-          )}
+          {notificationAction}
           {isAuthenticated && !isDesktop && (
             <button
               ref={profileButtonRef}
@@ -468,6 +534,15 @@ export default function AppHeader({
         document.body,
       )
     : null;
+
+  if (useDesktopHeaderBox) {
+    return (
+      <>
+        {desktopHeaderMarkup}
+        {profileActionMenu}
+      </>
+    );
+  }
 
   if (!shrinkEnabled) {
     return (

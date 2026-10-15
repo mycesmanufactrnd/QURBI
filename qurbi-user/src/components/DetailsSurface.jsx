@@ -7,7 +7,7 @@ import React from "react";
 export function DetailOuterSheet({ raised = false, withActionBar = false, children, className = "" }) {
   return (
     <main
-      className={`relative z-10 mx-auto -mt-12 max-w-5xl space-y-4 rounded-t-[32px] bg-gradient-to-br from-[#41362D] to-[#6B594A] px-4 pt-5 text-white shadow-xl shadow-black/20 transition-all duration-300 ease-out sm:px-6 ${withActionBar ? "qurbi-action-bar-space" : "pb-[calc(7rem+env(safe-area-inset-bottom))]"} ${raised ? "-translate-y-12" : "translate-y-0"} ${className}`}
+      className={`qurbi-desktop-bounded-content relative z-10 -mt-12 max-w-5xl space-y-4 rounded-t-[32px] bg-gradient-to-br from-[#41362D] to-[#6B594A] px-4 pt-5 text-white shadow-xl shadow-black/20 transition-all duration-300 ease-out sm:px-6 ${withActionBar ? "qurbi-action-bar-space" : "pb-[calc(7rem+env(safe-area-inset-bottom))]"} ${raised ? "-translate-y-12" : "translate-y-0"} ${className}`}
     >
       {children}
     </main>

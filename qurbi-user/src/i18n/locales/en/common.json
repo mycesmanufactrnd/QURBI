@@ -21,6 +21,10 @@
     "cart": "Cart",
     "orders": "Orders"
   },
+  "homeHeader": {
+    "welcome": "Welcome, {{name}}",
+    "welcomeGuest": "Welcome to QURBI"
+  },
   "pageLoading": {
     "loading": "Loading...",
     "pleaseWait": "Please wait..."

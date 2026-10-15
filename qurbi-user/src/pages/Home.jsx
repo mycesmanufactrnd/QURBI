@@ -82,6 +82,7 @@ export default function Home() {
   const { t } = useTranslation("shop");
   const { t: tf } = useTranslation("shopflow");
   const { t: tseo } = useTranslation("seo");
+  const { t: tc } = useTranslation("common");
   const navigate = useNavigate();
 
   const { totalItems, totalPrice } = useCart();
@@ -89,11 +90,21 @@ export default function Home() {
   const { reveal } = useReveal();
 
   const {
+    user,
     authChecked,
     isAuthenticated,
     isLoadingAuth,
     isLoadingPublicSettings,
   } = useAuth();
+  const userName =
+    user?.display_name ||
+    user?.full_name ||
+    user?.fullName ||
+    user?.email?.split("@")[0] ||
+    "";
+  const desktopGreeting = userName
+    ? tc("homeHeader.welcome", { name: userName })
+    : tc("homeHeader.welcomeGuest");
 
   // The splash is browser-only. The prerendered HTML (and the first client
   // render that hydrates it) show the real page content; right after mount
@@ -260,6 +271,7 @@ export default function Home() {
       <AppHeader
         eyebrow="QURBI"
         title=""
+        desktopTitle={desktopGreeting}
         subtitle={tseo("home.tagline")}
         subtitleClassName="text-base"
         search={
@@ -288,7 +300,7 @@ export default function Home() {
 
       <ViewCartCard totalItems={totalItems} totalPrice={totalPrice} />
 
-      <div className="mx-auto max-w-5xl space-y-7 px-4 pt-5 sm:px-5">
+      <div className="qurbi-desktop-bounded-content max-w-5xl space-y-7 px-4 pt-5 sm:px-5">
         {/* ANIMAL CATEGORIES */}
         <section className={reveal()} style={{ animationDelay: "120ms" }} aria-labelledby="home-categories-title">
           <div className="mb-3 flex items-center justify-between">
