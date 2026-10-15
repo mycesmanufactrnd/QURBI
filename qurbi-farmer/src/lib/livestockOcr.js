@@ -1,9 +1,17 @@
 export function parseLivestockDocument(rawText, knownBreeds = [], ocrConfidence = 0, states = []) {
   const text = normalizeOcrText(rawText);
   const lower = text.toLowerCase();
-  const healthTerms = /(veterinary health certificate|sijil kesihatan veterinar|health status|veterinary officer|pegawai veterinar)/i;
-  const birthTerms = /(birth certificate|sijil (?:kelahiran|lahir)|date of birth|tarikh lahir|\bsire\b|\bdam\b)/i;
-  const documentType = healthTerms.test(text) ? "veterinary" : birthTerms.test(text) ? "birth" : "livestock_details";
+  const healthCertificateTerms = /(veterinary health certificate|sijil kesihatan veterinar)/i;
+  const birthCertificateTerms = /(birth certificate|sijil (?:kelahiran|lahir))/i;
+  const healthTerms = /(health status|veterinary officer|pegawai veterinar)/i;
+  const birthTerms = /(date of birth|tarikh lahir|\bsire\b|\bdam\b)/i;
+  const documentType = birthCertificateTerms.test(text)
+    ? "birth"
+    : healthCertificateTerms.test(text) || healthTerms.test(text)
+      ? "veterinary"
+      : birthTerms.test(text)
+        ? "birth"
+        : "livestock_details";
   const speciesLabel = extractLabeledText(text, /species|spesies|jenis ternakan/i);
   const species = detectSpecies(speciesLabel) || detectSpecies(text);
   const breedLabel = extractLabeledText(text, /breed|baka/i);
@@ -28,15 +36,20 @@ export function parseLivestockDocument(rawText, knownBreeds = [], ocrConfidence 
   const animalIdCandidate = extractLabeledText(text, /(?:(?:animal|livestock)[ \t]+(?:id|no\.?|number|nombor|#)(?:[ \t]*\/[ \t]*tag)?|(?:ear[ \t]*tag|tag)(?:[ \t]+(?:id|no\.?|number|nombor|#))?)/i, true);
   const certificateNumber = cleanIdentifier(certificateCandidate);
   const animalId = cleanIdentifier(animalIdCandidate);
-  const birthDateRaw = matchText(text, /(?:date of birth|birth date|tarikh lahir|dob)[ \t]*[:=\-]?[ \t]*([0-9]{1,4}[/\.\-][0-9]{1,2}[/\.\-][0-9]{1,4})/i);
+  const birthDateRaw = matchText(text, /(?:date of birth|birth date|tarikh lahir|dob)[ \t]*[:=\-]?[ \t]*([0-9]{1,4}[/\.\-][0-9]{1,2}[/\.\-][0-9]{1,4}|[0-9]{1,2}[ \t]+[A-Za-z]+[ \t]+[0-9]{4})/i);
   const birthDate = normalizeDate(birthDateRaw);
   const veterinaryOfficer = cleanPersonName(extractLabeledText(text, /veterinary officer|veterinarian|pegawai veterinar|veterinary surgeon/i, true));
   const color = matchText(text, /(?:colou?r|warna)[ \t]*[:=\-]?[ \t]*([^\n]{2,50})/i);
   const weight = matchText(text, /(?:birth[ \t]+weight|weight|berat)[ \t]*[:=\-]?[ \t]*([0-9]+(?:\.[0-9]+)?)[ \t]*(?:kg|kilogram)?/i);
+  const ageMatch = text.match(/(?:age|umur)[ \t]*[:=\-]?[ \t]*(\d{1,3})[ \t]*(months?|months old|bulan|years?|years old|tahun)\b/i);
+  const ageMonths = ageMatch
+    ? Number(ageMatch[1]) * (/^(?:years?|years old|tahun)$/i.test(ageMatch[2]) ? 12 : 1)
+    : ageInCompletedMonths(birthDate);
+  const description = cleanDescription(extractLabeledText(text, /description|penerangan|catatan/i, true));
   const state = [...states].sort((a, b) => String(b).length - String(a).length).find((name) => lower.includes(String(name).toLowerCase())) || "";
 
-  const detectedValues = [species, matchedBreed?.name, gender, maleCount || femaleCount, certificateNumber, animalId, birthDate, state, veterinaryOfficer, color, weight];
-  const detectedFieldCount = detectedValues.filter(Boolean).length;
+  const detectedValues = [species, matchedBreed?.name, gender, maleCount || femaleCount, certificateNumber, animalId, birthDate, ageMonths, state, veterinaryOfficer, color, weight, description];
+  const detectedFieldCount = detectedValues.filter(hasValue).length;
   const confidence = Math.round(Math.max(0, Math.min(100, Number(ocrConfidence || 0) * 0.7 + Math.min(30, detectedFieldCount * 3))));
   const warnings = [];
   if (!text.trim()) warnings.push("empty_text");
@@ -58,10 +71,12 @@ export function parseLivestockDocument(rawText, knownBreeds = [], ocrConfidence 
     maleCount,
     femaleCount,
     birthDate,
+    ageMonths,
     state,
     veterinaryOfficer,
     color,
     weight,
+    description,
     confidence,
     detectedFieldCount,
     warnings,
@@ -86,7 +101,7 @@ export function combineLivestockDocuments(results) {
   const documentTypes = [...new Set(unique.map((result) => result.documentType).filter(Boolean))];
   const conflicts = [];
   const consistentValue = (key) => {
-    const values = [...new Set(unique.map((result) => result[key]).filter(Boolean))];
+    const values = [...new Set(unique.map((result) => result[key]).filter(hasValue))];
     if (values.length > 1) conflicts.push(key);
     return values.length === 1 ? values[0] : "";
   };
@@ -95,10 +110,12 @@ export function combineLivestockDocuments(results) {
     "animalId",
     "gender",
     "birthDate",
+    "ageMonths",
     "state",
     "veterinaryOfficer",
     "color",
     "weight",
+    "description",
   ].map((key) => [key, consistentValue(key)]));
   const documentType = documentTypes.length === 1 ? documentTypes[0] : "mixed";
   const warnings = [...new Set(unique.flatMap((result) => result.warnings || []))];
@@ -126,10 +143,12 @@ export function combineLivestockDocuments(results) {
     maleCount,
     femaleCount,
     birthDate: consistent.birthDate,
+    ageMonths: consistent.ageMonths,
     state: consistent.state,
     veterinaryOfficer: consistent.veterinaryOfficer,
     color: consistent.color,
     weight: consistent.weight,
+    description: consistent.description,
     confidence: Math.max(0, baseConfidence - confidencePenalty),
     detectedFieldCount: unique.reduce((sum, result) => sum + result.detectedFieldCount, 0),
     warnings: [...new Set(warnings)],
@@ -152,11 +171,11 @@ export function combineLivestockDocuments(results) {
 export function combineIndividualDocuments(results) {
   const { unique, duplicateCount } = uniqueResults(results);
   const ranked = [...unique].sort((a, b) => (b.detectedFieldCount - a.detectedFieldCount) || (b.confidence - a.confidence));
-  const keys = ["certificateNumber", "animalId", "species", "breed", "breedId", "gender", "birthDate", "state", "veterinaryOfficer", "color", "weight"];
+  const keys = ["certificateNumber", "animalId", "species", "breed", "breedId", "gender", "birthDate", "ageMonths", "state", "veterinaryOfficer", "color", "weight", "description"];
   const combined = {};
   const conflicts = [];
   keys.forEach((key) => {
-    const values = [...new Set(ranked.map((result) => result[key]).filter(Boolean))];
+    const values = [...new Set(ranked.map((result) => result[key]).filter(hasValue))];
     combined[key] = values[0] || "";
     if (values.length > 1) conflicts.push(key);
   });
@@ -203,7 +222,21 @@ function normalizeOcrText(value) {
 }
 
 function normalizeDate(value) {
-  const match = String(value || "").match(/^(\d{1,4})[/\.\-](\d{1,2})[/\.\-](\d{1,4})$/);
+  const source = String(value || "").trim();
+  const namedDate = source.match(/^(\d{1,2})[ \t]+([A-Za-z]+)[ \t]+(\d{4})$/);
+  if (namedDate) {
+    const months = {
+      january: 1, januari: 1, february: 2, februari: 2, march: 3, mac: 3,
+      april: 4, may: 5, mei: 5, june: 6, jun: 6, july: 7, julai: 7,
+      august: 8, ogos: 8, september: 9, october: 10, oktober: 10,
+      november: 11, december: 12, disember: 12,
+    };
+    const month = months[namedDate[2].toLowerCase()];
+    if (!month) return "";
+    return validDateParts(namedDate[3], month, namedDate[1]);
+  }
+
+  const match = source.match(/^(\d{1,4})[/\.\-](\d{1,2})[/\.\-](\d{1,4})$/);
   if (!match) return "";
   let [, first, middle, last] = match;
   let year;
@@ -215,9 +248,23 @@ function normalizeDate(value) {
     [day, month, year] = [first, middle, last];
   }
   if (year.length === 2) year = Number(year) > 50 ? `19${year}` : `20${year}`;
+  return validDateParts(year, month, day);
+}
+
+function validDateParts(year, month, day) {
   const date = new Date(`${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}T00:00:00`);
   if (Number.isNaN(date.getTime()) || date.getFullYear() !== Number(year) || date.getMonth() + 1 !== Number(month) || date.getDate() !== Number(day)) return "";
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function ageInCompletedMonths(birthDateValue, today = new Date()) {
+  if (!birthDateValue) return null;
+  const birthDate = new Date(`${birthDateValue}T00:00:00`);
+  if (Number.isNaN(birthDate.getTime()) || birthDate > today) return null;
+  let months = (today.getFullYear() - birthDate.getFullYear()) * 12;
+  months += today.getMonth() - birthDate.getMonth();
+  if (today.getDate() < birthDate.getDate()) months -= 1;
+  return Math.max(0, months);
 }
 
 function detectSpecies(value) {
@@ -242,7 +289,7 @@ function extractLabeledText(text, labelPattern, allowNextLine = false) {
 }
 
 function looksLikeLabel(value) {
-  return /^(?:certificate|animal|livestock|species|spesies|breed|baka|male|female|jantan|betina|state|negeri|date|tarikh|veterinary|pegawai|total|information|details?)\b/i.test(String(value || "").trim());
+  return /^(?:certificate|animal|livestock|species|spesies|jenis|breed|baka|male|female|jantan|betina|state|negeri|date|tarikh|age|umur|description|penerangan|catatan|veterinary|pegawai|total|information|details?)\b/i.test(String(value || "").trim());
 }
 
 function cleanIdentifier(value) {
@@ -259,6 +306,13 @@ function cleanPersonName(value) {
   return candidate;
 }
 
+function cleanDescription(value) {
+  const candidate = String(value || "").trim().replace(/\s{2,}/g, " ");
+  if (!candidate || candidate.length > 240 || looksLikeLabel(candidate)) return "";
+  return /[A-Za-z]{2}/.test(candidate) ? candidate : "";
+}
+
 function matchText(text, pattern) { return String(text.match(pattern)?.[1] || "").trim().replace(/[|]+$/, ""); }
 function matchNumber(text, pattern) { const value = Number(text.match(pattern)?.[1] || 0); return Number.isFinite(value) ? value : 0; }
 function average(values) { return values.length ? values.reduce((sum, value) => sum + Number(value || 0), 0) / values.length : 0; }
+function hasValue(value) { return value !== null && value !== undefined && value !== ""; }

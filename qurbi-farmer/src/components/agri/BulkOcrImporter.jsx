@@ -41,7 +41,7 @@ export default function BulkOcrImporter({ managedBreeds = [], onApply }) {
     setResult(null);
     setProgress(0);
     try {
-      const pages = await recognizeLivestockFiles(files, setProgress);
+      const pages = await recognizeLivestockFiles(files, setProgress, { maxPages: MAX_FILES });
       const pageResults = pages.map((page) => ({
         ...parseLivestockDocument(page.text, knownBreeds, page.confidence, MALAYSIA_STATES),
         filename: page.filename,
@@ -50,7 +50,11 @@ export default function BulkOcrImporter({ managedBreeds = [], onApply }) {
       setResult(combined);
       if (!combined.groups.length) setError(t("ocr.noBulkData"));
     } catch (ocrError) {
-      setError(ocrError?.message || t("ocr.failed"));
+      setError(ocrError?.code === "OCR_PAGE_LIMIT"
+        ? t("ocr.pdfPageLimit", { count: MAX_FILES })
+        : ocrError?.code === "OCR_PDF_READ_FAILED"
+          ? t("ocr.pdfReadFailed")
+          : ocrError?.message || t("ocr.failed"));
     } finally {
       setProcessing(false);
     }
@@ -74,15 +78,15 @@ export default function BulkOcrImporter({ managedBreeds = [], onApply }) {
       </button>
 
       <Dialog open={open} onOpenChange={(nextOpen) => { if (!processing) setOpen(nextOpen); }}>
-        <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] overflow-y-auto rounded-3xl sm:max-w-2xl">
-          <DialogHeader><DialogTitle>{t("ocr.title")}</DialogTitle><DialogDescription>{t("ocr.description")}</DialogDescription></DialogHeader>
-          <div className="space-y-4">
-            <div className="rounded-2xl bg-sky-50 p-3 text-sm text-sky-900"><p className="font-bold">{t("ocr.privateTitle")}</p><p className="mt-1">{t("ocr.privateDescription")}</p></div>
-            <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="sr-only" onChange={(event) => addFiles(event.target.files)} />
+        <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] min-w-0 overflow-x-hidden overflow-y-auto rounded-3xl sm:max-w-2xl">
+          <DialogHeader className="min-w-0"><DialogTitle>{t("ocr.title")}</DialogTitle><DialogDescription className="break-words">{t("ocr.description")}</DialogDescription></DialogHeader>
+          <div className="min-w-0 space-y-4">
+            <div className="min-w-0 rounded-2xl bg-sky-50 p-3 text-sm text-sky-900"><p className="font-bold">{t("ocr.privateTitle")}</p><p className="mt-1 break-words">{t("ocr.privateDescription")}</p></div>
+            <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.pdf" multiple className="sr-only" onChange={(event) => addFiles(event.target.files)} />
             <button type="button" onClick={() => inputRef.current?.click()} disabled={processing || files.length >= MAX_FILES} className="flex min-h-28 w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border px-4 text-center transition-colors hover:border-primary/50">
-              <Upload className="h-6 w-6 text-primary" /><span className="mt-2 text-sm font-bold">{t("ocr.chooseImages")}</span><span className="mt-1 text-xs text-muted-foreground">{t("ocr.fileHelp", { count: MAX_FILES })}</span>
+              <Upload className="h-6 w-6 text-primary" /><span className="mt-2 text-sm font-bold">{t("ocr.chooseImages")}</span><span className="mt-1 break-words text-xs text-muted-foreground">{t("ocr.fileHelp", { count: MAX_FILES })}</span>
             </button>
-            {files.length > 0 && <ul className="space-y-2">{files.map((file, index) => <li key={`${file.name}-${file.size}-${file.lastModified}`} className="flex min-h-11 items-center gap-2 rounded-xl bg-muted/55 px-3"><FileText className="h-4 w-4 shrink-0 text-primary" /><span className="min-w-0 flex-1 truncate text-sm font-semibold">{file.name}</span><button type="button" disabled={processing} onClick={() => { setFiles((current) => current.filter((_, itemIndex) => itemIndex !== index)); setResult(null); setError(""); }} aria-label={t("ocr.removeFile", { name: file.name })} className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-background"><X className="h-4 w-4" /></button></li>)}</ul>}
+            {files.length > 0 && <ul className="min-w-0 space-y-2 overflow-hidden">{files.map((file, index) => <li key={`${file.name}-${file.size}-${file.lastModified}`} className="flex min-h-11 w-full min-w-0 items-center gap-2 rounded-xl bg-muted/55 px-3"><FileText className="h-4 w-4 shrink-0 text-primary" /><span className="min-w-0 flex-1 truncate text-sm font-semibold">{file.name}</span><button type="button" disabled={processing} onClick={() => { setFiles((current) => current.filter((_, itemIndex) => itemIndex !== index)); setResult(null); setError(""); }} aria-label={t("ocr.removeFile", { name: file.name })} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-background"><X className="h-4 w-4" /></button></li>)}</ul>}
             {processing && <Progress progress={progress} label={t("ocr.processing")} />}
             {notice && <p className="rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-900">{notice}</p>}
             {error && <p role="alert" className="flex items-start gap-2 rounded-xl bg-destructive/10 p-3 text-sm font-semibold text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{error}</p>}

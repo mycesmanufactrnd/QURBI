@@ -47,13 +47,17 @@ export default function IndividualOcrImporter({ onApply }) {
     setResult(null);
     setProgress(0);
     try {
-      const pages = await recognizeLivestockFiles(files, setProgress);
+      const pages = await recognizeLivestockFiles(files, setProgress, { maxPages: MAX_FILES });
       const parsed = pages.map((page) => parseLivestockDocument(page.text, knownBreeds, page.confidence, MALAYSIA_STATES));
       const combined = combineIndividualDocuments(parsed);
       setResult(combined);
       if (!combined.detectedFieldCount) setError(t("ocr.noIndividualData"));
     } catch (ocrError) {
-      setError(ocrError?.message || t("ocr.failed"));
+      setError(ocrError?.code === "OCR_PAGE_LIMIT"
+        ? t("ocr.pdfPageLimit", { count: MAX_FILES })
+        : ocrError?.code === "OCR_PDF_READ_FAILED"
+          ? t("ocr.pdfReadFailed")
+          : ocrError?.message || t("ocr.failed"));
     } finally {
       setProcessing(false);
     }
@@ -77,15 +81,15 @@ export default function IndividualOcrImporter({ onApply }) {
       </button>
 
       <Dialog open={open} onOpenChange={(nextOpen) => { if (!processing) setOpen(nextOpen); }}>
-        <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] overflow-y-auto rounded-3xl sm:max-w-2xl">
-          <DialogHeader><DialogTitle>{t("ocr.title")}</DialogTitle><DialogDescription>{t("ocr.description")}</DialogDescription></DialogHeader>
-          <div className="space-y-4">
-            <div className="rounded-2xl bg-sky-50 p-3 text-sm text-sky-900"><p className="font-bold">{t("ocr.privateTitle")}</p><p className="mt-1">{t("ocr.privateDescription")}</p></div>
-            <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="sr-only" onChange={(event) => addFiles(event.target.files)} />
+        <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] min-w-0 overflow-x-hidden overflow-y-auto rounded-3xl sm:max-w-2xl">
+          <DialogHeader className="min-w-0"><DialogTitle>{t("ocr.title")}</DialogTitle><DialogDescription className="break-words">{t("ocr.description")}</DialogDescription></DialogHeader>
+          <div className="min-w-0 space-y-4">
+            <div className="min-w-0 rounded-2xl bg-sky-50 p-3 text-sm text-sky-900"><p className="font-bold">{t("ocr.privateTitle")}</p><p className="mt-1 break-words">{t("ocr.privateDescription")}</p></div>
+            <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.pdf" multiple className="sr-only" onChange={(event) => addFiles(event.target.files)} />
             <button type="button" onClick={() => inputRef.current?.click()} disabled={processing || files.length >= MAX_FILES} className="flex min-h-28 w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border px-4 text-center transition-colors hover:border-primary/50">
-              <Upload className="h-6 w-6 text-primary" /><span className="mt-2 text-sm font-bold">{t("ocr.chooseImages")}</span><span className="mt-1 text-xs text-muted-foreground">{t("ocr.fileHelp", { count: MAX_FILES })}</span>
+              <Upload className="h-6 w-6 text-primary" /><span className="mt-2 text-sm font-bold">{t("ocr.chooseImages")}</span><span className="mt-1 break-words text-xs text-muted-foreground">{t("ocr.fileHelp", { count: MAX_FILES })}</span>
             </button>
-            {files.length > 0 && <ul className="space-y-2">{files.map((file, index) => <li key={`${file.name}-${file.size}-${file.lastModified}`} className="flex min-h-11 items-center gap-2 rounded-xl bg-muted/55 px-3"><FileText className="h-4 w-4 shrink-0 text-primary" /><span className="min-w-0 flex-1 truncate text-sm font-semibold">{file.name}</span><button type="button" disabled={processing} onClick={() => { setFiles((current) => current.filter((_, itemIndex) => itemIndex !== index)); setResult(null); setError(""); }} aria-label={t("ocr.removeFile", { name: file.name })} className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-background"><X className="h-4 w-4" /></button></li>)}</ul>}
+            {files.length > 0 && <ul className="min-w-0 space-y-2 overflow-hidden">{files.map((file, index) => <li key={`${file.name}-${file.size}-${file.lastModified}`} className="flex min-h-11 w-full min-w-0 items-center gap-2 rounded-xl bg-muted/55 px-3"><FileText className="h-4 w-4 shrink-0 text-primary" /><span className="min-w-0 flex-1 truncate text-sm font-semibold">{file.name}</span><button type="button" disabled={processing} onClick={() => { setFiles((current) => current.filter((_, itemIndex) => itemIndex !== index)); setResult(null); setError(""); }} aria-label={t("ocr.removeFile", { name: file.name })} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-background"><X className="h-4 w-4" /></button></li>)}</ul>}
             {processing && <div className="rounded-2xl bg-muted/50 p-4"><div className="flex items-center justify-between gap-3 text-sm"><span className="flex items-center gap-2 font-bold"><Loader2 className="h-4 w-4 animate-spin" />{t("ocr.processing")}</span><span>{progress}%</span></div><div className="mt-3 h-2 overflow-hidden rounded-full bg-background"><div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progress}%` }} /></div></div>}
             {notice && <p className="rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-900">{notice}</p>}
             {error && <p role="alert" className="flex items-start gap-2 rounded-xl bg-destructive/10 p-3 text-sm font-semibold text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{error}</p>}
@@ -109,9 +113,11 @@ function IndividualReview({ result, t }) {
     ["breed", t("ocr.fields.breed"), result.breed],
     ["gender", t("ocr.fields.gender"), result.gender],
     ["birthDate", t("ocr.fields.birthDate"), result.birthDate],
+    ["ageMonths", t("ocr.fields.ageMonths"), result.ageMonths !== null && result.ageMonths !== "" ? result.ageMonths : ""],
     ["state", t("ocr.fields.state"), result.state],
     ["color", t("ocr.fields.color"), result.color],
     ["weight", t("ocr.fields.weight"), result.weight ? `${result.weight} kg` : ""],
+    ["description", t("ocr.fields.description"), result.description],
   ];
   return <div className="rounded-2xl border border-border p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="font-extrabold">{t("ocr.reviewTitle")}</h3><p className="mt-1 text-sm text-muted-foreground">{t("ocr.reviewDescription")}</p></div><span className={cn("shrink-0 rounded-full px-2.5 py-1 text-xs font-bold", result.confidence >= 75 ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900")}>{t("ocr.confidence", { count: result.confidence })}</span></div><p className="mt-3 text-sm font-semibold text-muted-foreground">{t("ocr.documentsRead", { count: result.documentCount })}</p>{result.conflicts.length > 0 && <p className="mt-2 flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{t("ocr.conflictsFound")}</p>}<dl className="mt-2 divide-y divide-border/60">{fields.map(([key, label, value]) => <div key={key} className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-3 py-2.5 text-sm"><dt className="text-muted-foreground">{label}</dt><dd className={cn("break-words text-right font-bold", !value && "text-amber-700", result.conflicts.includes(key) && "text-amber-700")}>{value || t("ocr.notDetected")}</dd></div>)}</dl><p className="mt-4 rounded-xl bg-sky-50 p-3 text-sm text-sky-900">{t("ocr.applyHelp")}</p><p className="mt-3 flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{t("ocr.notVerification")}</p></div>;
 }
