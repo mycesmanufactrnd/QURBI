@@ -13,7 +13,7 @@ import {
   orderDayHeading,
   orderTimestamp,
 } from "@/lib/order-date";
-import { groupOrdersByCheckout } from "@/lib/order-groups";
+import { groupOrdersByCheckout, groupedOrderQuery } from "@/lib/order-groups";
 import { useTranslation } from "react-i18next";
 
 const TRANSACTION_STATUSES = new Set([
@@ -23,6 +23,8 @@ const TRANSACTION_STATUSES = new Set([
   "cancelled",
   "out_of_stock",
 ]);
+
+const SUCCESSFUL_TRANSACTION_STATUSES = new Set(["completed", "received"]);
 
 const STATUS_KEYS = {
   completed: "completed",
@@ -50,6 +52,13 @@ const DATE_KEYS = {
 
 function normalizedTransactionStatus(status) {
   return String(status || "").trim().toLowerCase();
+}
+
+function isSuccessfulTransaction(order) {
+  const orders = order.grouped_orders?.length ? order.grouped_orders : [order];
+  return orders.every((item) =>
+    SUCCESSFUL_TRANSACTION_STATUSES.has(normalizedTransactionStatus(item.status)),
+  );
 }
 
 function transactionStatusLabel(order, t) {
@@ -182,14 +191,14 @@ export default function TransactionHistory() {
   const groups = useMemo(() => groupTransactions(orders, t), [orders, t]);
 
   if (!authChecked) {
-    return <div className="aisyah-page"><AppHeader title={t("title")} backTo={isDesktop ? "" : "/orders"} /><PageLoading contentOnly message={t("loading")} /></div>;
+    return <div className="qurbi-page"><AppHeader title={t("title")} backTo={isDesktop ? "" : "/orders"} /><PageLoading contentOnly message={t("loading")} /></div>;
   }
 
   if (!isAuthenticated) {
     return (
-      <div className="aisyah-page min-h-screen pb-28">
+      <div className="qurbi-page min-h-screen pb-28">
         <AppHeader title={t("title")} backTo={isDesktop ? "" : "/orders"} />
-        <div className="aisyah-content flex flex-col items-center justify-center gap-3 py-20 text-center">
+        <div className="qurbi-content flex flex-col items-center justify-center gap-3 py-20 text-center">
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gray-100"><ReceiptText className="h-10 w-10 text-gray-300" /></div>
           <p className="text-sm text-[#41362D]/65">{t("signInPrompt")}</p>
           <button type="button" onClick={() => requestSignIn({ returnTo: "/transaction-history", message: t("signInMessage") })} className="mt-2 rounded-xl bg-gradient-to-br from-[#41362D] to-[#6B594A] px-6 py-3 text-sm font-bold text-white">{t("signIn")}</button>
@@ -199,9 +208,9 @@ export default function TransactionHistory() {
   }
 
   return (
-    <div className="aisyah-page">
+    <div className="qurbi-page">
       <AppHeader title={t("title")} backTo={isDesktop ? "" : "/orders"} />
-      <main className="aisyah-content space-y-5">
+      <main className="qurbi-content space-y-5">
         {loading ? <PageLoading contentOnly message={t("loading")} /> : error ? (
           <div className="py-16 text-center"><p className="text-sm text-gray-500">{error}</p><button type="button" onClick={loadTransactions} className="mt-3 text-sm font-bold text-[#5A493C]">{t("retry")}</button></div>
         ) : groups.length === 0 ? (
@@ -218,6 +227,14 @@ export default function TransactionHistory() {
                   key={order.id}
                   type="button"
                   onClick={() => {
+                    if (isSuccessfulTransaction(order)) {
+                      navigateWithTransition(`/receipt?${groupedOrderQuery(order)}`, {
+                        navigateOptions: {
+                          state: { fromTransactionHistory: true },
+                        },
+                      });
+                      return;
+                    }
                     const groupIds = order.order_ids || [order.id];
                     const groupSuffix = groupIds.length > 1
                       ? `&group_ids=${encodeURIComponent(groupIds.join(","))}`

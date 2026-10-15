@@ -25,7 +25,7 @@ import { useNotifications } from "@/lib/notification-context";
 import { orderDateKey, orderTimestamp } from "@/lib/order-date";
 import { dayHeading, timeOnly } from "@/components/account/dates";
 import { dangerBtn, secondaryBtn } from "@/components/account/buttons";
-import { AisyahCardSkeleton } from "@/components/AisyahLoading";
+import { QurbiCardSkeleton } from "@/components/QurbiLoading";
 import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
 import { recentPageOr } from "@/lib/navigation";
 import AuthRequiredState from "@/components/AuthRequiredState";
@@ -434,6 +434,7 @@ export default function Notifications() {
 
   const {
     navigateFromIconPage,
+    requestIconClose,
   } = useHeaderTransition();
 
   const {
@@ -595,18 +596,20 @@ export default function Notifications() {
   }
 
   return (
-    <main className="aisyah-page min-h-screen px-4 pt-[max(2rem,env(safe-area-inset-top))] sm:px-6">
+    <main className="qurbi-page min-h-screen px-4 pt-[max(2rem,env(safe-area-inset-top))] sm:px-6">
       <section className="mx-auto max-w-3xl">
 
         {/* Header */}
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() =>
-              navigateFromIconPage(
-                recentPageOr("/")
-              )
-            }
+            onClick={() => {
+              if (!requestIconClose("notification")) {
+                navigateFromIconPage(
+                  recentPageOr("/")
+                );
+              }
+            }}
             aria-label={t(
               "notifications.goBackAria"
             )}
@@ -713,7 +716,7 @@ export default function Notifications() {
           {loading &&
           !notifications.length ? (
             <div className="mt-6">
-              <AisyahCardSkeleton
+              <QurbiCardSkeleton
                 count={4}
                 variant="list"
               />

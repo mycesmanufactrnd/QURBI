@@ -25,6 +25,23 @@ import { useVisiblePageRefresh } from "@/hooks/useVisiblePageRefresh";
 
 const BROWSE_FILTERS_KEY = "qurbi_browse_filters";
 
+const DEFAULT_APPLIED_FILTERS = {
+  filterBreed: "",
+  filterGender: "",
+  filterAge: "",
+  filterLocation: "",
+  priceMin: "",
+  priceMax: "",
+  sortBy: "newest",
+};
+
+function normalizedSpecies(value) {
+  const key = String(value || "").trim().toLowerCase();
+  if (["cow", "cattle", "lembu"].includes(key)) return "cow";
+  if (["goat", "kambing"].includes(key)) return "goat";
+  return key;
+}
+
 function readBrowseFilters() {
   if (typeof sessionStorage === "undefined") return {};
   try {
@@ -36,7 +53,10 @@ function readBrowseFilters() {
 
 function matchesBrowseFilters(livestock, filters) {
   if (isProductExpired(livestock)) return false;
-  if (filters.activeSpecies !== "All" && livestock.species !== filters.activeSpecies) return false;
+  if (
+    normalizedSpecies(filters.activeSpecies) !== "all" &&
+    normalizedSpecies(livestock.species) !== normalizedSpecies(filters.activeSpecies)
+  ) return false;
   if (filters.filterBreed && livestock.breed !== filters.filterBreed) return false;
   if (filters.filterGender && livestock.gender !== filters.filterGender) return false;
   if (filters.filterAge && livestock.age !== filters.filterAge) return false;
@@ -88,6 +108,7 @@ export default function Browse() {
   const [priceMax, setPriceMax] = useState(savedFilters.priceMax || "");
   const [sortBy, setSortBy] = useState(savedFilters.sortBy || "newest");
   const [appliedFilters, setAppliedFilters] = useState(() => ({
+    ...DEFAULT_APPLIED_FILTERS,
     filterBreed: savedFilters.filterBreed || "",
     filterGender: savedFilters.filterGender || "",
     filterAge: savedFilters.filterAge || "",
@@ -122,7 +143,21 @@ export default function Browse() {
 
     if (!speciesFromHome && !queryFromHome && !focusFromHome) return;
 
-    if (speciesFromHome) setActiveSpecies(speciesFromHome);
+    if (speciesFromHome) {
+      // A Home category is a new browse intent. Clear filters left from an
+      // earlier Browse visit so a Cow/Goat selection cannot be hidden by an
+      // incompatible breed, location, price range, or search query.
+      setActiveSpecies(speciesFromHome);
+      setSearchQuery("");
+      setFilterBreed("");
+      setFilterGender("");
+      setFilterAge("");
+      setFilterLocation("");
+      setPriceMin("");
+      setPriceMax("");
+      setSortBy("newest");
+      setAppliedFilters(DEFAULT_APPLIED_FILTERS);
+    }
     if (typeof queryFromHome === "string") setSearchQuery(queryFromHome);
     if (focusFromHome) {
       window.setTimeout(() => searchInputRef.current?.focus(), 350);
@@ -133,6 +168,9 @@ export default function Browse() {
      * This prevents the filter from being reapplied if
      * Browse is refreshed.
      */
+    // Clear only the browser entry's transient state. Using router navigation
+    // here remounts Browse before its species state is committed, which resets
+    // the Home selection back to All.
     window.history.replaceState(
       { ...window.history.state, usr: null },
       document.title,
@@ -375,15 +413,7 @@ export default function Browse() {
     setPriceMin("");
     setPriceMax("");
     setSortBy("newest");
-    setAppliedFilters({
-      filterBreed: "",
-      filterGender: "",
-      filterAge: "",
-      filterLocation: "",
-      priceMin: "",
-      priceMax: "",
-      sortBy: "newest",
-    });
+    setAppliedFilters(DEFAULT_APPLIED_FILTERS);
     setSearchQuery("");
   };
 
@@ -489,7 +519,7 @@ export default function Browse() {
 
   if (error && !livestock.length) {
     return (
-      <div className="aisyah-page flex flex-col items-center justify-center gap-4 p-8">
+      <div className="qurbi-page flex flex-col items-center justify-center gap-4 p-8">
         {sharedStyles}
 
         <AlertCircle aria-hidden="true" className="h-12 w-12 text-[#6B594A]" />
@@ -505,7 +535,7 @@ export default function Browse() {
         <button
           type="button"
           onClick={() => loadData()}
-          className="aisyah-primary-button flex min-h-12 items-center gap-2 px-6"
+          className="qurbi-primary-button flex min-h-12 items-center gap-2 px-6"
         >
           <RefreshCw className="h-4 w-4" />
           {t("browse.error.retry")}
@@ -521,7 +551,7 @@ export default function Browse() {
    */
 
   return (
-    <main className="aisyah-page pb-32">
+    <main className="qurbi-page pb-32">
       {sharedStyles}
 
       <AppHeader
@@ -639,12 +669,12 @@ export default function Browse() {
                   <button
                     type="button"
                     onClick={clearAllFilters}
-                    className="aisyah-primary-button mt-4 min-h-12 px-6"
+                    className="qurbi-primary-button mt-4 min-h-12 px-6"
                   >
                     {t("browse.clearFilters")}
                   </button>
                 ) : (
-                  <Link to="/bulk-buy" className="aisyah-primary-button mt-4 inline-flex min-h-12 items-center px-6">
+                  <Link to="/bulk-buy" className="qurbi-primary-button mt-4 inline-flex min-h-12 items-center px-6">
                     {tf("browse.tryBulkBuy")}
                   </Link>
                 )}

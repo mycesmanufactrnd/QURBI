@@ -256,7 +256,7 @@ export default function Home() {
   }
 
   return (
-    <main className="aisyah-page">
+    <main className="qurbi-page">
       <AppHeader
         eyebrow="QURBI"
         title=""
@@ -303,6 +303,7 @@ export default function Home() {
                 key={label}
                 to="/browse"
                 state={{ species: label }}
+                data-navigation-state={JSON.stringify({ species: label })}
                 className={`
                     flex
                     min-h-[88px]
@@ -366,7 +367,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={loadFeatured}
-                className="aisyah-primary-button mt-3 inline-flex min-h-11 items-center gap-2"
+                className="qurbi-primary-button mt-3 inline-flex min-h-11 items-center gap-2"
               >
                 <RefreshCw aria-hidden="true" className="h-4 w-4" /> {tf("common.retry")}
               </button>
@@ -374,7 +375,7 @@ export default function Home() {
           ) : featured.length === 0 ? (
             <div className="rounded-2xl border border-[#41362D]/20 bg-[#F7EDE2]/80 p-4 text-center">
               <p className="text-sm font-semibold text-[#41362D]">{tf("home.featuredEmpty")}</p>
-              <Link to="/bulk-buy" className="aisyah-primary-button mt-3 inline-flex min-h-11 items-center">
+              <Link to="/bulk-buy" className="qurbi-primary-button mt-3 inline-flex min-h-11 items-center">
                 {tf("home.featuredEmptyAction")}
               </Link>
             </div>

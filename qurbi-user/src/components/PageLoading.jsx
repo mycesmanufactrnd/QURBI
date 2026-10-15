@@ -42,7 +42,7 @@ export default function PageLoading({
   if (hideHeader) {
     return (
       <div
-        className="aisyah-page flex min-h-[100dvh] items-center justify-center px-6"
+        className="qurbi-page flex min-h-[100dvh] items-center justify-center px-6"
         role="status"
         aria-live="polite"
         aria-label={resolvedMessage}
@@ -54,7 +54,7 @@ export default function PageLoading({
 
   return (
     <div
-      className="aisyah-page min-h-[100dvh]"
+      className="qurbi-page min-h-[100dvh]"
       role="status"
       aria-live="polite"
       aria-label={resolvedMessage}

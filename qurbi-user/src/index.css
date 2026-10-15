@@ -104,27 +104,27 @@
 }
 
 @layer components {
-  .aisyah-page {
+  .qurbi-page {
     @apply min-h-screen pb-24;
     padding-bottom: calc(6rem + env(safe-area-inset-bottom));
     background: linear-gradient(135deg, #e3c19f 0%, #f7ede2 100%);
   }
 
-  .aisyah-content {
+  .qurbi-content {
     @apply mx-auto w-full max-w-5xl space-y-4 px-4 pt-5;
   }
 
-  .aisyah-page > :not(.qurbi-shrinkable-header-shell):not(.fixed) {
+  .qurbi-page > :not(.qurbi-shrinkable-header-shell):not(.fixed) {
     translate: 0 0;
     transition: translate 220ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  .aisyah-page.qurbi-header-is-shrunk
+  .qurbi-page.qurbi-header-is-shrunk
     > :not(.qurbi-shrinkable-header-shell):not(.fixed) {
     translate: 0 calc(-1 * var(--qurbi-header-collapse-offset, 0px));
   }
 
-  .aisyah-card {
+  .qurbi-card {
     @apply rounded-2xl text-white shadow-lg shadow-black/20;
     background-image: linear-gradient(
       135deg,
@@ -134,11 +134,11 @@
     );
   }
 
-  .aisyah-primary-button {
+  .qurbi-primary-button {
     @apply rounded-xl bg-gradient-to-br from-[#41362D] to-[#6B594A] px-4 py-3 text-sm font-bold text-white shadow-md shadow-black/20 transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50;
   }
 
-  .aisyah-secondary-button {
+  .qurbi-secondary-button {
     @apply rounded-xl bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] px-4 py-3 text-sm font-bold text-black transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98];
   }
 }
@@ -215,7 +215,7 @@
   outline-offset: -1px;
 }
 
-#root .aisyah-card img:not([data-no-contrast-outline]),
+#root .qurbi-card img:not([data-no-contrast-outline]),
 #root .qurbi-dark-surface img:not([data-no-contrast-outline]),
 #root [class*="from-[#41362D]"] img:not([data-no-contrast-outline]),
 #root [class*="from-[#4B3E34]"] img:not([data-no-contrast-outline]),
@@ -272,7 +272,7 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
 }
 
-#root :where(.aisyah-card, .qurbi-dark-surface):not(header *):not(nav *) {
+#root :where(.qurbi-card, .qurbi-dark-surface):not(header *):not(nav *) {
   translate: 0 -1px;
   box-shadow:
     0 24px 46px -20px rgba(65, 54, 45, 0.66),
@@ -302,7 +302,7 @@
 }
 
 #root
-  :where(.aisyah-card, .qurbi-dark-surface):not(header *):not(nav *):hover {
+  :where(.qurbi-card, .qurbi-dark-surface):not(header *):not(nav *):hover {
   translate: 0 -3px;
   box-shadow:
     0 30px 54px -20px rgba(65, 54, 45, 0.7),
@@ -609,7 +609,7 @@ html {
   will-change: clip-path, opacity, transform;
 }
 .animate-profile-origin-enter
-  > .aisyah-page
+  > .qurbi-page
   > :not(header):not(.qurbi-shrinkable-header-shell):not(style):not(.fixed) {
   animation: profileOriginEnter 0.54s cubic-bezier(0.16, 0.78, 0.24, 1) both;
   transform-origin: var(--icon-origin-x) var(--icon-origin-y);
@@ -617,7 +617,7 @@ html {
   will-change: clip-path, opacity, transform;
 }
 .animate-profile-origin-exit
-  > .aisyah-page
+  > .qurbi-page
   > :not(header):not(.qurbi-shrinkable-header-shell):not(style):not(.fixed) {
   animation: profileOriginExit 0.63s cubic-bezier(0.42, 0, 0.22, 1) both;
   pointer-events: none;
@@ -704,7 +704,7 @@ html {
   pointer-events: none;
 }
 
-.qurbi-icon-route-overlay > .aisyah-page {
+.qurbi-icon-route-overlay > .qurbi-page {
   min-height: 100dvh;
 }
 
@@ -1217,7 +1217,7 @@ html.qurbi-profile-navigation-active::view-transition-new(qurbi-desktop-sidebar)
   :where(section, article, div, a)[class*="rounded-3xl"][class*="bg-"]:not(
     header *
   ):not(nav *):hover,
-#root :where(.aisyah-card, .qurbi-dark-surface):not(header *):not(nav *):hover {
+#root :where(.qurbi-card, .qurbi-dark-surface):not(header *):not(nav *):hover {
   translate: 0 -1px;
 }
 
@@ -1500,7 +1500,7 @@ html[data-qurbi-display-preference="mobile"] #root [class~="lg:grid-cols-4"] {
 
 /* Bulk Buy is a one-column phone list; its lg rule must not win over the base
    layout when Mobile is selected on a desktop-sized window. */
-html[data-qurbi-display-preference="mobile"] #root .aisyah-content[class~="sm:grid-cols-2"][class~="lg:grid-cols-3"] {
+html[data-qurbi-display-preference="mobile"] #root .qurbi-content[class~="sm:grid-cols-2"][class~="lg:grid-cols-3"] {
   grid-template-columns: minmax(0, 1fr) !important;
 }
 

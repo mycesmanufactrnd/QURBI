@@ -98,6 +98,12 @@ function livestockForUser(item) {
   const attributes = item.attributes || {};
   const images = (item.images || []).map(mediaUrl).filter(Boolean);
   const videos = (item.videos || []).map(mediaUrl).filter(Boolean);
+  const listingExpiresAt =
+    item.marketplaceExpiresAt ??
+    item.marketplace_expires_at ??
+    item.listingExpiresAt ??
+    item.listing_expires_at ??
+    null;
   return {
     ...item,
     ...farmDetails(item),
@@ -122,6 +128,11 @@ function livestockForUser(item) {
     vaccinationRecord: attributes.vaccinationRecord || "",
     specialNotes: attributes.specialNotes || "",
     created_date: item.createdAt,
+    // The backend owns marketplace expiry and renews this value when a farmer
+    // republishes a listing. Expose the legacy name used by the User app so a
+    // renewed listing is not evaluated against its original creation date.
+    listingExpiresAt,
+    listing_expires_at: listingExpiresAt,
   };
 }
 

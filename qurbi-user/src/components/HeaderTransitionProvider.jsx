@@ -197,14 +197,12 @@ export default function HeaderTransitionProvider({ children }) {
           : options.transitionType || currentType || destinationType || null;
       const closingFromIcon = Boolean(
         !profileNavigationSlide &&
-          (!isDesktop || currentType === "profile") &&
           currentType &&
           location.state?.qurbiIconOverlay &&
           iconOriginRef.current?.type === currentType,
       );
       const openingToIcon = Boolean(
         !profileNavigationSlide &&
-          (!isDesktop || destinationType === "profile") &&
           destinationType &&
           destinationType !== currentType &&
           iconOriginRef.current?.type === destinationType,
@@ -560,6 +558,17 @@ export default function HeaderTransitionProvider({ children }) {
       if (!link || link.hasAttribute("download") || (link.target && link.target !== "_self")) return;
       const url = new URL(link.href, window.location.href);
       if (url.origin !== window.location.origin) return;
+      const serializedNavigationState = link.getAttribute(
+        "data-navigation-state",
+      );
+      let navigationState;
+      if (serializedNavigationState) {
+        try {
+          navigationState = JSON.parse(serializedNavigationState);
+        } catch {
+          navigationState = undefined;
+        }
+      }
       const destination = `${url.pathname}${url.search}${url.hash}`;
       const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
       if (destination === current) {
@@ -574,7 +583,7 @@ export default function HeaderTransitionProvider({ children }) {
       event.preventDefault();
       if (lockedRef.current) return;
       const destinationType = iconTypeForPath(url.pathname);
-      if (destinationType && (!isDesktop || destinationType === "profile")) {
+      if (destinationType) {
         const headerIcon =
           destinationType === "notification"
             ? document.querySelector('a[href="/notifications"][aria-label]')
@@ -584,6 +593,10 @@ export default function HeaderTransitionProvider({ children }) {
       navigateWithTransition(destination, {
         transitionType: destinationType || iconOriginRef.current?.type,
         profileNavigationSlide: location.pathname === "/profile",
+        navigateOptions:
+          navigationState === undefined
+            ? undefined
+            : { state: navigationState },
       });
     };
 

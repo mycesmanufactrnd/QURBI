@@ -9,7 +9,7 @@ import { checkCartAvailability } from "@/lib/livestock-availability";
 import { isProductExpired } from "@/lib/product-expiry";
 import AppHeader from "@/components/AppHeader";
 import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
-import { AisyahCardSkeleton } from "@/components/AisyahLoading";
+import { QurbiCardSkeleton } from "@/components/QurbiLoading";
 import StickyActionBar from "@/components/shop/StickyActionBar";
 import { formatRM } from "@/lib/format";
 
@@ -174,7 +174,7 @@ export default function Cart() {
 
   if (cartItems.length === 0) {
     return (
-      <div className="aisyah-page flex flex-col">
+      <div className="qurbi-page flex flex-col">
         <AppHeader title={t("cart.title")} subtitle={t("cart.emptySubtitle")} />
         <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#F7EDE2] shadow-sm">
@@ -186,7 +186,7 @@ export default function Cart() {
             <button
               type="button"
               onClick={() => navigateWithTransition("/browse")}
-              className="aisyah-primary-button min-h-12"
+              className="qurbi-primary-button min-h-12"
             >
               {t("cart.browseLivestock")}
             </button>
@@ -222,7 +222,7 @@ export default function Cart() {
     selectedItems.length === 0 || checkingStock || Boolean(availabilityError);
 
   return (
-    <div className="aisyah-page qurbi-action-bar-space overflow-x-hidden">
+    <div className="qurbi-page qurbi-action-bar-space overflow-x-hidden">
       <AppHeader
         title={t("cart.title")}
         subtitle={t("cart.subtitleSummary", {
@@ -231,7 +231,7 @@ export default function Cart() {
         })}
       />
 
-      <div className="aisyah-content max-w-2xl">
+      <div className="qurbi-content max-w-2xl">
         {/* Selection toolbar */}
         <div
           className={`flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-2xl border border-[#41362D]/15 bg-[#F7EDE2]/85 px-2 py-1 ${reveal()}`}
@@ -274,7 +274,7 @@ export default function Cart() {
 
         {/* Cart Items */}
         {checkingStock && !hasAvailability ? (
-          <AisyahCardSkeleton
+          <QurbiCardSkeleton
             count={Math.min(Math.max(cartItems.length, 1), 5)}
             variant="list"
           />
@@ -284,7 +284,7 @@ export default function Cart() {
             <button
               type="button"
               onClick={refreshAvailability}
-              className="aisyah-primary-button mt-3 min-h-12 px-5"
+              className="qurbi-primary-button mt-3 min-h-12 px-5"
             >
               {t("cart.retryStockCheck")}
             </button>
@@ -297,8 +297,9 @@ export default function Cart() {
                 availabilityResult?.state === "reserved_by_you";
               const expired =
                 item.item_type !== "bulk" &&
-                (availabilityResult?.state === "expired" ||
-                  isProductExpired(item));
+                (availabilityResult
+                  ? availabilityResult.state === "expired"
+                  : isProductExpired(item));
               const unavailable =
                 expired || isUnobtainable(availabilityResult);
               const selected = selectedKeys.includes(item.key);

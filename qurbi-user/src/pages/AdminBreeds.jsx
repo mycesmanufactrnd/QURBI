@@ -364,7 +364,7 @@ export default function AdminBreeds() {
 
   if (user?.role !== "admin") {
     return (
-      <main className="aisyah-page flex min-h-screen flex-col items-center justify-center gap-3 p-8 text-center">
+      <main className="qurbi-page flex min-h-screen flex-col items-center justify-center gap-3 p-8 text-center">
         <p className="font-semibold text-[#41362D]/65">{t("adminBreeds.adminRequired")}</p>
         <Link to="/" className="font-bold text-[#6B594A]">{t("adminBreeds.backToHome")}</Link>
       </main>
@@ -372,7 +372,7 @@ export default function AdminBreeds() {
   }
 
   return (
-    <div className="aisyah-page">
+    <div className="qurbi-page">
       <AppHeader
         title={t("adminBreeds.title")}
         subtitle={t("adminBreeds.subtitle", { count: breeds.length })}

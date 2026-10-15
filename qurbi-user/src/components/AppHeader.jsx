@@ -125,7 +125,7 @@ export default function AppHeader({
 
   useIsomorphicLayoutEffect(() => {
     if (!shrinkEnabled || !expandedHeight || !headerRef.current) return undefined;
-    const page = headerRef.current.closest(".aisyah-page");
+    const page = headerRef.current.closest(".qurbi-page");
     if (!page) return undefined;
 
     page.style.setProperty(
@@ -241,7 +241,7 @@ export default function AppHeader({
       style={{ viewTransitionName: "qurbi-header", ...shrinkStyle }}
     >
       <div
-        className="relative z-10 flex flex-col items-center text-center"
+        className="relative z-20 flex flex-col items-center text-center"
       >
         <div className="absolute -top-2 left-0 z-30 flex flex-row items-center gap-1">
           {(backTo || onBack) && (
@@ -271,7 +271,7 @@ export default function AppHeader({
           {!backTo && !onBack && leftAction}
         </div>
 
-        <div className="absolute -top-2 right-0 z-30 flex flex-row items-center gap-1">
+        <div className="pointer-events-auto absolute -top-2 right-0 z-30 flex flex-row items-center gap-1">
           {!isAuthenticated && !isDesktop && (
             <button
               type="button"

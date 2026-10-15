@@ -137,7 +137,7 @@ function AvailabilityModal({ state, onClose, onBrowse, backLabel }) {
         <button
           type="button"
           onClick={reserved || unavailable ? onBrowse : onClose}
-          className="aisyah-primary-button mt-5 min-h-12 w-full"
+          className="qurbi-primary-button mt-5 min-h-12 w-full"
         >
           {returnToOrders
             ? t("livestockDetail.viewMyOrders")
@@ -439,7 +439,7 @@ export default function LivestockDetail() {
 
   if (error) {
     return (
-      <div className="aisyah-page flex flex-col items-center justify-center gap-4 p-8">
+      <div className="qurbi-page flex flex-col items-center justify-center gap-4 p-8">
         <AlertCircle aria-hidden="true" className="h-12 w-12 text-[#6B594A]" />
         <p className="text-center text-lg font-bold text-[#41362D]">
           {t("livestockDetail.loadError")}
@@ -448,7 +448,7 @@ export default function LivestockDetail() {
         <button
           type="button"
           onClick={load}
-          className="aisyah-primary-button flex min-h-12 items-center gap-2 px-6"
+          className="qurbi-primary-button flex min-h-12 items-center gap-2 px-6"
         >
           <RefreshCw className="h-4 w-4" /> {t("livestockDetail.retry")}
         </button>

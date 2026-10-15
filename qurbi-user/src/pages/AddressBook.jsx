@@ -348,7 +348,7 @@ function AddressCard({
     : addr.label || t("addressBook.card.noLabel");
   return (
     <article
-      className={`aisyah-card overflow-hidden rounded-2xl border-2 ${addr.isDefault ? "border-[#E3C19F]" : isSelected ? "border-[#E3C19F]/70" : "border-transparent"}`}
+      className={`qurbi-card overflow-hidden rounded-2xl border-2 ${addr.isDefault ? "border-[#E3C19F]" : isSelected ? "border-[#E3C19F]/70" : "border-transparent"}`}
       aria-label={name}
     >
       {/* Top Bar */}
@@ -585,7 +585,7 @@ export default function AddressBook() {
 
   if (!authChecked || profileLoading) {
     return (
-      <div className="aisyah-page">
+      <div className="qurbi-page">
         <AppHeader
           title={t("addressBook.pageTitle")}
           backTo={returnTo}
@@ -600,7 +600,7 @@ export default function AddressBook() {
 
   if (!isAuthenticated) {
     return (
-      <div className="aisyah-page min-h-screen">
+      <div className="qurbi-page min-h-screen">
         <AppHeader
           title={t("addressBook.pageTitle")}
           backTo={returnTo}
@@ -608,7 +608,7 @@ export default function AddressBook() {
           preferRecentBack={false}
           subtitle={t("addressBook.pageSubtitle")}
         />
-        <div className="aisyah-content flex flex-col items-center justify-center gap-3 py-16 text-center">
+        <div className="qurbi-content flex flex-col items-center justify-center gap-3 py-16 text-center">
           <MapPin className="h-12 w-12 text-[#41362D]/40" aria-hidden="true" />
           <p className="max-w-xs text-[15px] text-[#41362D]/75">{t("addressBook.signInPrompt")}</p>
           <button
@@ -629,7 +629,7 @@ export default function AddressBook() {
   );
 
   return (
-    <div className="aisyah-page">
+    <div className="qurbi-page">
       <AppHeader
         title={t("addressBook.pageTitle")}
         backTo={returnTo}
@@ -646,7 +646,7 @@ export default function AddressBook() {
         </div>
       )}
 
-      <div className="aisyah-content mx-auto max-w-2xl">
+      <div className="qurbi-content mx-auto max-w-2xl">
         {pageError && (
           <p role="alert" className="flex items-start gap-2 rounded-xl bg-[#FBE4E1] px-3 py-2.5 text-sm font-semibold text-[#8A1C12]">
             <CircleAlert className="mt-0.5 h-4 w-4 flex-none" aria-hidden="true" /> {pageError}

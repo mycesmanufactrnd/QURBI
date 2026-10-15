@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { CheckCircle, Home, Clock, ReceiptText, ShoppingBag } from "lucide-react";
+import { ArrowLeft, CheckCircle, Home, Clock, ReceiptText, ShoppingBag } from "lucide-react";
 import { qurbiApi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
 import { GRADE_COLORS } from "@/lib/livestock-data";
@@ -15,6 +15,8 @@ import { PAID_STATUSES } from "@/components/account/orderStatus";
 import { accountMediaUrl } from "@/components/account/media";
 import { primaryBtn, secondaryBtn } from "@/components/account/buttons";
 import { combineOrders, groupedOrderQuery } from "@/lib/order-groups";
+import { recentPageOr } from "@/lib/navigation";
+import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
 
 const ANIMAL_EMOJIS = {
   Cow: "🐄",
@@ -35,6 +37,7 @@ export default function Receipt() {
   const { reveal } = useReveal();
   const { user, isAuthenticated, authChecked } = useAuth();
   const { requestSignIn } = useAuthPrompt();
+  const { navigateWithTransition } = useHeaderTransition();
 
   const sessionId = searchParams.get("session_id");
   const orderParam = searchParams.get("order_ids") || searchParams.get("order_id") || "";
@@ -184,8 +187,16 @@ export default function Receipt() {
     <main className="min-h-screen bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] pb-[max(2.5rem,env(safe-area-inset-bottom))]">
       {/* Success Banner */}
       <header
-        className={`qurbi-header-background rounded-b-[28px] bg-gradient-to-br from-[#41362D] to-[#6B594A] px-4 pb-8 pt-[max(2rem,env(safe-area-inset-top))] text-center shadow-lg ${reveal()}`}
+        className={`qurbi-header-background relative rounded-b-[28px] bg-gradient-to-br from-[#41362D] to-[#6B594A] px-4 pb-8 pt-[max(2rem,env(safe-area-inset-top))] text-center shadow-lg ${reveal()}`}
       >
+        <button
+          type="button"
+          onClick={() => navigateWithTransition(recentPageOr("/orders"))}
+          aria-label="Return"
+          className="absolute left-4 top-[max(2rem,env(safe-area-inset-top))] z-20 flex h-11 w-11 items-center justify-center rounded-xl border border-[#F7EDE2]/60 bg-white/10 text-white transition-transform active:scale-90"
+        >
+          <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+        </button>
         <div className="relative z-10 flex flex-col items-center gap-3">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#F7EDE2]">
             <CheckCircle className="h-10 w-10 text-[#41362D]" aria-hidden="true" />

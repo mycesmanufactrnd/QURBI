@@ -9,7 +9,7 @@ export function SettingsGroup({ title, children, className = "", style }) {
   return (
     <section className={className} style={style} aria-label={title}>
       <h2 className="mb-2 px-1 text-sm font-bold text-[#41362D]/80">{title}</h2>
-      <div className="aisyah-card divide-y divide-white/15 overflow-hidden rounded-2xl">
+      <div className="qurbi-card divide-y divide-white/15 overflow-hidden rounded-2xl">
         {children}
       </div>
     </section>

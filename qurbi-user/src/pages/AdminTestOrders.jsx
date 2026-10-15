@@ -72,13 +72,13 @@ export default function AdminTestOrders() {
       </div>
     );
   return (
-    <div className="aisyah-page pb-12">
+    <div className="qurbi-page pb-12">
       <AppHeader
         title={t("adminTestOrders.title")}
         backTo="/"
         subtitle={t("adminTestOrders.subtitle")}
       />
-      <main className="aisyah-content">
+      <main className="qurbi-content">
         <p className="rounded-xl bg-amber-50 px-3 py-3 text-xs leading-5 text-amber-700">
           {t("adminTestOrders.restrictedNotice")}
         </p>

@@ -174,7 +174,7 @@ export default function FilterSidebar({ open, onClose, onApply, filters, options
             <button
               type="button"
               onClick={onApply}
-              className="aisyah-primary-button flex min-h-12 min-w-0 items-center justify-center px-3 text-sm sm:text-base"
+              className="qurbi-primary-button flex min-h-12 min-w-0 items-center justify-center px-3 text-sm sm:text-base"
             >
               {typeof resultCount === "number"
                 ? tf("filters.showResults", { count: resultCount })

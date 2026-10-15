@@ -159,7 +159,7 @@ export default function BulkBuy() {
   };
 
   return (
-    <div className="aisyah-page pb-28">
+    <div className="qurbi-page pb-28">
       <AppHeader
         sticky
         thresholdShrink
@@ -203,7 +203,7 @@ export default function BulkBuy() {
         </div>
       </AppHeader>
 
-      <main className="aisyah-content grid auto-rows-fr grid-cols-1 gap-3 sm:grid-cols-2 lg:mx-auto lg:w-full lg:max-w-5xl lg:grid-cols-2">
+      <main className="qurbi-content grid auto-rows-fr grid-cols-1 gap-3 sm:grid-cols-2 lg:mx-auto lg:w-full lg:max-w-5xl lg:grid-cols-2">
         {loading && !listings.length && (
           <PageLoading contentOnly message={t("bulkBuy.loading")} />
         )}
@@ -215,7 +215,7 @@ export default function BulkBuy() {
             <button
               type="button"
               onClick={() => load()}
-              className="mt-4 aisyah-primary-button min-h-12 px-6"
+              className="mt-4 qurbi-primary-button min-h-12 px-6"
             >
               {t("bulkBuy.retry")}
             </button>
@@ -235,12 +235,12 @@ export default function BulkBuy() {
                   setQuery("");
                   setState("");
                 }}
-                className="mt-4 aisyah-primary-button min-h-12 px-6"
+                className="mt-4 qurbi-primary-button min-h-12 px-6"
               >
                 {tf("bulk.clearSearch")}
               </button>
             ) : (
-              <Link to="/browse" className="mt-4 aisyah-primary-button inline-flex min-h-12 items-center px-6">
+              <Link to="/browse" className="mt-4 qurbi-primary-button inline-flex min-h-12 items-center px-6">
                 {tf("bulk.browseSingle")}
               </Link>
             )}
@@ -257,7 +257,7 @@ export default function BulkBuy() {
               <article
                 data-cart-product
                 key={listing.id}
-                className="aisyah-card flex h-full flex-col overflow-hidden transition-all duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.99]"
+                className="qurbi-card flex h-full flex-col overflow-hidden transition-all duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.99]"
               >
                 <Link
                   to={`/bulk-buy/${encodeURIComponent(listing.id)}`}
@@ -333,7 +333,7 @@ export default function BulkBuy() {
                     onClick={(event) =>
                       addLot(listing, true, event.currentTarget)
                     }
-                    className="aisyah-secondary-button min-h-12"
+                    className="qurbi-secondary-button min-h-12"
                   >
                     {t("bulkBuy.buyNow")}
                   </button>

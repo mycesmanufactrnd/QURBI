@@ -153,7 +153,7 @@ export default function Profile() {
 
   if (!authChecked || profileLoading) {
     return (
-      <div className="aisyah-page">
+      <div className="qurbi-page">
         <AppHeader
           title={t("profile.pageTitle")}
           subtitle={t("profile.pageSubtitle")}
@@ -193,7 +193,7 @@ export default function Profile() {
   ];
 
   return (
-    <div className="aisyah-page">
+    <div className="qurbi-page">
       <style>{`
         @keyframes profileFadeIn {
           from { opacity: 0; }
@@ -218,7 +218,7 @@ export default function Profile() {
         preferRecentBack={false}
       />
 
-      <div className="aisyah-content mx-auto max-w-2xl space-y-6">
+      <div className="qurbi-content mx-auto max-w-2xl space-y-6">
         {/* Account */}
         <section
           className={reveal()}
@@ -228,7 +228,7 @@ export default function Profile() {
           <h2 id="account-group-title" className="mb-2 px-1 text-sm font-bold text-[#41362D]/80">
             {ta("profile.groups.account")}
           </h2>
-          <div className="aisyah-card overflow-hidden rounded-2xl">
+          <div className="qurbi-card overflow-hidden rounded-2xl">
             <div className="flex items-center gap-4 p-4">
               <div className="flex h-14 w-14 flex-none items-center justify-center rounded-full bg-white/15">
                 <User className="h-7 w-7 text-white" aria-hidden="true" />
@@ -466,7 +466,7 @@ export default function Profile() {
           <h2 id="language-title" className="mb-2 px-1 text-sm font-bold text-[#41362D]/80">
             {t("language.title")}
           </h2>
-          <div className="aisyah-card rounded-2xl p-4">
+          <div className="qurbi-card rounded-2xl p-4">
             <div className="mb-3 flex items-center gap-3">
               <span className="flex h-10 w-10 flex-none items-center justify-center rounded-xl bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2]">
                 <Languages className="h-5 w-5 text-[#41362D]" aria-hidden="true" />
@@ -503,7 +503,7 @@ export default function Profile() {
           <h2 id="display-mode-title" className="mb-2 px-1 text-sm font-bold text-[#41362D]/80">
             {t("displayMode.title")}
           </h2>
-          <div className="aisyah-card rounded-2xl p-4">
+          <div className="qurbi-card rounded-2xl p-4">
             <p className="mb-3 text-sm leading-relaxed text-white/80">
               {t("displayMode.subtitle")}
             </p>
