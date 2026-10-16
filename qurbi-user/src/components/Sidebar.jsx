@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import AuthButtons from "@/components/AuthButtons";
 import { useAuth } from "@/lib/AuthContext";
 import { useCart } from "@/lib/cart-context";
+import ProfileAvatar from "@/components/ProfileAvatar";
 
 const ITEMS = [
   { to: "/", icon: Home, labelKey: "bottomNav.home", end: true },
@@ -17,8 +18,9 @@ const ITEMS = [
 
 /** Permanent desktop navigation. Mobile uses BottomNav instead. */
 export default function Sidebar() {
-  const { t } = useTranslation("common");
+  const { t, i18n } = useTranslation("common");
   const { t: tf } = useTranslation("shopflow");
+  const { t: tp } = useTranslation("profile");
   const { user, isAuthenticated } = useAuth();
   const { totalItems = 0 } = useCart() || {};
   const counts = { cart: totalItems };
@@ -33,13 +35,44 @@ export default function Sidebar() {
       className="sticky top-0 z-[60] flex h-dvh w-[260px] flex-col overflow-hidden border-r border-white/10 bg-gradient-to-b from-[#41362D] to-[#6B594A] shadow-[4px_0_24px_rgba(65,54,45,0.3)]"
       style={{ viewTransitionName: "qurbi-desktop-sidebar" }}
     >
-      <div className="flex min-h-[76px] items-center border-b border-white/15 px-6">
+      <div className="flex min-h-[76px] items-center gap-3 border-b border-white/15 px-5">
         <Link to="/" className="flex min-w-0 items-center gap-2">
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/25">
             <Leaf className="h-4 w-4 text-white" aria-hidden="true" />
           </span>
           <span className="text-sm font-bold tracking-[0.16em] text-white">QURBI</span>
         </Link>
+
+        <div
+          className="ml-auto grid grid-cols-2 rounded-xl border border-[#E3C19F]/55 bg-black/10 p-1"
+          role="radiogroup"
+          aria-label={tp("language.title")}
+        >
+          {[
+            { code: "en", shortLabel: "EN", label: tp("language.english") },
+            { code: "ms", shortLabel: "BM", label: tp("language.malay") },
+          ].map(({ code, shortLabel, label }) => {
+            const selected = i18n.resolvedLanguage === code;
+            return (
+              <button
+                key={code}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                aria-label={label}
+                title={label}
+                onClick={() => i18n.changeLanguage(code)}
+                className={`flex h-8 min-w-9 items-center justify-center rounded-lg px-2 text-[11px] font-extrabold tracking-wide transition-[background-color,color,box-shadow,transform] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F7EDE2] ${
+                  selected
+                    ? "bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] text-[#41362D] shadow-sm"
+                    : "text-white/75 hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                {shortLabel}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <nav id="desktop-sidebar-navigation" aria-label={tf("nav.label")} className="flex-1 space-y-2 overflow-y-auto px-4 py-5">
@@ -83,9 +116,18 @@ export default function Sidebar() {
                 `group block min-w-0 px-3 py-3 transition-transform duration-200 ease-out hover:translate-x-1 ${isActive ? "text-white" : "text-white/90"}`
               }
             >
-              <p className="truncate text-[15px] font-bold leading-tight text-white transition-colors duration-200 group-hover:text-[#E3C19F]">{displayName}</p>
-              {user?.email ? <p className="mt-1 truncate text-xs text-white/65" title={user.email}>{user.email}</p> : null}
-              <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#E3C19F]">{t("sidebar.profile")}</p>
+              <div className="flex min-w-0 items-center gap-3">
+                <ProfileAvatar
+                  src={user?.avatarUrl || user?.avatar_url}
+                  name={displayName}
+                  className="h-10 w-10 rounded-full text-xs"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[15px] font-bold leading-tight text-white transition-colors duration-200 group-hover:text-[#E3C19F]">{displayName}</p>
+                  {user?.email ? <p className="mt-1 truncate text-xs text-white/65" title={user.email}>{user.email}</p> : null}
+                  <p className="mt-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#E3C19F]">{t("sidebar.profile")}</p>
+                </div>
+              </div>
             </NavLink>
             <div className="my-3 h-px bg-white/15" aria-hidden="true" />
           </>

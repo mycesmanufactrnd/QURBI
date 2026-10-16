@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import {
   User,
   MapPin,
-  Package,
+  Clock,
   Check,
   Pencil,
   X,
@@ -13,7 +13,7 @@ import {
   Phone,
   ShieldCheck,
   FileText,
-  LifeBuoy,
+  Headset,
   Languages,
   Monitor,
   Smartphone,
@@ -35,6 +35,7 @@ import { primaryBtn } from "@/components/account/buttons";
 import { registerAsFarmer, switchToFarmerPortal } from "@/lib/portalSwitch";
 import { useMounted } from "@/hooks/useMounted";
 import { useDisplayMode } from "@/lib/display-mode-context";
+import ProfileAvatar from "@/components/ProfileAvatar";
 
 export default function Profile() {
   const location = useLocation();
@@ -196,13 +197,6 @@ export default function Profile() {
     { icon: Mail, label: t("profile.accountInfo.email"), value: profile.email },
     { icon: Phone, label: t("profile.accountInfo.phone"), value: profile.phone },
   ];
-  const profileInitials = (profile.name || "")
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase() || "?";
   const languages = [
     { code: "en", label: t("language.english") },
     { code: "ms", label: t("language.malay") },
@@ -254,9 +248,11 @@ export default function Profile() {
           </div>
           <div className="qurbi-card qurbi-header-background relative overflow-hidden rounded-[1.75rem] p-5 sm:p-6">
             <div className="relative z-10 flex min-w-0 items-center gap-3.5">
-              <div className="flex h-14 w-14 flex-none items-center justify-center rounded-2xl border border-white/25 bg-white/15 text-lg font-extrabold text-white shadow-sm" aria-hidden="true">
-                {profileInitials}
-              </div>
+              <ProfileAvatar
+                src={profile.avatarUrl || user?.avatarUrl || user?.avatar_url}
+                name={profile.name}
+                className="h-14 w-14 rounded-2xl text-lg"
+              />
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#E3C19F]">
                   {t("profile.buyerAccount")}
@@ -448,7 +444,7 @@ export default function Profile() {
             }
           />
           <SettingsRow
-            icon={Package}
+            icon={Clock}
             title={t("profile.transactionHistoryCard.title")}
             subtitle={t("profile.transactionHistoryCard.subtitle")}
             onClick={() => requireAuth(() => navigateFromIconPage("/transaction-history"))}
@@ -564,7 +560,7 @@ export default function Profile() {
           style={{ animationDelay: "260ms" }}
         >
           <SettingsRow
-            icon={LifeBuoy}
+            icon={Headset}
             title={t("profile.customerSupportCard.title")}
             subtitle={t("profile.customerSupportCard.subtitle")}
             onClick={() => navigateFromIconPage("/support")}

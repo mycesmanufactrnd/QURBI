@@ -41,13 +41,6 @@ import IconRouteOverlay from "@/components/IconRouteOverlay";
 import { DisplayModeProvider } from "@/lib/display-mode-context";
 import AgreementGate from "@/components/AgreementGate";
 
-function LegacyAuthRedirect({ mode }) {
-  const location = useLocation();
-  const params = new URLSearchParams(location.search);
-  params.set("mode", mode);
-  return <Navigate to={`/auth?${params.toString()}`} replace />;
-}
-
 function ApplicationRoutes() {
   const location = useLocation();
   const backgroundLocation = location.state?.qurbiIconOverlay
@@ -76,8 +69,6 @@ function ApplicationRoutes() {
         </Route>
         <Route element={<StandaloneLayout />}>
           <Route path="/auth" element={<Authentication />} />
-          <Route path="/login" element={<LegacyAuthRedirect mode="login" />} />
-          <Route path="/register" element={<LegacyAuthRedirect mode="register" />} />
           <Route path="/switch-session" element={<SwitchSession />} />
           <Route path="/signup-details" element={<SignupDetails />} />
           <Route path="/user-agreement" element={<UserAgreement />} />

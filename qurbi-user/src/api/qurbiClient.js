@@ -349,11 +349,11 @@ const functionHandlers = {
   },
   async getMyProfile() {
     const user = await request({ method: "get", url: "/auth/me" });
-    return wrap({ profile: { name: user.full_name, email: user.email, phone: user.phone || "" } });
+    return wrap({ profile: { name: user.full_name, email: user.email, phone: user.phone || "", avatarUrl: user.avatar_url || "" } });
   },
   async updateMyProfile({ name, phone }) {
     const user = await request({ method: "patch", url: `/users/${currentUserId()}`, data: { fullName: name, phone } });
-    return wrap({ profile: { name: user.full_name, email: user.email, phone: user.phone || "" } });
+    return wrap({ profile: { name: user.full_name, email: user.email, phone: user.phone || "", avatarUrl: user.avatar_url || "" } });
   },
   /** @param {{ orderId?: string }} [payload] */
   async fetchMyOrders({ orderId } = {}) {

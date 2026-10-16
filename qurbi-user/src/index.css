@@ -213,6 +213,29 @@
   );
 }
 
+/* A low-contrast QURBI motif adds depth to the combined authentication page
+   without changing either mode's existing colour palette. */
+.qurbi-auth-abstract-background {
+  background: url("./assets/abstract-header-nav.webp") center / 44rem auto repeat;
+  opacity: 0.11;
+  mix-blend-mode: soft-light;
+  transform: scale(1.015);
+  -webkit-mask-image: radial-gradient(
+    ellipse at center,
+    #000 0%,
+    rgba(0, 0, 0, 0.82) 48%,
+    rgba(0, 0, 0, 0.3) 78%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    ellipse at center,
+    #000 0%,
+    rgba(0, 0, 0, 0.82) 48%,
+    rgba(0, 0, 0, 0.3) 78%,
+    transparent 100%
+  );
+}
+
 /* Keep image edges readable without changing their size or surrounding layout. */
 #root img:not([data-no-contrast-outline]) {
   outline: 1px solid rgba(65, 54, 45, 0.72);
@@ -374,19 +397,6 @@ html {
     transform: translateY(0);
   }
 }
-
-@keyframes authPageEnterLogin {
-  from { filter: saturate(0.82) brightness(0.96); }
-  to { filter: saturate(1) brightness(1); }
-}
-
-@keyframes authPageEnterRegister {
-  from { filter: saturate(0.82) brightness(0.9); }
-  to { filter: saturate(1) brightness(1); }
-}
-
-.auth-page-enter-login { animation: authPageEnterLogin 360ms cubic-bezier(0.16, 1, 0.3, 1) both; }
-.auth-page-enter-register { animation: authPageEnterRegister 360ms cubic-bezier(0.16, 1, 0.3, 1) both; }
 
 @keyframes authModeContentLogin {
   from { opacity: 0; transform: translateX(-14px); }
@@ -1237,7 +1247,7 @@ html.qurbi-profile-navigation-active::view-transition-new(qurbi-desktop-sidebar)
 
 [class*="bg-blue"],
 [class*="bg-purple"],
-[class*="bg-red"],
+
 [class*="bg-orange"],
 [class*="bg-yellow"],
 [class*="bg-gray"],
@@ -1251,7 +1261,7 @@ html.qurbi-profile-navigation-active::view-transition-new(qurbi-desktop-sidebar)
 
 [class*="text-blue"],
 [class*="text-purple"],
-[class*="text-red"],
+
 [class*="text-orange"],
 [class*="text-yellow"],
 [class*="text-gray"],
@@ -1267,7 +1277,7 @@ html.qurbi-profile-navigation-active::view-transition-new(qurbi-desktop-sidebar)
 [class*="border-green"],
 [class*="border-blue"],
 [class*="border-purple"],
-[class*="border-red"],
+
 [class*="border-orange"],
 [class*="border-yellow"],
 [class*="border-gray"],

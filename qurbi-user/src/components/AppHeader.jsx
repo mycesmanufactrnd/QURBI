@@ -9,6 +9,7 @@ import { useNotifications } from "@/lib/notification-context";
 import { recentPageOr } from "@/lib/navigation";
 import { useDisplayMode } from "@/lib/display-mode-context";
 import { useAuthPrompt } from "@/lib/auth-prompt-context";
+import ProfileAvatar from "@/components/ProfileAvatar";
 
 const HEADER_SHRINK_SCROLL_Y = 12;
 const HEADER_EXPAND_SCROLL_Y = 4;
@@ -37,7 +38,7 @@ export default function AppHeader({
 }) {
   const { t } = useTranslation("common");
   const location = useLocation();
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, user } = useAuth();
   const { isDesktop } = useDisplayMode();
   const { requestSignIn } = useAuthPrompt();
   const { unreadCount } = useNotifications();
@@ -408,9 +409,11 @@ export default function AppHeader({
               }
               className="relative flex h-11 w-11 flex-none items-center justify-center transition-transform active:scale-90"
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/30 bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] shadow-lg">
-                <User className="h-5 w-5 text-[#41362D]" />
-              </div>
+              <ProfileAvatar
+                src={user?.avatarUrl || user?.avatar_url}
+                name={user?.display_name || user?.full_name || user?.email}
+                className="h-10 w-10 rounded-full border-2 text-xs"
+              />
             </button>
           )}
         </div>

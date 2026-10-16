@@ -13,7 +13,7 @@ import apiClient from "@/api/apiClient";
  */
 const UserProfileContext = createContext(null);
 
-const emptyProfile = { name: "", email: "", phone: "" };
+const emptyProfile = { name: "", email: "", phone: "", avatarUrl: "" };
 
 const profileKey = (uid) => `gh_profile_${uid}`;
 const addressesKey = (uid) => `gh_addresses_${uid}`;
@@ -65,7 +65,12 @@ export function UserProfileProvider({ children }) {
     // Start with auth data, then replace it with the authoritative User record.
     // Auth claims can be stale after a profile edit.
     setProfileLoading(true);
-    setProfile({ name: user?.display_name || user?.full_name || "", email: user?.email || "", phone: user?.phone || "" });
+    setProfile({
+      name: user?.display_name || user?.full_name || "",
+      email: user?.email || "",
+      phone: user?.phone || "",
+      avatarUrl: user?.avatarUrl || user?.avatar_url || "",
+    });
     let active = true;
     qurbiApi.functions.invoke("getMyProfile", {}).then((response) => {
       if (active && response.data?.profile) setProfile(response.data.profile);
@@ -98,6 +103,7 @@ export function UserProfileProvider({ children }) {
       ...prev,
       name: prev.name || user.display_name || user.full_name || "",
       email: prev.email || user.email || "",
+      avatarUrl: user.avatarUrl || user.avatar_url || prev.avatarUrl || "",
     }));
   }, [isAuthenticated, user]);
 

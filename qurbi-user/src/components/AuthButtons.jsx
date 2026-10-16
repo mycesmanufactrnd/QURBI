@@ -38,7 +38,7 @@ export default function AuthButtons({ returnTo = null, onDark = false, compact =
         onClick={handleLogout}
         aria-label={t("authButtons.logOut")}
         title={compact ? t("authButtons.logOut") : undefined}
-        className={`flex min-h-12 w-full items-center justify-center rounded-2xl border-2 bg-transparent text-[15px] font-bold transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A9825F] ${compact ? "px-0 py-3" : "gap-2 py-3"} ${onDark ? "border-white/40 text-white hover:-translate-y-0.5 hover:border-[#E3C19F] hover:bg-white/10 hover:text-[#E3C19F]" : "border-[#6B594A] text-[#41362D] hover:bg-[#41362D]/5"}`}
+        className={`flex min-h-12 w-full items-center justify-center rounded-2xl border-2 border-red bg-transparent text-[15px] font-bold transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A9825F] ${compact ? "px-0 py-3" : "gap-2 py-3"} ${onDark ? "border-red text-white hover:-translate-y-0.5 hover:border-[#E3C19F] hover:bg-white/10 hover:text-[#E3C19F]" : "border-red-900 text-[#41362D] hover:bg-[#41362D]/5"}`}
       >
         <LogOut className="h-4 w-4" />
         {!compact ? <span>{t("authButtons.logOut")}</span> : null}

@@ -94,20 +94,10 @@ export default function Authentication() {
       icon={isRegister ? UserPlus : LogIn}
       title={t(`${copy}.title`)}
       subtitle={t(`${copy}.subtitle`)}
-      footer={
-        <>
-          {isRegister ? t("register.haveAccount") : t("login.noAccount")}{" "}
-          <button
-            type="button"
-            onClick={() => changeMode(isRegister ? "login" : "register")}
-            className="inline-flex min-h-11 items-center px-1 font-bold text-[#41362D] underline underline-offset-4"
-          >
-            {isRegister ? t("register.signIn") : t("login.createOne")}
-          </button>
-        </>
-      }
+      onModeChange={changeMode}
+      showLanguageToggle
     >
-      <div key={mode} className={isRegister ? "auth-mode-content-register" : "auth-mode-content-login"}>
+      <div className={isRegister ? "auth-mode-content-register" : "auth-mode-content-login"}>
         {authError?.type === "auth_failed" && (
           <div role="alert" className="mb-4 flex items-start gap-2 rounded-xl border border-[#E8A39A] bg-[#FBE4E1] px-3 py-3 text-sm font-semibold text-[#8A1C12]">
             <CircleAlert className="mt-0.5 h-4 w-4 flex-none" aria-hidden="true" />

@@ -3,7 +3,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import { safeReturnTo } from "@/lib/authReturnTo";
 
-const AUTH_ENTRY_PATHS = new Set(["/auth", "/login", "/register"]);
+const AUTH_ENTRY_PATHS = new Set(["/auth"]);
 
 function currentDestination(location) {
   const destination = `${location.pathname}${location.search}${location.hash}`;
