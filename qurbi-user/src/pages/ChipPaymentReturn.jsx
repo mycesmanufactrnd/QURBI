@@ -70,7 +70,7 @@ export default function ChipPaymentReturn() {
       icon={Clock3}
       title="Sign in to confirm payment"
       message="Your payment status is stored securely. Sign in with the same buyer account to continue."
-      action={<Link className="qurbi-primary-button block text-center" to={`/auth?mode=login&returnTo=${encodeURIComponent(returnTo)}`}>Sign in</Link>}
+      action={<Link className="qurbi-primary-button block text-center" to="/auth" state={{ authMode: "login", returnTo }}>Sign in</Link>}
     />;
   }
   if (!paymentSessionId) {

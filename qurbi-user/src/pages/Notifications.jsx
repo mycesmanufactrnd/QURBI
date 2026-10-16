@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
@@ -8,7 +8,6 @@ import {
   Camera,
   CheckCircle2,
   ChevronDown,
-  ChevronUp,
   CreditCard,
   Info,
   Megaphone,
@@ -139,12 +138,29 @@ function SwipeableNotificationRow({
   const { t } = useTranslation("orders");
   const { t: ta } = useTranslation("account");
 
-  const [revealed, setRevealed] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const [dismissing, setDismissing] = useState(false);
+  const [collapsing, setCollapsing] = useState(false);
+  const [rowHeight, setRowHeight] = useState(null);
 
-  const touchStart = useRef(null);
+  const rowRef = useRef(null);
+  const surfaceRef = useRef(null);
+  const dragOffsetRef = useRef(0);
+  const gesture = useRef({ pointerId: null, startX: 0, startY: 0, axis: null });
   const didSwipe = useRef(false);
+
+  useLayoutEffect(() => {
+    const surface = surfaceRef.current;
+    if (!surface) return undefined;
+    const updateHeight = () => setRowHeight(surface.scrollHeight);
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(surface);
+    return () => observer.disconnect();
+  }, []);
 
   const style =
     TYPE_STYLE[notification.type] ||
@@ -154,28 +170,69 @@ function SwipeableNotificationRow({
   const unread = !notification.is_read;
   const showImage = Boolean(notification.image_url) && !imageFailed;
 
-  const onTouchEnd = (event) => {
-    if (touchStart.current == null) return;
-
-    const endX =
-      event.changedTouches[0]?.clientX ??
-      touchStart.current;
-
-    const distance =
-      endX - touchStart.current;
-
-    didSwipe.current =
-      Math.abs(distance) > 18;
-
-    if (distance < -42) {
-      setRevealed(true);
+  const dismissNotification = async () => {
+    if (dismissing || clearing) return;
+    setDismissing(true);
+    setExpanded(false);
+    const exitOffset = -Math.max(window.innerWidth, (rowRef.current?.offsetWidth || 320) * 1.2);
+    dragOffsetRef.current = exitOffset;
+    setDragOffset(exitOffset);
+    await new Promise((resolve) => window.setTimeout(resolve, 260));
+    setCollapsing(true);
+    await new Promise((resolve) => window.setTimeout(resolve, 220));
+    const cleared = await onClear(notification.id);
+    if (!cleared) {
+      setCollapsing(false);
+      dragOffsetRef.current = 0;
+      setDragOffset(0);
+      setDismissing(false);
     }
+  };
 
-    if (distance > 32) {
-      setRevealed(false);
+  const handlePointerDown = (event) => {
+    if (opening || clearing || dismissing || event.button > 0) return;
+    gesture.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      axis: null,
+    };
+    didSwipe.current = false;
+    setDragging(true);
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  };
+
+  const handlePointerMove = (event) => {
+    if (gesture.current.pointerId !== event.pointerId) return;
+    const distanceX = event.clientX - gesture.current.startX;
+    const distanceY = event.clientY - gesture.current.startY;
+
+    if (!gesture.current.axis && (Math.abs(distanceX) > 7 || Math.abs(distanceY) > 7)) {
+      gesture.current.axis = Math.abs(distanceX) > Math.abs(distanceY) ? "x" : "y";
     }
+    if (gesture.current.axis !== "x") return;
 
-    touchStart.current = null;
+    event.preventDefault();
+    didSwipe.current = Math.abs(distanceX) > 12;
+    const rowWidth = rowRef.current?.offsetWidth || 320;
+    const leftDistance = Math.max(-rowWidth * 1.08, Math.min(0, distanceX));
+    dragOffsetRef.current = leftDistance;
+    setDragOffset(leftDistance);
+  };
+
+  const finishPointerGesture = (event) => {
+    if (gesture.current.pointerId !== event.pointerId) return;
+    const horizontalGesture = gesture.current.axis === "x";
+    gesture.current = { pointerId: null, startX: 0, startY: 0, axis: null };
+    setDragging(false);
+
+    const rowWidth = rowRef.current?.offsetWidth || 320;
+    if (horizontalGesture && dragOffsetRef.current <= -Math.max(96, rowWidth * 0.38)) {
+      dismissNotification();
+      return;
+    }
+    dragOffsetRef.current = 0;
+    setDragOffset(0);
   };
 
   /**
@@ -184,11 +241,6 @@ function SwipeableNotificationRow({
   const handleOpen = () => {
     if (didSwipe.current) {
       didSwipe.current = false;
-      return;
-    }
-
-    if (revealed) {
-      setRevealed(false);
       return;
     }
 
@@ -208,37 +260,38 @@ function SwipeableNotificationRow({
 
   return (
     <div
-      className={`relative isolate overflow-hidden rounded-2xl ${
-        revealed
-          ? "notification-delete-surface"
-          : ""
-      }`}
+      ref={rowRef}
+      className="relative isolate overflow-hidden rounded-2xl transition-[max-height,opacity,margin,transform] duration-200 ease-out"
+      style={{
+        maxHeight: collapsing ? 0 : rowHeight == null ? undefined : `${rowHeight}px`,
+        opacity: collapsing ? 0 : 1,
+        marginTop: collapsing ? 0 : undefined,
+        marginBottom: collapsing ? 0 : undefined,
+        transform: collapsing ? "scale(0.97)" : "scale(1)",
+      }}
     >
       {/* Swipe delete background */}
-      <button
-        type="button"
-        onClick={() =>
-          onClear(notification.id)
-        }
-        disabled={clearing}
-        tabIndex={revealed ? 0 : -1}
-        aria-hidden={!revealed}
-        className="notification-delete-surface absolute inset-y-0 right-0 z-0 flex h-full w-[76px] flex-col items-center justify-center gap-1 rounded-r-2xl text-xs font-bold text-white disabled:opacity-60"
+      <div
+        aria-hidden="true"
+        className="notification-delete-surface absolute inset-0 z-0 flex items-center justify-end pr-7 text-white"
+        style={{ opacity: Math.min(1, Math.abs(dragOffset) / 90) }}
       >
-        <Trash2 className="h-5 w-5" />
-
-        {clearing
-          ? t("notifications.clearing")
-          : t("notifications.clear")}
-      </button>
+        <span className="flex flex-col items-center gap-1 text-xs font-bold">
+          <Trash2 className="h-6 w-6" />
+          {t("notifications.clear")}
+        </span>
+      </div>
 
       {/* Main sliding notification surface */}
       <div
-        className="relative z-10 transition-transform duration-300 ease-out will-change-transform"
+        ref={surfaceRef}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={finishPointerGesture}
+        onPointerCancel={finishPointerGesture}
+        className={`relative z-10 touch-pan-y will-change-transform ${dragging ? "transition-none" : "transition-transform duration-300 ease-out"}`}
         style={{
-          transform: revealed
-            ? "translateX(-76px)"
-            : "translateX(0)",
+          transform: `translateX(${dragOffset}px)`,
         }}
       >
         <div
@@ -251,14 +304,6 @@ function SwipeableNotificationRow({
           {/* Main notification button */}
           <button
             type="button"
-            onTouchStart={(event) => {
-              touchStart.current =
-                event.touches[0]?.clientX ??
-                null;
-
-              didSwipe.current = false;
-            }}
-            onTouchEnd={onTouchEnd}
             onClick={handleOpen}
             disabled={opening || clearing}
             aria-label={`${unread ? ta("notifications.unreadPrefix") : ""}${notification.title}`}
@@ -323,31 +368,25 @@ function SwipeableNotificationRow({
                 ? "Collapse notification"
                 : "Expand notification"
             }
-            className={`absolute right-[48px] top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full transition-all duration-300 active:scale-90 disabled:opacity-50 ${
+            className={`absolute right-[48px] top-4 flex h-11 w-11 items-center justify-center rounded-full transition-all duration-300 active:scale-90 disabled:opacity-50 ${
               unread
                 ? "text-white hover:bg-white/10"
                 : "text-[#41362D] hover:bg-[#F7EDE2]"
             }`}
           >
-            {expanded ? (
-              <ChevronUp
-                className="h-5 w-5"
-                aria-hidden="true"
-              />
-            ) : (
-              <ChevronDown
-                className="h-5 w-5"
-                aria-hidden="true"
-              />
-            )}
+            <ChevronDown
+              className={`h-5 w-5 transition-transform duration-300 ${expanded ? "rotate-180" : "rotate-0"}`}
+              aria-hidden="true"
+            />
           </button>
 
           {/* Clear notification */}
           <button
             type="button"
-            onClick={() =>
-              onClear(notification.id)
-            }
+            onClick={(event) => {
+              event.stopPropagation();
+              dismissNotification();
+            }}
             disabled={clearing || opening}
             aria-label={t(
               "notifications.clearAria",
@@ -552,15 +591,16 @@ export default function Notifications() {
   const clearOne = async (
     notificationId
   ) => {
-    if (clearingId || clearingAll) return;
+    if (clearingId || clearingAll) return false;
 
     setClearingId(notificationId);
 
-    await clearNotification(
+    const cleared = await clearNotification(
       notificationId
     );
 
     setClearingId("");
+    return cleared;
   };
 
   const clearAll = async () => {

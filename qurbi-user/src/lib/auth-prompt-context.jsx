@@ -238,7 +238,8 @@ export function AuthPromptProvider({ children }) {
                 </button>
                 {isDesktop ? (
                   <Link
-                    to={`/auth?mode=register${prompt.returnTo && prompt.returnTo !== "/" ? `&returnTo=${encodeURIComponent(prompt.returnTo)}` : ""}`}
+                    to="/auth"
+                    state={{ authMode: "register", returnTo: prompt.returnTo || "/" }}
                     className="flex w-full items-center justify-center rounded-xl border border-[#E3C19F] bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] px-3 py-3.5 text-center text-sm font-bold text-[#41362D] transition-all hover:brightness-105 active:scale-95"
                   >
                     Create account
@@ -266,7 +267,8 @@ export function AuthPromptProvider({ children }) {
               {!isDesktop ? <p className="mt-3 text-center text-sm text-[#F7EDE2]">
                 Don&apos;t have an account?{" "}
                 <Link
-                  to={`/auth?mode=register${prompt.returnTo && prompt.returnTo !== "/" ? `&returnTo=${encodeURIComponent(prompt.returnTo)}` : ""}`}
+                  to="/auth"
+                  state={{ authMode: "register", returnTo: prompt.returnTo || "/" }}
                   className="font-bold text-white hover:underline"
                 >
                   Create one

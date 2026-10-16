@@ -8,8 +8,32 @@
 // /\evil.com parses same-origin but normalizes to a protocol-relative
 // //evil.com when assigned to location.href — an open redirect. So require the
 // resolved path to be exactly one leading slash (no "//" prefix, no backslash).
-export function safeReturnTo() {
-  const raw = new URLSearchParams(window.location.search).get("returnTo");
+const AUTH_RETURN_TO_KEY = "qurbi_auth_return_to";
+
+export function rememberAuthReturnTo(returnTo) {
+  try {
+    sessionStorage.setItem(AUTH_RETURN_TO_KEY, returnTo);
+  } catch {
+    // Session storage can be unavailable in restricted browser contexts.
+  }
+}
+
+export function clearRememberedAuthReturnTo() {
+  try {
+    sessionStorage.removeItem(AUTH_RETURN_TO_KEY);
+  } catch {
+    // Session storage can be unavailable in restricted browser contexts.
+  }
+}
+
+export function safeReturnTo(candidate = null) {
+  let remembered = null;
+  try {
+    remembered = sessionStorage.getItem(AUTH_RETURN_TO_KEY);
+  } catch {
+    // Session storage can be unavailable in restricted browser contexts.
+  }
+  const raw = candidate || remembered || new URLSearchParams(window.location.search).get("returnTo");
   if (!raw) return "/";
   try {
     const url = new URL(raw, window.location.origin);

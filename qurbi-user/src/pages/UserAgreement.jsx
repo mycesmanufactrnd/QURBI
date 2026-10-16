@@ -31,7 +31,7 @@ export default function UserAgreement() {
   const [triedSubmit, setTriedSubmit] = useState(false);
 
   if (authChecked && !isAuthenticated) {
-    return <Navigate to={`/auth?mode=register&returnTo=${encodeURIComponent(returnTo)}`} replace />;
+    return <Navigate to="/auth" replace state={{ authMode: "register", returnTo }} />;
   }
 
   // Previously an already-accepted buyer was always bounced to /signup-details

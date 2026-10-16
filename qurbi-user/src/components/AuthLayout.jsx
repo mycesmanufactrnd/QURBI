@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useLayoutEffect, useRef, useState } from "react";
 import { Leaf } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -16,10 +16,45 @@ export default function AuthLayout({
 }) {
   const { t, i18n } = useTranslation("auth");
   const isRegister = mode === "register";
+  const contentRef = useRef(null);
+  const previousContentHeightRef = useRef(null);
+  const [contentHeight, setContentHeight] = useState(null);
+
+  useLayoutEffect(() => {
+    const content = contentRef.current;
+    if (!content) return undefined;
+    let animationFrame = null;
+
+    const updateHeight = () => {
+      const nextHeight = content.scrollHeight;
+      const previousHeight = previousContentHeightRef.current;
+
+      if (previousHeight == null) {
+        setContentHeight(nextHeight);
+      } else {
+        setContentHeight(previousHeight);
+        animationFrame = requestAnimationFrame(() => setContentHeight(nextHeight));
+      }
+      previousContentHeightRef.current = nextHeight;
+    };
+
+    updateHeight();
+    const observer = new ResizeObserver(() => {
+      const nextHeight = content.scrollHeight;
+      previousContentHeightRef.current = nextHeight;
+      setContentHeight(nextHeight);
+    });
+    observer.observe(content);
+    return () => {
+      if (animationFrame != null) cancelAnimationFrame(animationFrame);
+      observer.disconnect();
+    };
+  }, [mode]);
+
   return (
     <div
       data-page-description={subtitle || undefined}
-      className={`relative isolate min-h-screen overflow-x-hidden flex flex-col items-center justify-center px-4 py-10 pb-[max(2.5rem,env(safe-area-inset-bottom))] ${
+      className={`relative isolate min-h-screen overflow-x-hidden flex flex-col items-center justify-start px-4 py-10 pb-[max(2.5rem,env(safe-area-inset-bottom))] ${
         showLanguageToggle
           ? "bg-gradient-to-br from-[#41362D] to-[#6B594A]"
           : "bg-[#F7EDE2]"
@@ -111,7 +146,12 @@ export default function AuthLayout({
             {t("authButtons.signUp")}
           </button>
         </div>}
-        {children}
+        <div
+          className="overflow-hidden transition-[height] duration-300 ease-out motion-reduce:transition-none"
+          style={contentHeight == null ? undefined : { height: `${contentHeight}px` }}
+        >
+          <div ref={contentRef}>{children}</div>
+        </div>
       </div>
     </div>
   );

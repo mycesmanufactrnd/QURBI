@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -29,22 +29,46 @@ export default function Analytics() {
   const [error, setError] = useState("");
   const [showAllListings, setShowAllListings] = useState(false);
   const [showAllActivity, setShowAllActivity] = useState(false);
+  const requestIdRef = useRef(0);
 
-  const load = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      setData(await qurbi.analytics.summary(days));
-    } catch (requestError) {
-      setError(requestError.message || t("loadError"));
-    } finally {
-      setLoading(false);
+  const load = useCallback(async ({ silent = false } = {}) => {
+    const requestId = ++requestIdRef.current;
+    if (!silent) {
+      setLoading(true);
+      setError("");
     }
-  };
+    try {
+      const nextData = await qurbi.analytics.summary(days);
+      if (requestId === requestIdRef.current) {
+        setData(nextData);
+        setError("");
+      }
+    } catch (requestError) {
+      if (!silent && requestId === requestIdRef.current) {
+        setError(requestError.message || t("loadError"));
+      }
+    } finally {
+      if (!silent && requestId === requestIdRef.current) setLoading(false);
+    }
+  }, [days, t]);
 
   useEffect(() => {
     load();
-  }, [days]);
+
+    const refresh = () => {
+      if (document.visibilityState === "visible") load({ silent: true });
+    };
+    const intervalId = window.setInterval(refresh, 10_000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+      requestIdRef.current += 1;
+    };
+  }, [load]);
 
   const chartDays = useMemo(() => (data?.daily || []).slice(days > 14 ? -14 : 0), [data, days]);
   const chartMax = Math.max(1, ...chartDays.map((row) => row.views));
@@ -81,7 +105,7 @@ export default function Analytics() {
       {error && (
         <div className="mt-5 rounded-2xl border border-destructive/20 bg-destructive/5 p-4">
           <p className="text-sm font-semibold text-destructive">{error}</p>
-          <button type="button" onClick={load} className="mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-primary">
+          <button type="button" onClick={() => load()} className="mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-primary">
             <RefreshCw className="h-4 w-4" /> {t("retry")}
           </button>
         </div>
