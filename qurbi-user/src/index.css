@@ -104,27 +104,31 @@
 }
 
 @layer components {
-  .aisyah-page {
+  .qurbi-page {
     @apply min-h-screen pb-24;
     padding-bottom: calc(6rem + env(safe-area-inset-bottom));
     background: linear-gradient(135deg, #e3c19f 0%, #f7ede2 100%);
   }
 
-  .aisyah-content {
-    @apply mx-auto w-full max-w-5xl space-y-4 px-4 pt-5;
+  .qurbi-content {
+    @apply mx-auto w-full max-w-[61.5rem] space-y-4 px-4 pt-5;
   }
 
-  .aisyah-page > :not(.qurbi-shrinkable-header-shell):not(.fixed) {
+  .qurbi-desktop-bounded-content {
+    @apply mx-auto;
+  }
+
+  .qurbi-page > :not(.qurbi-shrinkable-header-shell):not(.fixed) {
     translate: 0 0;
     transition: translate 220ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  .aisyah-page.qurbi-header-is-shrunk
+  .qurbi-page.qurbi-header-is-shrunk
     > :not(.qurbi-shrinkable-header-shell):not(.fixed) {
     translate: 0 calc(-1 * var(--qurbi-header-collapse-offset, 0px));
   }
 
-  .aisyah-card {
+  .qurbi-card {
     @apply rounded-2xl text-white shadow-lg shadow-black/20;
     background-image: linear-gradient(
       135deg,
@@ -134,11 +138,11 @@
     );
   }
 
-  .aisyah-primary-button {
+  .qurbi-primary-button {
     @apply rounded-xl bg-gradient-to-br from-[#41362D] to-[#6B594A] px-4 py-3 text-sm font-bold text-white shadow-md shadow-black/20 transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50;
   }
 
-  .aisyah-secondary-button {
+  .qurbi-secondary-button {
     @apply rounded-xl bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] px-4 py-3 text-sm font-bold text-black transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98];
   }
 }
@@ -161,6 +165,7 @@
   background: url("./assets/abstract-header-nav.webp") right bottom / cover no-repeat;
   opacity: 0.2;
   mix-blend-mode: multiply;
+  border-radius: inherit;
   -webkit-mask-image: linear-gradient(
     to top right,
     #000 0%,
@@ -208,13 +213,36 @@
   );
 }
 
+/* A low-contrast QURBI motif adds depth to the combined authentication page
+   without changing either mode's existing colour palette. */
+.qurbi-auth-abstract-background {
+  background: url("./assets/abstract-header-nav.webp") center / 44rem auto repeat;
+  opacity: 0.11;
+  mix-blend-mode: soft-light;
+  transform: scale(1.015);
+  -webkit-mask-image: radial-gradient(
+    ellipse at center,
+    #000 0%,
+    rgba(0, 0, 0, 0.82) 48%,
+    rgba(0, 0, 0, 0.3) 78%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    ellipse at center,
+    #000 0%,
+    rgba(0, 0, 0, 0.82) 48%,
+    rgba(0, 0, 0, 0.3) 78%,
+    transparent 100%
+  );
+}
+
 /* Keep image edges readable without changing their size or surrounding layout. */
 #root img:not([data-no-contrast-outline]) {
   outline: 1px solid rgba(65, 54, 45, 0.72);
   outline-offset: -1px;
 }
 
-#root .aisyah-card img:not([data-no-contrast-outline]),
+#root .qurbi-card img:not([data-no-contrast-outline]),
 #root .qurbi-dark-surface img:not([data-no-contrast-outline]),
 #root [class*="from-[#41362D]"] img:not([data-no-contrast-outline]),
 #root [class*="from-[#4B3E34]"] img:not([data-no-contrast-outline]),
@@ -271,7 +299,7 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
 }
 
-#root :where(.aisyah-card, .qurbi-dark-surface):not(header *):not(nav *) {
+#root :where(.qurbi-card, .qurbi-dark-surface):not(header *):not(nav *) {
   translate: 0 -1px;
   box-shadow:
     0 24px 46px -20px rgba(65, 54, 45, 0.66),
@@ -301,7 +329,7 @@
 }
 
 #root
-  :where(.aisyah-card, .qurbi-dark-surface):not(header *):not(nav *):hover {
+  :where(.qurbi-card, .qurbi-dark-surface):not(header *):not(nav *):hover {
   translate: 0 -3px;
   box-shadow:
     0 30px 54px -20px rgba(65, 54, 45, 0.7),
@@ -369,19 +397,6 @@ html {
     transform: translateY(0);
   }
 }
-
-@keyframes authPageEnterLogin {
-  from { filter: saturate(0.82) brightness(0.96); }
-  to { filter: saturate(1) brightness(1); }
-}
-
-@keyframes authPageEnterRegister {
-  from { filter: saturate(0.82) brightness(0.9); }
-  to { filter: saturate(1) brightness(1); }
-}
-
-.auth-page-enter-login { animation: authPageEnterLogin 360ms cubic-bezier(0.16, 1, 0.3, 1) both; }
-.auth-page-enter-register { animation: authPageEnterRegister 360ms cubic-bezier(0.16, 1, 0.3, 1) both; }
 
 @keyframes authModeContentLogin {
   from { opacity: 0; transform: translateX(-14px); }
@@ -608,7 +623,7 @@ html {
   will-change: clip-path, opacity, transform;
 }
 .animate-profile-origin-enter
-  > .aisyah-page
+  > .qurbi-page
   > :not(header):not(.qurbi-shrinkable-header-shell):not(style):not(.fixed) {
   animation: profileOriginEnter 0.54s cubic-bezier(0.16, 0.78, 0.24, 1) both;
   transform-origin: var(--icon-origin-x) var(--icon-origin-y);
@@ -616,7 +631,7 @@ html {
   will-change: clip-path, opacity, transform;
 }
 .animate-profile-origin-exit
-  > .aisyah-page
+  > .qurbi-page
   > :not(header):not(.qurbi-shrinkable-header-shell):not(style):not(.fixed) {
   animation: profileOriginExit 0.63s cubic-bezier(0.42, 0, 0.22, 1) both;
   pointer-events: none;
@@ -703,7 +718,7 @@ html {
   pointer-events: none;
 }
 
-.qurbi-icon-route-overlay > .aisyah-page {
+.qurbi-icon-route-overlay > .qurbi-page {
   min-height: 100dvh;
 }
 
@@ -977,6 +992,68 @@ html {
   animation: spin 0.9s linear infinite;
 }
 
+@keyframes profileNavigationSlideIn {
+  from {
+    transform: translate3d(100%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes profileNavigationSlideOut {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    opacity: 0.92;
+    transform: translate3d(-10%, 0, 0);
+  }
+}
+
+@keyframes profileNavigationBackIn {
+  from {
+    transform: translate3d(-10%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes profileNavigationBackOut {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    opacity: 0.92;
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+.animate-profile-navigation-slide-enter {
+  animation: profileNavigationSlideIn 320ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+.animate-profile-navigation-back-enter {
+  animation: profileNavigationBackIn 320ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+.animate-profile-navigation-back-exit {
+  animation: profileNavigationBackOut 320ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+  pointer-events: none;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-in-up {
     animation: none;
@@ -1011,7 +1088,14 @@ html {
     > :first-child
     > :not(header):not(.qurbi-shrinkable-header-shell):not(.qurbi-page-header):not(.fixed),
   .animate-header-copy-enter,
-  .animate-header-copy-exit {
+  .animate-header-copy-exit,
+  .animate-profile-navigation-slide-enter {
+    animation: none;
+  }
+  .animate-profile-navigation-back-enter {
+    animation: none;
+  }
+  .animate-profile-navigation-back-exit {
     animation: none;
   }
 }
@@ -1019,6 +1103,53 @@ html {
 ::view-transition-group(qurbi-header) {
   animation-duration: 700ms;
   animation-timing-function: ease-in-out;
+}
+
+html.qurbi-profile-navigation-active::view-transition-old(root),
+html.qurbi-profile-navigation-active::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+html.qurbi-profile-navigation-active::view-transition-group(qurbi-profile-navigation-page) {
+  animation-duration: 320ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html.qurbi-profile-navigation-active::view-transition-old(qurbi-profile-navigation-page) {
+  animation: profileNavigationSlideOut 320ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+  mix-blend-mode: normal;
+}
+
+html.qurbi-profile-navigation-active::view-transition-new(qurbi-profile-navigation-page) {
+  animation: profileNavigationSlideIn 320ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+  mix-blend-mode: normal;
+}
+
+html.qurbi-profile-navigation-back-active::view-transition-old(qurbi-profile-navigation-page) {
+  animation: profileNavigationBackOut 320ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+}
+
+html.qurbi-profile-navigation-back-active::view-transition-new(qurbi-profile-navigation-page) {
+  animation: profileNavigationBackIn 320ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+}
+
+html.qurbi-profile-navigation-active::view-transition-group(qurbi-desktop-sidebar),
+html.qurbi-profile-navigation-active::view-transition-old(qurbi-desktop-sidebar),
+html.qurbi-profile-navigation-active::view-transition-new(qurbi-desktop-sidebar) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.qurbi-profile-navigation-active::view-transition-old(qurbi-profile-navigation-page),
+  html.qurbi-profile-navigation-active::view-transition-new(qurbi-profile-navigation-page) {
+    animation: none;
+  }
 }
 
 /* Splash screen transitions */
@@ -1100,7 +1231,7 @@ html {
   :where(section, article, div, a)[class*="rounded-3xl"][class*="bg-"]:not(
     header *
   ):not(nav *):hover,
-#root :where(.aisyah-card, .qurbi-dark-surface):not(header *):not(nav *):hover {
+#root :where(.qurbi-card, .qurbi-dark-surface):not(header *):not(nav *):hover {
   translate: 0 -1px;
 }
 
@@ -1116,7 +1247,7 @@ html {
 
 [class*="bg-blue"],
 [class*="bg-purple"],
-[class*="bg-red"],
+
 [class*="bg-orange"],
 [class*="bg-yellow"],
 [class*="bg-gray"],
@@ -1130,7 +1261,7 @@ html {
 
 [class*="text-blue"],
 [class*="text-purple"],
-[class*="text-red"],
+
 [class*="text-orange"],
 [class*="text-yellow"],
 [class*="text-gray"],
@@ -1146,7 +1277,7 @@ html {
 [class*="border-green"],
 [class*="border-blue"],
 [class*="border-purple"],
-[class*="border-red"],
+
 [class*="border-orange"],
 [class*="border-yellow"],
 [class*="border-gray"],
@@ -1332,4 +1463,257 @@ html {
 
 .product-name-scroll {
   animation: product-name-scroll 10s ease-in-out infinite;
+}
+
+/* Manual display modes override the responsive navigation breakpoint. */
+html[data-qurbi-display-mode="desktop"] {
+  --qurbi-nav-clearance: 1rem;
+}
+
+html[data-qurbi-display-mode="mobile"] {
+  --qurbi-nav-clearance: calc(5.5rem + env(safe-area-inset-bottom));
+}
+
+/* Desktop navigation owns a permanent grid column beside page content. */
+html[data-qurbi-display-mode="desktop"] .qurbi-desktop-content {
+  min-width: 0;
+}
+
+/* Keep desktop page content inside the same horizontal range as the shared
+   61.5rem header. Smaller page-specific max-widths remain in control. */
+html[data-qurbi-display-mode="desktop"] .qurbi-content,
+html[data-qurbi-display-mode="desktop"] .qurbi-desktop-bounded-content {
+  width: calc(100% - 2.5rem);
+}
+
+html[data-qurbi-display-mode="desktop"] .qurbi-desktop-bounded-content {
+  max-width: 61.5rem;
+}
+
+/* A manually forced Mobile layout still runs inside a wide browser viewport,
+   so Tailwind's viewport media queries remain active. Restore the exact base
+   values used by the original phone layout instead of allowing desktop/tablet
+   utilities to leak into the 430px mobile shell. Auto mode is intentionally
+   excluded so its normal tablet breakpoints continue to work. */
+html[data-qurbi-display-preference="mobile"] #root .qurbi-header-background {
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root .qurbi-header-background[class~="pt-7"] {
+  padding-top: 1.75rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root .qurbi-header-background[class~="pt-3"] {
+  padding-top: 0.75rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root .qurbi-header-route-copy h1 {
+  max-width: calc(100% - 9rem) !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:grid-cols-2"] {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:grid-cols-3"],
+html[data-qurbi-display-preference="mobile"] #root [class~="md:grid-cols-3"],
+html[data-qurbi-display-preference="mobile"] #root [class~="lg:grid-cols-3"],
+html[data-qurbi-display-preference="mobile"] #root [class~="lg:grid-cols-4"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+/* Bulk Buy is a one-column phone list; its lg rule must not win over the base
+   layout when Mobile is selected on a desktop-sized window. */
+html[data-qurbi-display-preference="mobile"] #root .qurbi-content[class~="sm:grid-cols-2"][class~="lg:grid-cols-3"] {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:px-6"] {
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:px-5"] {
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:px-4"] {
+  padding-left: 0.75rem !important;
+  padding-right: 0.75rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:p-6"] {
+  padding: 1.25rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:p-5"] {
+  padding: 1rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:p-4"] {
+  padding: 0.75rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:p-3"] {
+  padding: 0.625rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:pb-4"] {
+  padding-bottom: 0.75rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:gap-4"] {
+  gap: 0.75rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:gap-2.5"] {
+  gap: 0.375rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:text-4xl"] {
+  font-size: 1.875rem !important;
+  line-height: 2.25rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:text-3xl"] {
+  font-size: 1.5rem !important;
+  line-height: 2rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:text-xl"] {
+  font-size: 1.125rem !important;
+  line-height: 1.75rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:text-lg"] {
+  font-size: 1rem !important;
+  line-height: 1.5rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:text-base"] {
+  font-size: 0.875rem !important;
+  line-height: 1.25rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:text-sm"] {
+  font-size: 0.75rem !important;
+  line-height: 1rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:text-[11px]"] {
+  font-size: 0.625rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:min-h-[300px]"] {
+  min-height: 248px !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:min-h-[170px]"] {
+  min-height: 128px !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:min-h-[3rem]"] {
+  min-height: 2.5rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:min-h-44"] {
+  min-height: 10rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:h-96"] {
+  height: 18rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:h-32"] {
+  height: 7rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:w-56"] {
+  width: 46% !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:w-48"] {
+  width: 10rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:max-w-none"] {
+  max-width: 65% !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:max-w-sm"],
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:max-w-3xl"],
+html[data-qurbi-display-preference="mobile"] #root [class~="md:max-w-[420px]"] {
+  max-width: none !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:mx-auto"] {
+  margin-left: 1rem !important;
+  margin-right: 1rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:-mx-5"] {
+  margin-left: -1rem !important;
+  margin-right: -1rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:flex-row"] {
+  flex-direction: column !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="flex-col-reverse"][class~="sm:flex-row"] {
+  flex-direction: column-reverse !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:text-left"] {
+  text-align: center !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:mt-0"] {
+  margin-top: 0.5rem !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:rounded-lg"] {
+  border-radius: 0 !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:rounded-3xl"] {
+  border-radius: 1.5rem 1.5rem 0 0 !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:hidden"] {
+  display: block !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="sm:flex"] {
+  display: none !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="hidden"][class~="lg:block"],
+html[data-qurbi-display-preference="mobile"] #root [class~="hidden"][class~="lg:flex"],
+html[data-qurbi-display-preference="mobile"] #root [class~="hidden"][class~="lg:grid"] {
+  display: none !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="md:block"],
+html[data-qurbi-display-preference="mobile"] #root [class~="md:flex"] {
+  display: none !important;
+}
+
+html[data-qurbi-display-preference="mobile"] #root [class~="md:hidden"] {
+  display: block !important;
+}
+
+/* Preserve the original phone toast placement instead of the tablet
+   bottom-right layout selected by the wide host viewport. */
+html[data-qurbi-display-preference="mobile"] body > [class~="sm:bottom-20"] {
+  top: 0 !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: 100% !important;
+  max-width: 430px !important;
+  flex-direction: column-reverse !important;
+  transform: translateX(-50%);
 }

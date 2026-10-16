@@ -337,6 +337,14 @@ function dateKeys(from: Date, days: number): string[] {
   return Array.from({ length: days }, (_, index) => {
     const date = new Date(from);
     date.setDate(from.getDate() + index);
-    return date.toISOString().slice(0, 10);
+    return localDateKey(date);
   });
+}
+
+function localDateKey(date: Date): string {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-');
 }

@@ -3,11 +3,11 @@ import { Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/AuthContext";
 import UserNotRegisteredError from "@/components/UserNotRegisteredError";
-import { AisyahPageLoader } from "@/components/AisyahLoading";
+import { QurbiPageLoader } from "@/components/QurbiLoading";
 
 const DefaultFallback = () => {
   const { t } = useTranslation("auth");
-  return <AisyahPageLoader label={t("protectedRoute.checkingSession")} />;
+  return <QurbiPageLoader label={t("protectedRoute.checkingSession")} />;
 };
 
 export default function ProtectedRoute({

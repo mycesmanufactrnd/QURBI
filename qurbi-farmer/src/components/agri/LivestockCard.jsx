@@ -41,6 +41,8 @@ export default function LivestockCard({ livestock, onEdit, onDelete, onView, foo
   const display = useLivestockDisplay();
   const { t } = display;
   const paymentReserved = hasActivePaymentReservation(livestock);
+  const historyLocked = livestock.status === "Sold" || livestock.status === "Reserved";
+  const actionsLocked = paymentReserved || historyLocked;
   const expiry = listingExpiry(livestock);
   const listingExpired = livestock.status === "Available" && expiry.expired;
   const cover = livestock.coverImage || livestock.images?.[0];
@@ -56,7 +58,7 @@ export default function LivestockCard({ livestock, onEdit, onDelete, onView, foo
     if (onEdit) onEdit(livestock);
     else navigate(`/livestock/${livestock.id}/edit`);
   };
-  const primaryIsRenew = listingExpired && !paymentReserved;
+  const primaryIsRenew = listingExpired && !actionsLocked;
 
   return (
     <article className={cn(
@@ -102,8 +104,8 @@ export default function LivestockCard({ livestock, onEdit, onDelete, onView, foo
             ) : (
               <button type="button" onClick={go} className="brand-gradient flex min-h-11 flex-1 items-center justify-center rounded-2xl px-4 text-sm font-bold text-white shadow-[0_4px_12px_rgba(65,54,45,0.14)]">{t("card.viewDetails")}</button>
             )}
-            {!paymentReserved && !primaryIsRenew && <button type="button" onClick={edit} aria-label={t("card.editAria", { title })} title={t("card.edit")} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-secondary/65 text-primary transition-colors hover:bg-secondary"><Pencil className="h-[18px] w-[18px]" /></button>}
-            {onDelete && !paymentReserved && <button type="button" onClick={() => onDelete(livestock)} aria-label={t("card.deleteAria", { title })} title={t("card.delete")} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-card text-destructive ring-1 ring-destructive/25 transition-colors hover:bg-destructive/10"><Trash2 className="h-[18px] w-[18px]" /></button>}
+            {!actionsLocked && !primaryIsRenew && <button type="button" onClick={edit} aria-label={t("card.editAria", { title })} title={t("card.edit")} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-secondary/65 text-primary transition-colors hover:bg-secondary"><Pencil className="h-[18px] w-[18px]" /></button>}
+            {onDelete && !actionsLocked && <button type="button" onClick={() => onDelete(livestock)} aria-label={t("card.deleteAria", { title })} title={t("card.delete")} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-card text-destructive ring-1 ring-destructive/25 transition-colors hover:bg-destructive/10"><Trash2 className="h-[18px] w-[18px]" /></button>}
           </>}
           {footerActions}
         </div>

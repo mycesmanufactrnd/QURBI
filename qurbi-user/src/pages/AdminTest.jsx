@@ -70,7 +70,7 @@ export default function AdminTest() {
 
   if (user?.role !== "admin") {
     return (
-      <main className="aisyah-page flex min-h-screen flex-col items-center justify-center gap-3 p-8 text-center">
+      <main className="qurbi-page flex min-h-screen flex-col items-center justify-center gap-3 p-8 text-center">
         <Package className="h-12 w-12 text-[#41362D]/25" />
         <p className="font-semibold text-[#41362D]/65">
           {t("adminTest.adminRequired")}
@@ -83,13 +83,13 @@ export default function AdminTest() {
   }
 
   return (
-    <div className="aisyah-page min-h-screen pb-12">
+    <div className="qurbi-page min-h-screen pb-12">
       <AppHeader
         title={t("adminTest.title")}
         subtitle={t("adminTest.subtitle")}
         backTo="/"
       />
-      <main className="aisyah-content">
+      <main className="qurbi-content">
         <section className="rounded-3xl border border-[#41362D]/20 bg-white/55 p-4 shadow-sm">
           <div className="flex items-start gap-3">
             <span className="flex h-11 w-11 flex-none items-center justify-center rounded-2xl bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white">

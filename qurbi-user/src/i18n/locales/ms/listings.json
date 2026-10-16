@@ -124,7 +124,7 @@
     "buyNow": "Beli Sekarang",
     "farmerDetails": "Butiran Penternak",
     "farmer": "Penternak",
-    "farmLocation": "Lokasi Ladang",
+    "farmLocation": "Lokasi",
     "livestockDetails": "Butiran Ternakan",
     "healthRecords": "Kesihatan & Rekod",
     "healthRecord": "Rekod Kesihatan",
@@ -148,6 +148,11 @@
   "imageLightbox": {
     "imagePreview": "Pratonton imej",
     "closePreview": "Tutup pratonton imej",
-    "loadError": "Imej ini tidak dapat dimuatkan."
+    "loadError": "Imej ini tidak dapat dimuatkan.",
+    "zoomIn": "Zum masuk",
+    "zoomOut": "Zum keluar",
+    "resetZoom": "Tetapkan semula zum",
+    "previousImage": "Imej sebelumnya",
+    "nextImage": "Imej seterusnya"
   }
 }

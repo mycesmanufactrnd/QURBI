@@ -592,7 +592,7 @@ export default function Payment() {
   if (resumeError || paymentItems.length === 0) {
     const backPath = isResumingOrder ? "/orders" : "/cart";
     return (
-      <div className="aisyah-page flex flex-col">
+      <div className="qurbi-page flex flex-col">
         <AppHeader title={tf("payment.title")} backTo={backPath} />
         <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#F7EDE2] shadow-sm">
@@ -607,7 +607,7 @@ export default function Payment() {
           <button
             type="button"
             onClick={() => navigateWithTransition(backPath)}
-            className="aisyah-primary-button min-h-12 w-full max-w-xs"
+            className="qurbi-primary-button min-h-12 w-full max-w-xs"
           >
             {isResumingOrder ? t("payment.backToMyOrders") : t("payment.backToCart")}
           </button>
@@ -625,7 +625,7 @@ export default function Payment() {
     : "";
 
   return (
-    <div className="aisyah-page qurbi-action-bar-space">
+    <div className="qurbi-page qurbi-action-bar-space">
       {showPicker && (
         <AddressPickerModal
           addresses={addresses}
@@ -659,7 +659,7 @@ export default function Payment() {
         onStepChange={changeCheckoutStep}
       />
 
-      <div className="aisyah-content max-w-2xl">
+      <div className="qurbi-content max-w-2xl">
         {/* Step 1: order items (read-only) */}
         {checkoutStep === 1 && (
           <>

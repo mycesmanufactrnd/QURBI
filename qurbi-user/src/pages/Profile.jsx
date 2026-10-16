@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
+import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   User,
   MapPin,
-  Package,
+  Clock,
   Check,
   Pencil,
   X,
@@ -12,15 +13,18 @@ import {
   Phone,
   ShieldCheck,
   FileText,
-  LifeBuoy,
+  Headset,
   Languages,
+  Monitor,
+  Smartphone,
+  Sparkles,
   Tractor,
   ArrowLeftRight,
+  ArrowLeft,
 } from "lucide-react";
 import { useUserProfile } from "@/lib/user-profile-context";
 import { useReveal } from "@/hooks/useReveal";
 import AuthButtons from "@/components/AuthButtons";
-import AppHeader from "@/components/AppHeader";
 import PageLoading from "@/components/PageLoading";
 import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
@@ -30,15 +34,23 @@ import { SettingsGroup, SettingsRow } from "@/components/account/SettingsGroup";
 import { primaryBtn } from "@/components/account/buttons";
 import { registerAsFarmer, switchToFarmerPortal } from "@/lib/portalSwitch";
 import { useMounted } from "@/hooks/useMounted";
+import { useDisplayMode } from "@/lib/display-mode-context";
+import ProfileAvatar from "@/components/ProfileAvatar";
 
 export default function Profile() {
-  const { navigateFromIconPage } = useHeaderTransition();
+  const location = useLocation();
+  const {
+    navigateFromIconPage,
+    navigateWithTransition,
+    requestIconClose,
+  } = useHeaderTransition();
   const requireAuth = useRequireAuth();
   const { authChecked, isAuthenticated, user } = useAuth();
   const { profile, profileLoading, updateProfile } = useUserProfile();
   const { reveal } = useReveal();
   const { t, i18n } = useTranslation("profile");
   const { t: ta } = useTranslation("account");
+  const { t: tc } = useTranslation("common");
   const [form, setForm] = useState(profile);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -48,7 +60,30 @@ export default function Profile() {
   const [switchError, setSwitchError] = useState("");
   const [switching, setSwitching] = useState(false);
   const mounted = useMounted();
+  const { displayMode, setDisplayMode } = useDisplayMode();
   const isFarmerAccount = user?.availableRoles?.includes("farmer");
+  const originalLocation =
+    location.state?.profileReturnLocation || location.state?.backgroundLocation;
+  const hasValidOriginalLocation = Boolean(
+    originalLocation?.pathname &&
+      originalLocation.pathname.startsWith("/") &&
+      originalLocation.pathname !== "/profile",
+  );
+  const profileReturnTo = hasValidOriginalLocation
+    ? `${originalLocation.pathname}${originalLocation.search || ""}${originalLocation.hash || ""}`
+    : "/";
+  const profileReturnState = hasValidOriginalLocation
+    ? originalLocation.state
+    : undefined;
+  const handleProfileReturn = () => {
+    if (requestIconClose("profile")) return;
+    navigateWithTransition(profileReturnTo, {
+      navigateOptions:
+        profileReturnState !== undefined
+          ? { state: profileReturnState }
+          : undefined,
+    });
+  };
 
   const goToFarmerSide = async () => {
     if (switching) return;
@@ -107,21 +142,42 @@ export default function Profile() {
   };
 
   const openEdit = () => {
-    requireAuth(() => {
-      setForm(profile);
-      setFieldErrors({ name: "", phone: "" });
-      setSaveError("");
-      setShowEdit(true);
-    });
+    setForm(profile);
+    setFieldErrors({ name: "", phone: "" });
+    setSaveError("");
+    setShowEdit(true);
   };
+
+  const returnButton = (
+    <header className="mx-auto w-full max-w-2xl px-4 pt-5 sm:pt-6">
+      <div className="flex gap-3">
+        <button
+          type="button"
+          onClick={handleProfileReturn}
+          aria-label={tc("appHeader.goBack")}
+          className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white shadow-sm transition-transform active:scale-95"
+        >
+          <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+        </button>
+        <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-[#41362D]/70">
+              QURBI
+            </p>
+
+            <h1 className="text-2xl font-bold leading-tight text-[#41362D]">
+              {t(
+                "profile.pageTitle"
+              )}
+            </h1>
+          </div>
+      </div>  
+    </header>
+  );
 
   if (!authChecked || profileLoading) {
     return (
-      <div className="aisyah-page">
-        <AppHeader
-          title={t("profile.pageTitle")}
-          subtitle={t("profile.pageSubtitle")}
-        />
+      <div className="qurbi-page">
+        {returnButton}
         <PageLoading contentOnly message={t("profile.loading")} />
       </div>
     );
@@ -138,7 +194,6 @@ export default function Profile() {
   }
 
   const infoRows = [
-    { icon: User, label: t("profile.accountInfo.name"), value: profile.name },
     { icon: Mail, label: t("profile.accountInfo.email"), value: profile.email },
     { icon: Phone, label: t("profile.accountInfo.phone"), value: profile.phone },
   ];
@@ -146,9 +201,14 @@ export default function Profile() {
     { code: "en", label: t("language.english") },
     { code: "ms", label: t("language.malay") },
   ];
+  const displayModes = [
+    { value: "auto", icon: Sparkles, label: t("displayMode.auto") },
+    { value: "desktop", icon: Monitor, label: t("displayMode.desktop") },
+    { value: "mobile", icon: Smartphone, label: t("displayMode.mobile") },
+  ];
 
   return (
-    <div className="aisyah-page">
+    <div className="qurbi-page">
       <style>{`
         @keyframes profileFadeIn {
           from { opacity: 0; }
@@ -164,66 +224,76 @@ export default function Profile() {
           .profile-backdrop, .profile-modal { animation: none; }
         }
       `}</style>
-      <AppHeader
-        title={t("profile.pageTitle")}
-        subtitle={t("profile.pageSubtitle")}
-      />
+      {returnButton}
 
-      <div className="aisyah-content mx-auto max-w-2xl space-y-6">
+      <div className="qurbi-content mx-auto max-w-2xl space-y-6">
         {/* Account */}
         <section
           className={reveal()}
           style={{ animationDelay: "80ms" }}
           aria-labelledby="account-group-title"
         >
-          <h2 id="account-group-title" className="mb-2 px-1 text-sm font-bold text-[#41362D]/80">
-            {ta("profile.groups.account")}
-          </h2>
-          <div className="aisyah-card overflow-hidden rounded-2xl">
-            <div className="flex items-center gap-4 p-4">
-              <div className="flex h-14 w-14 flex-none items-center justify-center rounded-full bg-white/15">
-                <User className="h-7 w-7 text-white" aria-hidden="true" />
-              </div>
+          <div className="mb-3 flex items-center justify-between gap-3 px-1">
+            <h2 id="account-group-title" className="text-sm font-bold text-[#41362D]/80">
+              {ta("profile.groups.account")}
+            </h2>
+            <button
+              type="button"
+              onClick={openEdit}
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-gradient-to-br from-[#41362D] to-[#6B594A] px-3 text-sm font-bold text-[#F7EDE2] shadow-sm transition-transform active:scale-95"
+            >
+              <Pencil className="h-4 w-4" aria-hidden="true" />
+              {ta("profile.editDetails")}
+            </button>
+          </div>
+          <div className="qurbi-card qurbi-header-background relative overflow-hidden rounded-[1.75rem] p-5 sm:p-6">
+            <div className="relative z-10 flex min-w-0 items-center gap-3.5">
+              <ProfileAvatar
+                src={profile.avatarUrl || user?.avatarUrl || user?.avatar_url}
+                name={profile.name}
+                className="h-14 w-14 rounded-2xl text-lg"
+              />
               <div className="min-w-0 flex-1">
-                <p className="break-words text-lg font-bold text-white">
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#E3C19F]">
+                  {t("profile.buyerAccount")}
+                </p>
+                <p className="mt-1 break-words text-xl font-extrabold leading-tight text-white">
                   {profile.name || t("profile.guestBuyer")}
                 </p>
-                <p className="break-all text-sm text-white/80">
+                <p className="mt-1 break-all text-sm text-white/80">
                   {profile.email || t("profile.noEmailSet")}
+                </p>
+                <p className="mt-1 break-all text-sm text-white/80">
+                  {profile.phone || t("profile.phone")}
                 </p>
               </div>
             </div>
-            <dl className="divide-y divide-white/15 border-t border-white/15">
-              {infoRows.map(({ icon: Icon, label, value }) => (
-                <div key={label} className="flex items-center gap-3 px-4 py-3">
-                  <Icon className="h-5 w-5 flex-none text-[#E3C19F]" aria-hidden="true" />
-                  <dt className="w-16 flex-none text-sm text-white/75">{label}</dt>
-                  <dd className="min-w-0 flex-1 break-words text-[15px] font-medium text-white [overflow-wrap:anywhere]">
+          </div>
+          <dl className="mt-4 divide-y divide-white/15 overflow-hidden rounded-[1.5rem] border border-[#E3C19F]/30 bg-gradient-to-br from-[#41362D] to-[#6B594A] shadow-md shadow-[#41362D]/20">
+            {infoRows.map(({ icon: Icon, label, value }) => (
+              <div key={label} className="flex min-h-[76px] items-center gap-3 px-4 py-3 sm:px-5">
+                <span className="flex h-10 w-10 flex-none items-center justify-center rounded-xl bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2]">
+                  <Icon className="h-5 w-5 text-black" aria-hidden="true" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <dt className="text-sm text-white/75">{label}</dt>
+                  <dd className="break-words text-[15px] font-semibold text-white [overflow-wrap:anywhere]">
                     {value || ta("profile.notSet")}
                   </dd>
                 </div>
-              ))}
-            </dl>
-            <div className="border-t border-white/15 p-3">
-              <button
-                type="button"
-                onClick={openEdit}
-                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] px-4 text-[15px] font-bold text-[#41362D]"
-              >
-                <Pencil className="h-4 w-4" aria-hidden="true" /> {ta("profile.editDetails")}
-              </button>
-            </div>
-          </div>
+              </div>
+            ))}
+          </dl>
         </section>
 
         {/* Edit popup */}
         {showEdit && mounted && createPortal((
           <>
             <div
-              className="fixed inset-0 z-40 bg-[#241D18]/55 backdrop-blur-[3px] profile-backdrop"
+              className="fixed inset-0 z-[290] bg-[#241D18]/55 backdrop-blur-[3px] profile-backdrop"
               onClick={() => !saving && setShowEdit(false)}
             />
-            <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain p-4 pointer-events-none sm:p-5">
+            <div className="fixed inset-0 z-[300] flex items-center justify-center overflow-y-auto overscroll-contain p-4 pointer-events-none sm:p-5">
               <div
                 role="dialog"
                 aria-modal="true"
@@ -284,27 +354,7 @@ export default function Profile() {
                     </div>
                     {fieldErrors.name && <p className={errorCls}>{fieldErrors.name}</p>}
                   </div>
-                  <div>
-                    <label htmlFor="profile-email" className={labelCls}>
-                      {t("profile.accountInfo.email")}
-                    </label>
-                    <div className={inputWrapCls}>
-                      <Mail className={inputIconCls} aria-hidden="true" />
-                    <input
-                      id="profile-email"
-                      value={profile.email}
-                      placeholder={t("profile.editModal.emailPlaceholder")}
-                      type="email"
-                      readOnly
-                      aria-readonly="true"
-                      aria-describedby="profile-email-help"
-                      className={`${inputCls} cursor-not-allowed text-white/75`}
-                    />
-                    </div>
-                    <p id="profile-email-help" className="mt-1 text-[13px] text-[#5A493C]">
-                      {ta("profile.emailLocked")}
-                    </p>
-                  </div>
+
                   <div>
                     <label htmlFor="profile-phone" className={labelCls}>
                       {t("profile.accountInfo.phone")}
@@ -326,6 +376,28 @@ export default function Profile() {
                     />
                     </div>
                     {fieldErrors.phone && <p className={errorCls}>{fieldErrors.phone}</p>}
+                  </div>
+
+                  <div>
+                    <label htmlFor="profile-email" className={labelCls}>
+                      {t("profile.accountInfo.email")}
+                    </label>
+                    <div className={inputWrapCls}>
+                      <Mail className={inputIconCls} aria-hidden="true" />
+                    <input
+                      id="profile-email"
+                      value={profile.email}
+                      placeholder={t("profile.editModal.emailPlaceholder")}
+                      type="email"
+                      readOnly
+                      aria-readonly="true"
+                      aria-describedby="profile-email-help"
+                      className={`${inputCls} cursor-not-allowed text-white/75`}
+                    />
+                    </div>
+                    <p id="profile-email-help" className="mt-1 text-[13px] text-[#5A493C]">
+                      {ta("profile.emailLocked")}
+                    </p>
                   </div>
                   {saveError && (
                     <p role="alert" className="rounded-xl bg-[#FBE4E1] px-3 py-2 text-center text-sm font-semibold text-[#8A1C12]">
@@ -363,10 +435,16 @@ export default function Profile() {
             icon={MapPin}
             title={t("profile.addressBookCard.title")}
             subtitle={t("profile.addressBookCard.subtitle")}
-            onClick={() => requireAuth(() => navigateFromIconPage("/address-book"))}
+            onClick={() =>
+              requireAuth(() =>
+                navigateFromIconPage("/address-book", {
+                  state: { addressBookFromProfile: true },
+                }),
+              )
+            }
           />
           <SettingsRow
-            icon={Package}
+            icon={Clock}
             title={t("profile.transactionHistoryCard.title")}
             subtitle={t("profile.transactionHistoryCard.subtitle")}
             onClick={() => requireAuth(() => navigateFromIconPage("/transaction-history"))}
@@ -409,7 +487,7 @@ export default function Profile() {
           <h2 id="language-title" className="mb-2 px-1 text-sm font-bold text-[#41362D]/80">
             {t("language.title")}
           </h2>
-          <div className="aisyah-card rounded-2xl p-4">
+          <div className="qurbi-card rounded-2xl p-4">
             <div className="mb-3 flex items-center gap-3">
               <span className="flex h-10 w-10 flex-none items-center justify-center rounded-xl bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2]">
                 <Languages className="h-5 w-5 text-[#41362D]" aria-hidden="true" />
@@ -437,6 +515,44 @@ export default function Profile() {
           </div>
         </section>
 
+        {/* Display mode */}
+        <section
+          className={reveal()}
+          style={{ animationDelay: "230ms" }}
+          aria-labelledby="display-mode-title"
+        >
+          <h2 id="display-mode-title" className="mb-2 px-1 text-sm font-bold text-[#41362D]/80">
+            {t("displayMode.title")}
+          </h2>
+          <div className="qurbi-card rounded-2xl p-4">
+            <p className="mb-3 text-sm leading-relaxed text-white/80">
+              {t("displayMode.subtitle")}
+            </p>
+            <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-labelledby="display-mode-title">
+              {displayModes.map(({ value, icon: Icon, label }) => {
+                const selected = displayMode === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => setDisplayMode(value)}
+                    className={`flex min-h-[72px] min-w-0 flex-col items-center justify-center gap-1.5 rounded-xl border-2 px-2 py-2 text-center text-xs font-bold transition-all duration-200 sm:text-sm ${
+                      selected
+                        ? "border-[#E3C19F] bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] text-[#41362D] shadow-md"
+                        : "border-white/25 bg-white/10 text-white hover:border-white/50 hover:bg-white/15"
+                    }`}
+                  >
+                    <Icon className="h-5 w-5 flex-none" aria-hidden="true" />
+                    <span className="max-w-full truncate">{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
         {/* Help & legal */}
         <SettingsGroup
           title={ta("profile.groups.helpLegal")}
@@ -444,7 +560,7 @@ export default function Profile() {
           style={{ animationDelay: "260ms" }}
         >
           <SettingsRow
-            icon={LifeBuoy}
+            icon={Headset}
             title={t("profile.customerSupportCard.title")}
             subtitle={t("profile.customerSupportCard.subtitle")}
             onClick={() => navigateFromIconPage("/support")}

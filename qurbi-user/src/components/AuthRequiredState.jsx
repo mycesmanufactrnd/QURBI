@@ -19,7 +19,7 @@ export default function AuthRequiredState({
   }, [message, requestSignIn, returnTo]);
 
   return (
-    <main className="aisyah-page flex min-h-screen flex-col items-center justify-center px-6 text-center">
+    <main className="qurbi-page flex min-h-screen flex-col items-center justify-center px-6 text-center">
       <LockKeyhole className="h-12 w-12 text-[#41362D]/45" aria-hidden="true" />
       <h1 className="mt-4 text-xl font-bold text-[#41362D]">{title}</h1>
       <p className="mt-2 max-w-sm text-[15px] leading-relaxed text-[#41362D]/80">{message}</p>

@@ -1,11 +1,11 @@
 {
   "home": {
-    "headerTitle": "Layari Ternakan",
+    "headerTitle": "Beli Lembu",
     "headerSubtitle": "Layari ternakan, urus troli anda dan jejaki pesanan anda.",
     "quickActionsTitle": "Tindakan Pantas",
     "swipe": "Leret",
     "quickActions": {
-      "browse": "Layari",
+      "browse": "Beli Ternakan",
       "bulkBuy": "Beli Pukal",
       "cart": "Troli",
       "orders": "Pesanan",

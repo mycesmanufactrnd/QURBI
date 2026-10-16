@@ -13,6 +13,7 @@ import {
   useNavigate,
   useNavigationType,
 } from "react-router-dom";
+import { useDisplayMode } from "@/lib/display-mode-context";
 
 const NORMAL_EXIT_MS = 280;
 const ICON_OPEN_DELAY_MS = 48;
@@ -29,6 +30,8 @@ const HeaderTransitionContext = createContext({
   isContracting: false,
   isIconOpening: false,
   isIconClosing: false,
+  usesNativeProfileSlide: false,
+  isProfileNavigationBack: false,
   iconOrigin: null,
   transitionType: null,
   productTransition: null,
@@ -63,10 +66,13 @@ export default function HeaderTransitionProvider({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const navigationType = useNavigationType();
+  const { isDesktop } = useDisplayMode();
   const persistedIconOrigin = location.state?.iconOrigin || null;
   const [phase, setPhase] = useState("idle");
   const [iconOrigin, setIconOrigin] = useState(persistedIconOrigin);
   const [transitionType, setTransitionType] = useState(null);
+  const [usesNativeProfileSlide, setUsesNativeProfileSlide] = useState(false);
+  const [isProfileNavigationBack, setIsProfileNavigationBack] = useState(false);
   const [productTransition, setProductTransition] = useState(null);
   const productTransitionRef = useRef(null);
   const lockedRef = useRef(false);
@@ -77,9 +83,13 @@ export default function HeaderTransitionProvider({ children }) {
   const iconOpenLocationKeyRef = useRef(null);
   const openingToIconRef = useRef(false);
   const pendingIconCloseRef = useRef(false);
+  const suppressNextProfilePopSlideRef = useRef(false);
+  const pendingProfilePopCommitRef = useRef(null);
   const timersRef = useRef(new Set());
   const locationKeyRef = useRef(location.key);
+  const locationRef = useRef(location);
   const scrollPositionsRef = useRef(new Map());
+  locationRef.current = location;
 
   const schedule = useCallback((callback, delay) => {
     const timer = window.setTimeout(() => {
@@ -96,6 +106,8 @@ export default function HeaderTransitionProvider({ children }) {
     openingToIconRef.current = false;
     setPhase("idle");
     setTransitionType(null);
+    setUsesNativeProfileSlide(false);
+    setIsProfileNavigationBack(false);
   }, []);
 
   const unlockRun = useCallback(
@@ -126,6 +138,7 @@ export default function HeaderTransitionProvider({ children }) {
   const completeIconClose = useCallback(() => {
     if (!pendingIconCloseRef.current) return false;
     pendingIconCloseRef.current = false;
+    suppressNextProfilePopSlideRef.current = true;
     flushSync(() => navigate(-1));
     return true;
   }, [navigate]);
@@ -163,15 +176,41 @@ export default function HeaderTransitionProvider({ children }) {
           ? new URL(destination, window.location.href).pathname
           : "";
       const destinationType = iconTypeForPath(destinationPath);
+      const profileFlowBack = Boolean(
+        typeof destination === "number" &&
+          destination < 0 &&
+          location.state?.profileReturnLocation,
+      );
+      const profileNavigationBack = Boolean(
+        profileFlowBack || options.profileNavigationBack,
+      );
+      const profileNavigationSlide = Boolean(
+        profileNavigationBack ||
+          (options.profileNavigationSlide &&
+            currentType === "profile" &&
+            destinationPath &&
+            destinationPath !== "/profile"),
+      );
       const requestedType =
-        options.transitionType || currentType || destinationType || null;
+        profileNavigationSlide
+          ? "profile-navigation"
+          : options.transitionType || currentType || destinationType || null;
       const closingFromIcon = Boolean(
-        currentType && iconOriginRef.current?.type === currentType,
+        !profileNavigationSlide &&
+          currentType &&
+          location.state?.qurbiIconOverlay &&
+          iconOriginRef.current?.type === currentType,
       );
       const openingToIcon = Boolean(
-        destinationType &&
+        !profileNavigationSlide &&
+          destinationType &&
           destinationType !== currentType &&
           iconOriginRef.current?.type === destinationType,
+      );
+      const canUseNativeProfileSlide = Boolean(
+        profileNavigationSlide &&
+          typeof document.startViewTransition === "function" &&
+          !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
       );
       const runId = ++transitionRunRef.current;
 
@@ -180,15 +219,26 @@ export default function HeaderTransitionProvider({ children }) {
       closingFromIconRef.current = closingFromIcon;
       iconOpenLocationKeyRef.current = location.key;
       openingToIconRef.current = openingToIcon;
-      setTransitionType(requestedType);
-      setPhase("exiting");
+      if (profileNavigationSlide) {
+        flushSync(() => {
+          setUsesNativeProfileSlide(canUseNativeProfileSlide);
+          setIsProfileNavigationBack(profileNavigationBack);
+          setTransitionType(requestedType);
+          setPhase("exiting");
+        });
+      } else {
+        setUsesNativeProfileSlide(false);
+        setIsProfileNavigationBack(false);
+        setTransitionType(requestedType);
+        setPhase("exiting");
+      }
 
-      schedule(() => {
+      const commitNavigation = () => {
         if (typeof destination === "number") {
           navigate(destination);
           return;
         }
-        const navigateOptions = openingToIcon
+        let navigateOptions = openingToIcon
           ? {
               ...options.navigateOptions,
               state: {
@@ -196,27 +246,108 @@ export default function HeaderTransitionProvider({ children }) {
                 qurbiIconOverlay: true,
                 iconType: destinationType,
                 iconOrigin: iconOriginRef.current,
+                ...(destinationType === "profile" ? { profileFlow: true } : {}),
+                profileReturnLocation:
+                  destinationType === "profile"
+                    ? location.state?.profileReturnLocation ||
+                      location.state?.backgroundLocation ||
+                      location
+                    : options.navigateOptions?.state?.profileReturnLocation,
                 backgroundLocation:
                   location.state?.backgroundLocation || location,
               },
             }
           : options.navigateOptions;
+        if (destinationType === "profile" && isDesktop && !openingToIcon) {
+          navigateOptions = {
+            ...navigateOptions,
+            state: {
+              ...(navigateOptions?.state || {}),
+              profileReturnLocation:
+                navigateOptions?.state?.profileReturnLocation ||
+                location.state?.profileReturnLocation ||
+                location.state?.backgroundLocation ||
+                location,
+            },
+          };
+        }
+        if (profileNavigationSlide) {
+          const profileReturnLocation =
+            location.state?.profileReturnLocation ||
+            location.state?.backgroundLocation;
+          navigateOptions = {
+            ...navigateOptions,
+            state: {
+              ...(navigateOptions?.state || {}),
+              profileFlow: true,
+              ...(profileReturnLocation ? { profileReturnLocation } : {}),
+            },
+          };
+        }
         flushSync(() => navigate(destination, navigateOptions));
-      }, openingToIcon
-        ? ICON_OPEN_DELAY_MS
-        : closingFromIcon
-          ? ICON_EXIT_MS
-          : NORMAL_EXIT_MS);
+      };
+
+      if (canUseNativeProfileSlide) {
+        document.documentElement.classList.add("qurbi-profile-navigation-active");
+        if (profileNavigationBack) {
+          document.documentElement.classList.add(
+            "qurbi-profile-navigation-back-active",
+          );
+        }
+        let update = commitNavigation;
+        if (profileNavigationBack && typeof destination === "number") {
+          suppressNextProfilePopSlideRef.current = true;
+          update = () =>
+            new Promise((resolve) => {
+              pendingProfilePopCommitRef.current = resolve;
+              navigate(destination);
+              schedule(() => {
+                if (pendingProfilePopCommitRef.current === resolve) {
+                  pendingProfilePopCommitRef.current = null;
+                  resolve();
+                }
+              }, 900);
+            });
+        }
+        const viewTransition = document.startViewTransition(update);
+        viewTransition.finished.finally(() => {
+          document.documentElement.classList.remove("qurbi-profile-navigation-active");
+          document.documentElement.classList.remove(
+            "qurbi-profile-navigation-back-active",
+          );
+          unlockRun(runId);
+        });
+      } else if (profileNavigationSlide) {
+        if (profileNavigationBack) {
+          const profileBackDelay = window.matchMedia(
+            "(prefers-reduced-motion: reduce)",
+          ).matches
+            ? 0
+            : 320;
+          schedule(commitNavigation, profileBackDelay);
+        } else {
+          commitNavigation();
+        }
+      } else {
+        schedule(commitNavigation, openingToIcon
+          ? ICON_OPEN_DELAY_MS
+          : closingFromIcon
+            ? ICON_EXIT_MS
+            : NORMAL_EXIT_MS);
+      }
       schedule(() => unlockRun(runId), FAILSAFE_MS);
       return true;
     },
-    [location, navigate, schedule, unlockRun],
+    [isDesktop, location, navigate, schedule, unlockRun],
   );
 
   const navigateFromIconPage = useCallback(
     (destination, navigateOptions) =>
-      navigateWithTransition(destination, { navigateOptions }),
-    [navigateWithTransition],
+      navigateWithTransition(destination, {
+        navigateOptions,
+        profileNavigationSlide: location.pathname === "/profile",
+      }),
+    [location.pathname, navigateWithTransition],
   );
 
   const completeProductTransition = useCallback(() => {
@@ -296,6 +427,11 @@ export default function HeaderTransitionProvider({ children }) {
     }
     scrollPositionsRef.current.set(locationKeyRef.current, window.scrollY);
     locationKeyRef.current = location.key;
+    if (pendingProfilePopCommitRef.current) {
+      const resolveProfilePop = pendingProfilePopCommitRef.current;
+      pendingProfilePopCommitRef.current = null;
+      resolveProfilePop();
+    }
     const destinationScroll =
       location.pathname === "/profile"
         ? 0
@@ -312,6 +448,96 @@ export default function HeaderTransitionProvider({ children }) {
       schedule(() => unlockRun(runId), ENTER_MS);
     }
   }, [location.key, location.pathname, navigationType, schedule, transitionType, unlockRun]);
+
+  useEffect(() => {
+    const handleProfileFlowPop = (event) => {
+      if (suppressNextProfilePopSlideRef.current) {
+        suppressNextProfilePopSlideRef.current = false;
+        return;
+      }
+
+      const sourceLocation = locationRef.current;
+      const targetState = event.state?.usr || null;
+      const targetPath = window.location.pathname;
+      const sourceIsProfile = sourceLocation.pathname === "/profile";
+      const targetIsProfile = targetPath === "/profile";
+      const sourceIsInternalDestination = Boolean(
+        sourceLocation.state?.profileReturnLocation,
+      );
+      const targetIsInternalDestination = Boolean(
+        targetState?.profileReturnLocation,
+      );
+      const isProfileFlowNavigation =
+        (targetIsProfile && sourceIsInternalDestination) ||
+        (sourceIsProfile && targetIsInternalDestination);
+
+      if (!isProfileFlowNavigation) return;
+
+      const isBackToProfile = Boolean(
+        targetIsProfile && sourceLocation.state?.addressBookFromProfile,
+      );
+
+      const runId = ++transitionRunRef.current;
+      const canUseNativeTransition = Boolean(
+        typeof document.startViewTransition === "function" &&
+          !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+      );
+
+      lockedRef.current = true;
+      closingFromIconRef.current = false;
+      openingToIconRef.current = false;
+      setUsesNativeProfileSlide(canUseNativeTransition);
+      setIsProfileNavigationBack(isBackToProfile);
+      setTransitionType("profile-navigation");
+      setPhase("exiting");
+
+      if (!canUseNativeTransition) {
+        schedule(() => unlockRun(runId), ENTER_MS);
+        return;
+      }
+
+      const outgoingPage = sourceIsProfile
+        ? document.querySelector('[data-icon-overlay="profile"]')
+        : document.querySelector(".qurbi-page-transition-outlet");
+      if (outgoingPage instanceof HTMLElement) {
+        outgoingPage.style.viewTransitionName =
+          "qurbi-profile-navigation-page";
+      }
+      document.documentElement.classList.add(
+        "qurbi-profile-navigation-active",
+      );
+      if (isBackToProfile) {
+        document.documentElement.classList.add(
+          "qurbi-profile-navigation-back-active",
+        );
+      }
+
+      const viewTransition = document.startViewTransition(
+        () =>
+          new Promise((resolve) => {
+            pendingProfilePopCommitRef.current = resolve;
+            schedule(() => {
+              if (pendingProfilePopCommitRef.current === resolve) {
+                pendingProfilePopCommitRef.current = null;
+                resolve();
+              }
+            }, 900);
+          }),
+      );
+      viewTransition.finished.finally(() => {
+        document.documentElement.classList.remove(
+          "qurbi-profile-navigation-active",
+        );
+        document.documentElement.classList.remove(
+          "qurbi-profile-navigation-back-active",
+        );
+        unlockRun(runId);
+      });
+    };
+
+    window.addEventListener("popstate", handleProfileFlowPop);
+    return () => window.removeEventListener("popstate", handleProfileFlowPop);
+  }, [schedule, unlockRun]);
 
   useEffect(() => {
     const handleLinkClick = (event) => {
@@ -332,6 +558,17 @@ export default function HeaderTransitionProvider({ children }) {
       if (!link || link.hasAttribute("download") || (link.target && link.target !== "_self")) return;
       const url = new URL(link.href, window.location.href);
       if (url.origin !== window.location.origin) return;
+      const serializedNavigationState = link.getAttribute(
+        "data-navigation-state",
+      );
+      let navigationState;
+      if (serializedNavigationState) {
+        try {
+          navigationState = JSON.parse(serializedNavigationState);
+        } catch {
+          navigationState = undefined;
+        }
+      }
       const destination = `${url.pathname}${url.search}${url.hash}`;
       const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
       if (destination === current) {
@@ -355,12 +592,17 @@ export default function HeaderTransitionProvider({ children }) {
       }
       navigateWithTransition(destination, {
         transitionType: destinationType || iconOriginRef.current?.type,
+        profileNavigationSlide: location.pathname === "/profile",
+        navigateOptions:
+          navigationState === undefined
+            ? undefined
+            : { state: navigationState },
       });
     };
 
     document.addEventListener("click", handleLinkClick, true);
     return () => document.removeEventListener("click", handleLinkClick, true);
-  }, [beginIconTransition, location.pathname, location.state, navigateWithTransition, requestIconClose]);
+  }, [beginIconTransition, isDesktop, location.pathname, location.state, navigateWithTransition, requestIconClose]);
 
   useEffect(
     () => () => {
@@ -386,9 +628,14 @@ export default function HeaderTransitionProvider({ children }) {
       value={{
         phase,
         isContracting:
-          phase === "exiting" && !isIconClosing && !isIconOpening,
+          phase === "exiting" &&
+          !isIconClosing &&
+          !isIconOpening &&
+          transitionType !== "profile-navigation",
         isIconOpening,
         isIconClosing,
+        usesNativeProfileSlide,
+        isProfileNavigationBack,
         iconOrigin,
         transitionType,
         productTransition,

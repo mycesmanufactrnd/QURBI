@@ -19,13 +19,13 @@ export default function CustomerSupport() {
     t("customerSupport.faqs", { returnObjects: true })
   );
   return (
-    <main className="aisyah-page">
+    <main className="qurbi-page">
       <AppHeader
         title={t("customerSupport.pageTitle")}
         backTo="/profile"
         subtitle={t("customerSupport.pageSubtitle")}
       />
-      <div className="aisyah-content mx-auto max-w-2xl space-y-4">
+      <div className="qurbi-content mx-auto max-w-2xl space-y-4">
         <div
           className={`rounded-2xl bg-gradient-to-br from-[#41362D] to-[#6B594A] p-4 flex items-center gap-4 ${reveal()}`}
           style={{ animationDelay: "80ms" }}
@@ -43,7 +43,7 @@ export default function CustomerSupport() {
 
         <a
           href={`mailto:${SUPPORT_EMAIL}`}
-          className="aisyah-card flex min-h-16 w-full items-center gap-4 rounded-2xl p-4 transition"
+          className="qurbi-card flex min-h-16 w-full items-center gap-4 rounded-2xl p-4 transition"
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2]">
             <Mail className="h-5 w-5 text-[#41362D]" />
@@ -54,7 +54,7 @@ export default function CustomerSupport() {
           </div>
         </a>
 
-        <div className="aisyah-card rounded-2xl p-4">
+        <div className="qurbi-card rounded-2xl p-4">
           <h2 className="mb-1 text-base font-bold text-white">
             {t("customerSupport.faqTitle")}
           </h2>

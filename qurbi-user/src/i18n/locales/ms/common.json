@@ -15,11 +15,15 @@
     }
   },
   "bottomNav": {
-    "browse": "Lihat",
+    "browse": "Beli Ternakan",
     "bulkBuy": "Beli Pukal",
     "home": "Utama",
     "cart": "Troli",
     "orders": "Pesanan"
+  },
+  "homeHeader": {
+    "welcome": "Selamat datang, {{name}}",
+    "welcomeGuest": "Selamat datang ke QURBI"
   },
   "pageLoading": {
     "loading": "Memuatkan...",
@@ -43,6 +47,7 @@
   },
   "sidebar": {
     "notifications": "Notifikasi",
+    "transactionHistory": "Sejarah Transaksi",
     "profile": "Profil"
   }
 }

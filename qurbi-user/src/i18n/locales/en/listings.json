@@ -148,6 +148,11 @@
   "imageLightbox": {
     "imagePreview": "Image preview",
     "closePreview": "Close image preview",
-    "loadError": "This image could not be loaded."
+    "loadError": "This image could not be loaded.",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "resetZoom": "Reset zoom",
+    "previousImage": "Previous image",
+    "nextImage": "Next image"
   }
 }

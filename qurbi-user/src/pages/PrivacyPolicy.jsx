@@ -11,13 +11,13 @@ export default function PrivacyPolicy() {
     t("privacyPolicy.sections", { returnObjects: true })
   );
   return (
-    <main className="aisyah-page">
+    <main className="qurbi-page">
       <AppHeader
         title={t("privacyPolicy.pageTitle")}
         backTo="/profile"
         subtitle={t("privacyPolicy.pageSubtitle")}
       />
-      <div className="aisyah-content mx-auto max-w-2xl space-y-4">
+      <div className="qurbi-content mx-auto max-w-2xl space-y-4">
         <div
           className={`rounded-2xl bg-gradient-to-br from-[#41362D] to-[#6B594A] p-4 flex items-start gap-3 ${reveal()}`}
           style={{ animationDelay: "80ms" }}
@@ -31,7 +31,7 @@ export default function PrivacyPolicy() {
         {sections.map((section, index) => (
           <div
             key={section.title}
-            className="aisyah-card rounded-2xl p-4"
+            className="qurbi-card rounded-2xl p-4"
             style={{ animationDelay: `${140 + index * 60}ms` }}
           >
             <h2 className="text-base font-bold text-white">{section.title}</h2>

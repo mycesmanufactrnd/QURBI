@@ -68,14 +68,14 @@ export default function Home() {
 
   return (
     <div className="animate-fade-in">
-      <section className="home-brand-hero -mx-5 -mt-5 px-5 pb-10 pt-4 text-white lg:mx-0 lg:mt-0 lg:rounded-[1.75rem] lg:px-8 lg:pb-12 lg:pt-5">
+      <section className="home-brand-hero -mx-5 -mt-5 px-5 pb-10 pt-4 text-white lg:mx-0 lg:mt-0 lg:rounded-[1.75rem] lg:px-8 lg:pb-10 lg:pt-5">
         <header
-          className="relative z-10 flex min-h-12 items-center justify-between"
+          className="relative z-10 flex min-h-12 items-center justify-between lg:min-h-11 lg:justify-end"
           aria-label={t("headerLabel")}
         >
           <BrandLogo
             light
-            className="[&>div:first-child]:bg-secondary [&>div:first-child]:text-secondary-foreground"
+            className="lg:hidden [&>div:first-child]:bg-secondary [&>div:first-child]:text-secondary-foreground"
           />
           <div className="flex gap-2 [&_button]:border-white/15 [&_button]:bg-white/10 [&_button]:text-white [&_button]:shadow-none [&_button:hover]:bg-white/20">
             <NotificationBell />
@@ -98,15 +98,15 @@ export default function Home() {
             </button>
           </div>
         </header>
-        <div className="relative z-10 mt-6 min-w-0">
+        <div className="relative z-10 mt-6 min-w-0 lg:mt-1">
           <p className="text-base font-medium text-white/80">{greetingText},</p>
           <h1 className="truncate text-2xl font-extrabold tracking-tight lg:text-3xl" title={fullName}>{shortName(fullName) || fullName}</h1>
           <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold text-secondary ring-1 ring-white/15 backdrop-blur"><BadgeCheck className="h-4 w-4" /> {t("verifiedFarmer")}</span>
         </div>
       </section>
 
-      <div className="relative z-20 -mx-5 -mt-6 lg:mx-0">
-        <div className="rounded-t-[2rem] border-b border-border/60 bg-card px-4 pb-4 pt-5 shadow-[0_-8px_24px_rgba(65,54,45,0.08)] sm:px-6 lg:rounded-[2rem]">
+      <div className="relative z-20 -mx-5 -mt-6 lg:mx-0 lg:mt-4">
+        <div className="rounded-t-[2rem] border-b border-border/60 bg-card px-4 pb-4 pt-5 shadow-[0_-8px_24px_rgba(65,54,45,0.08)] sm:px-6 lg:rounded-[2rem] lg:border lg:border-border/70 lg:px-6 lg:shadow-[0_10px_28px_rgba(65,54,45,0.08)]">
           <div className="grid grid-cols-4 gap-1.5">
             <QuickAction icon={Plus} label={t("quick.addAnimal")} onClick={() => navigate("/livestock/add")} primary />
             <QuickAction icon={Boxes} label={t("quick.bulkSell")} onClick={() => navigate("/bulk")} />
@@ -207,8 +207,8 @@ function QuickAction({ icon: Icon, iconClassName = "h-5 w-5", label, onClick, pr
   const { t } = useTranslation("home");
 
   return (
-    <button type="button" onClick={onClick} className="group flex min-h-[88px] min-w-0 flex-col items-center gap-2 rounded-2xl px-1 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-      <span className={cn("relative flex h-14 w-14 items-center justify-center rounded-full transition-transform group-hover:-translate-y-0.5", primary ? "brand-gradient text-primary-foreground shadow-[0_5px_14px_rgba(65,54,45,0.2)]" : "bg-secondary/65 text-primary")}>
+    <button type="button" onClick={onClick} className="group flex min-h-[88px] min-w-0 flex-col items-center gap-2 rounded-2xl px-1 py-1.5 transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <span className={cn("relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-transform group-hover:-translate-y-0.5", primary ? "brand-gradient text-primary-foreground shadow-[0_5px_14px_rgba(65,54,45,0.2)]" : "bg-secondary/65 text-primary")}>
         <Icon className={iconClassName} />
         {badge > 0 && <span className="absolute -right-1 -top-1 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-card bg-amber-500 px-1 text-[11px] font-extrabold text-white" aria-label={t("quick.toHandle", { count: badge })}>{badge}</span>}
       </span>

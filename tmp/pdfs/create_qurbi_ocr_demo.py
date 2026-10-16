@@ -252,10 +252,10 @@ def page_bulk(c):
 
     section_title(c, "Demo instructions", y - 53 * mm)
     instructions = [
-        "Upload this page together with the other demo images.",
+        "Upload this page alone when testing Bulk OCR.",
+        "Do not mix the Goat birth sample into a Cow bulk listing.",
         "Check that QURBI identifies Cow and Simmental.",
         "Confirm that Male 3 and Female 7 are inserted into the breed breakdown.",
-        "Review every detected field before saving the listing.",
     ]
     for index, text in enumerate(instructions, start=1):
         iy = y - (65 + (index - 1) * 13) * mm

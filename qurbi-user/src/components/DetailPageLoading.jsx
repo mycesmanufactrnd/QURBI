@@ -21,7 +21,7 @@ export default function DetailPageLoading({ message, backTo, backLabel }) {
         </button>
       </div>
 
-      <main className="relative z-10 mx-auto -mt-12 min-h-[calc(100dvh-15rem)] max-w-5xl rounded-t-[32px] bg-gradient-to-br from-[#41362D] to-[#6B594A] px-4 pb-28 pt-5 text-white shadow-xl shadow-black/20">
+      <main className="qurbi-desktop-bounded-content relative z-10 -mt-12 min-h-[calc(100dvh-15rem)] max-w-5xl rounded-t-[32px] bg-gradient-to-br from-[#41362D] to-[#6B594A] px-4 pb-28 pt-5 text-white shadow-xl shadow-black/20">
         <PageLoading contentOnly message={message} />
       </main>
     </div>

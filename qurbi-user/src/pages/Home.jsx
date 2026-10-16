@@ -82,6 +82,7 @@ export default function Home() {
   const { t } = useTranslation("shop");
   const { t: tf } = useTranslation("shopflow");
   const { t: tseo } = useTranslation("seo");
+  const { t: tc } = useTranslation("common");
   const navigate = useNavigate();
 
   const { totalItems, totalPrice } = useCart();
@@ -89,11 +90,21 @@ export default function Home() {
   const { reveal } = useReveal();
 
   const {
+    user,
     authChecked,
     isAuthenticated,
     isLoadingAuth,
     isLoadingPublicSettings,
   } = useAuth();
+  const userName =
+    user?.display_name ||
+    user?.full_name ||
+    user?.fullName ||
+    user?.email?.split("@")[0] ||
+    "";
+  const desktopGreeting = userName
+    ? tc("homeHeader.welcome", { name: userName })
+    : tc("homeHeader.welcomeGuest");
 
   // The splash is browser-only. The prerendered HTML (and the first client
   // render that hydrates it) show the real page content; right after mount
@@ -256,10 +267,11 @@ export default function Home() {
   }
 
   return (
-    <main className="aisyah-page">
+    <main className="qurbi-page">
       <AppHeader
         eyebrow="QURBI"
         title=""
+        desktopTitle={desktopGreeting}
         subtitle={tseo("home.tagline")}
         subtitleClassName="text-base"
         search={
@@ -288,7 +300,7 @@ export default function Home() {
 
       <ViewCartCard totalItems={totalItems} totalPrice={totalPrice} />
 
-      <div className="mx-auto max-w-5xl space-y-7 px-4 pt-5 sm:px-5">
+      <div className="qurbi-desktop-bounded-content max-w-5xl space-y-7 px-4 pt-5 sm:px-5">
         {/* ANIMAL CATEGORIES */}
         <section className={reveal()} style={{ animationDelay: "120ms" }} aria-labelledby="home-categories-title">
           <div className="mb-3 flex items-center justify-between">
@@ -303,6 +315,7 @@ export default function Home() {
                 key={label}
                 to="/browse"
                 state={{ species: label }}
+                data-navigation-state={JSON.stringify({ species: label })}
                 className={`
                     flex
                     min-h-[88px]
@@ -366,7 +379,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={loadFeatured}
-                className="aisyah-primary-button mt-3 inline-flex min-h-11 items-center gap-2"
+                className="qurbi-primary-button mt-3 inline-flex min-h-11 items-center gap-2"
               >
                 <RefreshCw aria-hidden="true" className="h-4 w-4" /> {tf("common.retry")}
               </button>
@@ -374,7 +387,7 @@ export default function Home() {
           ) : featured.length === 0 ? (
             <div className="rounded-2xl border border-[#41362D]/20 bg-[#F7EDE2]/80 p-4 text-center">
               <p className="text-sm font-semibold text-[#41362D]">{tf("home.featuredEmpty")}</p>
-              <Link to="/bulk-buy" className="aisyah-primary-button mt-3 inline-flex min-h-11 items-center">
+              <Link to="/bulk-buy" className="qurbi-primary-button mt-3 inline-flex min-h-11 items-center">
                 {tf("home.featuredEmptyAction")}
               </Link>
             </div>

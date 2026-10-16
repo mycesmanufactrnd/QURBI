@@ -16,6 +16,7 @@ import { useReveal } from "@/hooks/useReveal";
 import CancelOrderModal from "@/components/CancelOrderModal";
 import AppHeader from "@/components/AppHeader";
 import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
+import { useDisplayMode } from "@/lib/display-mode-context";
 import { orderDateKey, orderTimestamp } from "@/lib/order-date";
 import { formatRM } from "@/lib/format";
 import { groupedOrderQuery, groupOrdersByCheckout, groupItemsByFarm } from "@/lib/order-groups";
@@ -308,6 +309,7 @@ export default function Orders() {
   const { t } = useTranslation("orders");
   const { t: ta } = useTranslation("account");
   const { user, isAuthenticated, authChecked } = useAuth();
+  const { isDesktop } = useDisplayMode();
   const navigate = useNavigate();
   const { navigateWithTransition } = useHeaderTransition();
   const { reveal } = useReveal();
@@ -457,7 +459,7 @@ export default function Orders() {
 
   if (!authChecked) {
     return (
-      <div className="aisyah-page">
+      <div className="qurbi-page">
         <AppHeader title={t("orders.title")} subtitle={t("orders.subtitle")} />
         <PageLoading contentOnly message={t("orders.loadingOrders")} />
       </div>
@@ -466,9 +468,9 @@ export default function Orders() {
 
   if (authChecked && !isAuthenticated)
     return (
-      <div className="aisyah-page min-h-screen">
+      <div className="qurbi-page min-h-screen">
         <AppHeader title={t("orders.title")} subtitle={t("orders.subtitle")} />
-        <div className="aisyah-content flex flex-col items-center justify-center gap-3 py-16 text-center">
+        <div className="qurbi-content flex flex-col items-center justify-center gap-3 py-16 text-center">
           <ReceiptText className="h-12 w-12 text-[#41362D]/40" aria-hidden="true" />
           <h2 className="text-lg font-bold text-[#41362D]">{ta("orders.guestTitle")}</h2>
           <p className="max-w-xs text-[15px] leading-relaxed text-[#41362D]/75">{t("orders.signInPrompt")}</p>
@@ -484,14 +486,14 @@ export default function Orders() {
     );
 
   return (
-    <div className="aisyah-page">
+    <div className="qurbi-page">
       <AppHeader
         sticky
         title={t("orders.title")}
         subtitle={t("orders.subtitle")}
-        leftAction={
+        leftAction={!isDesktop ? (
           <TransactionHeaderButton onOpen={() => navigateWithTransition("/transaction-history")} />
-        }
+        ) : null}
       >
         <div className="flex w-full min-w-0 items-center gap-2">
           <div className="horizontal-filter-scroll no-scrollbar min-w-0 flex-1 overflow-x-auto">
@@ -533,7 +535,7 @@ export default function Orders() {
           {successMessage}
         </div>
       )}
-      <main className="aisyah-content mx-auto max-w-3xl space-y-2">
+      <main className="qurbi-content mx-auto max-w-3xl space-y-2">
         {loading && !orders.length ? (
           <PageLoading contentOnly message={t("orders.loadingOrders")} />
         ) : (

@@ -815,11 +815,10 @@ export default function OrderDetail() {
 
   if (loading) {
     return (
-      <div className="aisyah-page">
+      <div className="qurbi-page">
         <AppHeader
           title={t("orderDetail.title")}
           backTo="/orders"
-          preferRecentBack={false}
           subtitle="Track your purchase and delivery progress"
         />
         <PageLoading contentOnly message="Loading order details..." />
@@ -832,9 +831,9 @@ export default function OrderDetail() {
     !isAuthenticated
   ) {
     return (
-      <div className="aisyah-page min-h-screen pb-28">
-        <AppHeader title="Order Details" backTo="/orders" preferRecentBack={false} subtitle="Track your purchase and delivery progress" />
-        <div className="aisyah-content flex flex-col items-center justify-center gap-3 py-20 text-center">
+      <div className="qurbi-page min-h-screen pb-28">
+        <AppHeader title="Order Details" backTo="/orders" subtitle="Track your purchase and delivery progress" />
+        <div className="qurbi-content flex flex-col items-center justify-center gap-3 py-20 text-center">
           <Package className="h-12 w-12 text-[#41362D]/35" />
           <p className="text-sm text-[#41362D]/65">Sign in to view this order.</p>
           <button
@@ -911,11 +910,10 @@ export default function OrderDetail() {
   ) : null;
 
   return (
-    <div className={`aisyah-page ${stickyAction ? "pb-[calc(11rem+env(safe-area-inset-bottom))]" : ""}`}>
+    <div className={`qurbi-page ${stickyAction ? "pb-[calc(11rem+env(safe-area-inset-bottom))]" : ""}`}>
       <AppHeader
         title={t("orderDetail.title")}
         backTo="/orders"
-        preferRecentBack={false}
       />
 
       {message && (
@@ -927,7 +925,7 @@ export default function OrderDetail() {
         </div>
       )}
 
-      <main className="aisyah-content mx-auto max-w-3xl space-y-3">
+      <main className="qurbi-content mx-auto max-w-3xl space-y-3">
         {actionError && !refundSheetOpen && (
           <p role="alert" className="flex items-start gap-2 rounded-xl border border-[#E8A39A] bg-[#FBE4E1] px-3 py-3 text-[15px] font-semibold text-[#8A1C12]">
             <CircleAlert className="mt-0.5 h-5 w-5 flex-none" aria-hidden="true" />

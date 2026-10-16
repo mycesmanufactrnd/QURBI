@@ -38,24 +38,21 @@ import { AuthPromptProvider } from "@/lib/auth-prompt-context";
 import AppErrorBoundary from "@/components/AppErrorBoundary";
 import RouteSeo from "@/components/RouteSeo";
 import IconRouteOverlay from "@/components/IconRouteOverlay";
-
-function LegacyAuthRedirect({ mode }) {
-  const location = useLocation();
-  const params = new URLSearchParams(location.search);
-  params.set("mode", mode);
-  return <Navigate to={`/auth?${params.toString()}`} replace />;
-}
+import { DisplayModeProvider } from "@/lib/display-mode-context";
+import AgreementGate from "@/components/AgreementGate";
 
 function ApplicationRoutes() {
   const location = useLocation();
   const backgroundLocation = location.state?.qurbiIconOverlay
     ? location.state.backgroundLocation
     : null;
+  const profileFlow =
+    location.pathname === "/profile" || location.state?.profileFlow === true;
 
   return (
     <>
       <Routes location={backgroundLocation || location}>
-        <Route element={<AppLayout />}>
+        <Route element={<AppLayout profileFlow={profileFlow} />}>
           <Route path="/" element={<Home />} />
           <Route path="/browse" element={<Browse />} />
           <Route path="/livestock/:id" element={<LivestockDetail />} />
@@ -72,8 +69,6 @@ function ApplicationRoutes() {
         </Route>
         <Route element={<StandaloneLayout />}>
           <Route path="/auth" element={<Authentication />} />
-          <Route path="/login" element={<LegacyAuthRedirect mode="login" />} />
-          <Route path="/register" element={<LegacyAuthRedirect mode="register" />} />
           <Route path="/switch-session" element={<SwitchSession />} />
           <Route path="/signup-details" element={<SignupDetails />} />
           <Route path="/user-agreement" element={<UserAgreement />} />
@@ -117,6 +112,7 @@ function ApplicationRoutes() {
 // in the browser it is always the normal BrowserRouter.
 function App({ Router = BrowserRouter, routerProps = {} }) {
   return (
+    <DisplayModeProvider>
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         <UserProfileProvider>
@@ -127,7 +123,9 @@ function App({ Router = BrowserRouter, routerProps = {} }) {
                 <NotificationProvider>
                   <HeaderTransitionProvider>
                   <AppErrorBoundary>
-                  <ApplicationRoutes />
+                  <AgreementGate>
+                    <ApplicationRoutes />
+                  </AgreementGate>
                   </AppErrorBoundary>
                   </HeaderTransitionProvider>
                 </NotificationProvider>
@@ -138,6 +136,7 @@ function App({ Router = BrowserRouter, routerProps = {} }) {
         <Toaster />
       </QueryClientProvider>
     </AuthProvider>
+    </DisplayModeProvider>
   );
 }
 

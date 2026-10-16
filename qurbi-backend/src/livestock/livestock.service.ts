@@ -331,9 +331,23 @@ export class LivestockService extends BaseCrudService<Livestock> {
     data: DeepPartial<Livestock>,
   ): Promise<Livestock> {
     const listing = await this.findOwned(id, viewer);
-    if (data.status === LivestockStatus.SOLD) {
+
+    if (listing.status === LivestockStatus.SOLD) {
+      throw new ConflictException(
+        'Sold livestock cannot be edited or republished because it belongs to a completed order',
+      );
+    }
+    if (listing.status === LivestockStatus.RESERVED) {
+      throw new ConflictException(
+        'Reserved livestock cannot be edited while a buyer is completing payment',
+      );
+    }
+    if (
+      data.status === LivestockStatus.RESERVED ||
+      data.status === LivestockStatus.SOLD
+    ) {
       throw new BadRequestException(
-        'status SOLD can only be set by completing a purchase',
+        'RESERVED and SOLD statuses are managed by the payment system',
       );
     }
     let speciesApprovalStatus = listing.speciesApprovalStatus;
@@ -430,7 +444,7 @@ export class LivestockService extends BaseCrudService<Livestock> {
   }
 
   private ageRecordedAt(
-    attributes: DeepPartial<Record<string, any>> | null | undefined,
+    attributes: DeepPartial<Record<string, unknown>> | null | undefined,
   ): string | null {
     const value = attributes?.ageRecordedAt;
     return typeof value === 'string' ? value : null;
@@ -456,8 +470,48 @@ export class LivestockService extends BaseCrudService<Livestock> {
   }
 
   async removeOwned(id: string, viewer: AuthenticatedUser): Promise<void> {
-    const listing = await this.findOwned(id, viewer);
-    await this.repository.remove(listing);
+    await this.findOwned(id, viewer);
+
+    await this.dataSource.transaction(async (manager) => {
+      await this.reservationsService.expireDue(manager, id);
+
+      const listing = await manager
+        .createQueryBuilder(Livestock, 'livestock')
+        .setLock('pessimistic_write')
+        .where('livestock.id = :id', { id })
+        .getOne();
+      if (!listing) throw new NotFoundException(`Livestock ${id} not found`);
+
+      const reservations = await manager.find(Reservation, {
+        where: { livestockId: id },
+        order: { createdAt: 'DESC' },
+      });
+      if (
+        reservations.some(
+          (reservation) => reservation.status === ReservationStatus.COMPLETED,
+        )
+      ) {
+        throw new ConflictException(
+          'This livestock has a completed order and cannot be deleted. It is retained for payment and order history.',
+        );
+      }
+      if (
+        reservations.some(
+          (reservation) => reservation.status === ReservationStatus.ACTIVE,
+        )
+      ) {
+        throw new ConflictException(
+          'This livestock is currently reserved and cannot be deleted while payment is in progress.',
+        );
+      }
+      if (reservations.length > 0) {
+        throw new ConflictException(
+          'This livestock has order history and cannot be deleted. Set it to unavailable instead.',
+        );
+      }
+
+      await manager.remove(listing);
+    });
   }
 
   // Fetches a listing and confirms `viewer` owns it (or is an admin). Anyone

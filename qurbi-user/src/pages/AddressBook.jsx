@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   Plus,
@@ -20,6 +20,8 @@ import AppHeader from "@/components/AppHeader";
 import PageLoading from "@/components/PageLoading";
 import { useAuth } from "@/lib/AuthContext";
 import { useAuthPrompt } from "@/lib/auth-prompt-context";
+import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
+import { recentPageOr } from "@/lib/navigation";
 import {
   dangerBtn,
   ghostOnDarkBtn,
@@ -346,7 +348,7 @@ function AddressCard({
     : addr.label || t("addressBook.card.noLabel");
   return (
     <article
-      className={`aisyah-card overflow-hidden rounded-2xl border-2 ${addr.isDefault ? "border-[#E3C19F]" : isSelected ? "border-[#E3C19F]/70" : "border-transparent"}`}
+      className={`qurbi-card overflow-hidden rounded-2xl border-2 ${addr.isDefault ? "border-[#E3C19F]" : isSelected ? "border-[#E3C19F]/70" : "border-transparent"}`}
       aria-label={name}
     >
       {/* Top Bar */}
@@ -478,6 +480,7 @@ function DeleteAddressModal({ address, deleting, onCancel, onConfirm }) {
 }
 
 export default function AddressBook() {
+  const location = useLocation();
   const { authChecked, isAuthenticated } = useAuth();
   const { requestSignIn } = useAuthPrompt();
   const {
@@ -491,6 +494,7 @@ export default function AddressBook() {
   } = useUserProfile();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { navigateWithTransition } = useHeaderTransition();
   const { reveal } = useReveal();
   const { t } = useTranslation("profile");
   const { t: ta } = useTranslation("account");
@@ -505,6 +509,7 @@ export default function AddressBook() {
     : requestedReturnTo.startsWith("/payment")
       ? requestedReturnTo
       : "/profile";
+  const openedFromProfile = location.state?.addressBookFromProfile === true;
   const [showForm, setShowForm] = useState(openedFromPayment || isOnboarding);
   const [editingAddress, setEditingAddress] = useState(null);
   const [deleteCandidate, setDeleteCandidate] = useState(null);
@@ -512,6 +517,29 @@ export default function AddressBook() {
   const [formError, setFormError] = useState("");
   const [pageError, setPageError] = useState("");
   const [notice, setNotice] = useState("");
+
+  const handleReturn = useCallback(() => {
+    if (isOnboarding || openedFromPayment) {
+      navigate(returnTo, { replace: true });
+      return;
+    }
+
+    if (openedFromProfile) {
+      navigateWithTransition(recentPageOr("/profile"), {
+        profileNavigationBack: true,
+      });
+      return;
+    }
+
+    navigateWithTransition("/");
+  }, [
+    isOnboarding,
+    navigate,
+    navigateWithTransition,
+    openedFromPayment,
+    openedFromProfile,
+    returnTo,
+  ]);
 
   const flash = (text) => {
     setNotice(text);
@@ -557,10 +585,11 @@ export default function AddressBook() {
 
   if (!authChecked || profileLoading) {
     return (
-      <div className="aisyah-page">
+      <div className="qurbi-page">
         <AppHeader
           title={t("addressBook.pageTitle")}
           backTo={returnTo}
+          onBack={handleReturn}
           preferRecentBack={false}
           subtitle={t("addressBook.pageSubtitle")}
         />
@@ -571,14 +600,15 @@ export default function AddressBook() {
 
   if (!isAuthenticated) {
     return (
-      <div className="aisyah-page min-h-screen">
+      <div className="qurbi-page min-h-screen">
         <AppHeader
           title={t("addressBook.pageTitle")}
           backTo={returnTo}
+          onBack={handleReturn}
           preferRecentBack={false}
           subtitle={t("addressBook.pageSubtitle")}
         />
-        <div className="aisyah-content flex flex-col items-center justify-center gap-3 py-16 text-center">
+        <div className="qurbi-content flex flex-col items-center justify-center gap-3 py-16 text-center">
           <MapPin className="h-12 w-12 text-[#41362D]/40" aria-hidden="true" />
           <p className="max-w-xs text-[15px] text-[#41362D]/75">{t("addressBook.signInPrompt")}</p>
           <button
@@ -599,10 +629,11 @@ export default function AddressBook() {
   );
 
   return (
-    <div className="aisyah-page">
+    <div className="qurbi-page">
       <AppHeader
         title={t("addressBook.pageTitle")}
         backTo={returnTo}
+        onBack={handleReturn}
         preferRecentBack={false}
         subtitle={isOnboarding
           ? t("addressBook.onboardingSubtitle")
@@ -615,7 +646,7 @@ export default function AddressBook() {
         </div>
       )}
 
-      <div className="aisyah-content mx-auto max-w-2xl">
+      <div className="qurbi-content mx-auto max-w-2xl">
         {pageError && (
           <p role="alert" className="flex items-start gap-2 rounded-xl bg-[#FBE4E1] px-3 py-2.5 text-sm font-semibold text-[#8A1C12]">
             <CircleAlert className="mt-0.5 h-4 w-4 flex-none" aria-hidden="true" /> {pageError}

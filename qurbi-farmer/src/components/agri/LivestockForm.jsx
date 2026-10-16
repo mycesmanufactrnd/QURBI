@@ -192,6 +192,9 @@ const LivestockForm = forwardRef(
 
   const applyOcrResult = (result) => {
     const validBirthDate = result.birthDate && result.birthDate <= todayForInput() ? result.birthDate : "";
+    const validAgeMonths = !validBirthDate && Number.isInteger(Number(result.ageMonths)) && Number(result.ageMonths) >= 0
+      ? String(result.ageMonths)
+      : "";
     setForm((current) => {
       const speciesChanged = Boolean(result.species && current.species !== result.species);
       return {
@@ -208,13 +211,14 @@ const LivestockForm = forwardRef(
         color: result.color || current.color,
         tagNumber: result.animalId || current.tagNumber,
         weight: result.weight || current.weight,
-        ageInputMode: validBirthDate ? "Birth Date" : current.ageInputMode,
+        description: result.description || current.description,
+        ageInputMode: validBirthDate ? "Birth Date" : validAgeMonths ? "Age" : current.ageInputMode,
         birthDate: validBirthDate || current.birthDate,
-        ageValue: validBirthDate ? "" : current.ageValue,
-        ageRecordedAt: validBirthDate ? todayForInput() : current.ageRecordedAt,
+        ageValue: validBirthDate ? "" : validAgeMonths || current.ageValue,
+        ageRecordedAt: validBirthDate || validAgeMonths ? todayForInput() : current.ageRecordedAt,
       };
     });
-    if (validBirthDate) setAgeTouched(true);
+    if (validBirthDate || validAgeMonths) setAgeTouched(true);
     if (result.animalId || result.weight) setShowAdvanced(true);
   };
 

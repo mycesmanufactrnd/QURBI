@@ -23,8 +23,6 @@ export const DETAIL_PATH_PATTERN = /^\/(livestock|bulk-buy)\/[^/]+$/;
 // Paths robots.txt should keep crawlers out of.
 export const PRIVATE_PATHS = [
   "/auth",
-  "/login",
-  "/register",
   "/cart",
   "/payment",
   "/orders",

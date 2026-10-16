@@ -1,38 +1,46 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { ArrowLeft, Bell, Leaf, LogOut, User } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/AuthContext";
 import { useHeaderTransition } from "@/components/HeaderTransitionProvider";
 import { useNotifications } from "@/lib/notification-context";
 import { recentPageOr } from "@/lib/navigation";
+import { useDisplayMode } from "@/lib/display-mode-context";
+import { useAuthPrompt } from "@/lib/auth-prompt-context";
+import ProfileAvatar from "@/components/ProfileAvatar";
 
 const HEADER_SHRINK_SCROLL_Y = 12;
 const HEADER_EXPAND_SCROLL_Y = 4;
+const HEADER_COLLAPSED_HEIGHT = 108;
 const useIsomorphicLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 /** Shared QURBI page header for normal in-app screens. */
 export default function AppHeader({
   title,
+  desktopTitle = "",
   eyebrow = "QURBI",
   subtitle = "",
   backTo = "",
+  onBack = null,
   leftAction = null,
   search = null,
   children = null,
   sticky = false,
-  guestActionsOnLeft = false,
   progressiveShrink = false,
   thresholdShrink = false,
   titleClassName = "",
   subtitleClassName = "",
   preferRecentBack = true,
+  backState = undefined,
 }) {
   const { t } = useTranslation("common");
   const location = useLocation();
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, user } = useAuth();
+  const { isDesktop } = useDisplayMode();
+  const { requestSignIn } = useAuthPrompt();
   const { unreadCount } = useNotifications();
   const showNotificationAction =
     location.pathname !== "/profile" &&
@@ -53,10 +61,19 @@ export default function AppHeader({
   const profileButtonRef = useRef(null);
   const pendingProfileActionRef = useRef(null);
   const [profileMenu, setProfileMenu] = useState(null);
-  const shrinkEnabled = progressiveShrink || thresholdShrink;
+  const useDesktopHeaderBox = isDesktop && !isProfilePage;
+  const resolvedDesktopTitle = desktopTitle || title;
+  // Desktop follows the Farmer dashboard's fixed hero-card treatment. Header
+  // contraction remains a mobile-only interaction.
+  const shrinkEnabled = !isDesktop && (progressiveShrink || thresholdShrink);
   const headerExpanded = headerEntered;
-  const routeContentVisible = headerEntered && !isContracting;
-  const headerCopyAnimation = isContracting
+  const routeContentVisible =
+    useDesktopHeaderBox || (headerEntered && !isContracting && !isScrollShrunk);
+  const expandedContentVisible =
+    extraVisible && (useDesktopHeaderBox || (!isContracting && !isScrollShrunk));
+  const headerCopyAnimation = useDesktopHeaderBox
+    ? ""
+    : isContracting || isScrollShrunk
     ? "animate-header-copy-exit"
     : headerEntered
       ? "animate-header-copy-enter"
@@ -116,12 +133,12 @@ export default function AppHeader({
 
   useIsomorphicLayoutEffect(() => {
     if (!shrinkEnabled || !expandedHeight || !headerRef.current) return undefined;
-    const page = headerRef.current.closest(".aisyah-page");
+    const page = headerRef.current.closest(".qurbi-page");
     if (!page) return undefined;
 
     page.style.setProperty(
       "--qurbi-header-collapse-offset",
-      `${Math.max(0, expandedHeight - 108 - HEADER_SHRINK_SCROLL_Y)}px`,
+      `${Math.max(0, expandedHeight - HEADER_COLLAPSED_HEIGHT - HEADER_SHRINK_SCROLL_Y)}px`,
     );
     page.classList.toggle("qurbi-header-is-shrunk", isScrollShrunk);
 
@@ -134,7 +151,10 @@ export default function AppHeader({
   const shrinkStyle = shrinkEnabled
     ? expandedHeight
       ? {
-          height: isScrollShrunk || isContracting ? "108px" : `${expandedHeight}px`,
+          height:
+            isScrollShrunk || isContracting
+              ? `${HEADER_COLLAPSED_HEIGHT}px`
+              : `${expandedHeight}px`,
           paddingTop: isScrollShrunk || isContracting ? "12px" : "28px",
           paddingBottom: isScrollShrunk || isContracting ? "8px" : "16px",
           transition:
@@ -143,7 +163,7 @@ export default function AppHeader({
         }
       : isScrollShrunk || isContracting
         ? {
-            height: "108px",
+            height: `${HEADER_COLLAPSED_HEIGHT}px`,
             paddingTop: "12px",
             paddingBottom: "8px",
           }
@@ -220,6 +240,104 @@ export default function AppHeader({
     setProfileMenu(null);
   }, [isProfilePage, profileMenu]);
 
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+      return;
+    }
+    const destination = preferRecentBack
+      ? recentPageOr(backTo)
+      : backTo;
+    navigateWithTransition(destination, {
+      navigateOptions:
+        !preferRecentBack && backState !== undefined
+          ? { state: backState }
+          : undefined,
+    });
+  };
+
+  const notificationAction = isAuthenticated && showNotificationAction ? (
+    <button
+      type="button"
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        beginIconTransition("notification", event.currentTarget);
+        navigateWithTransition("/notifications", {
+          transitionType: "notification",
+        });
+      }}
+      aria-label={
+        unreadCount
+          ? t("appHeader.notificationsUnread", { count: unreadCount })
+          : t("appHeader.notifications")
+      }
+      className="group relative flex h-11 w-11 flex-none items-center justify-center rounded-full bg-transparent text-white transition-all duration-200 ease-out hover:-translate-y-0.5 hover:text-[#E3C19F] active:scale-90"
+    >
+      <Bell className="h-10 w-6 transition-transform duration-200 group-hover:scale-110" />
+      {unreadCount > 0 && (
+        <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-white bg-[#DC2626] px-1 text-[11px] font-bold leading-none text-white">
+          {unreadCount > 99 ? "99+" : unreadCount}
+        </span>
+      )}
+    </button>
+  ) : null;
+
+  const desktopHeaderMarkup = (
+    <header
+      ref={isDesktop ? headerRef : undefined}
+      data-page-description={subtitle || undefined}
+      data-description-class={subtitleClassName || undefined}
+      className="qurbi-desktop-page-header qurbi-header-background relative z-20 mx-auto mt-5 w-[calc(100%-2.5rem)] max-w-[61.5rem] overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-[#41362D] to-[#6B594A] px-6 py-5 text-white shadow-[0_10px_28px_rgba(65,54,45,0.18)] sm:px-8 sm:py-6"
+      style={{ viewTransitionName: "qurbi-header" }}
+    >
+      <div className="relative z-10 flex min-h-11 min-w-0 items-start justify-center px-14 text-center">
+        <div className="absolute left-0 top-0 flex items-center gap-2">
+          {(backTo || onBack) && (
+            <button
+              type="button"
+              onClick={handleBack}
+              aria-label={t("appHeader.goBack")}
+              className="flex h-11 w-11 flex-none items-center justify-center rounded-xl border border-[#F7EDE2]/60 bg-white/10 text-white transition-colors hover:bg-white/20 active:scale-95"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+          )}
+          {!backTo && !onBack && leftAction ? (
+            <div className="flex-none">{leftAction}</div>
+          ) : null}
+        </div>
+        <div className="min-w-0 max-w-3xl pt-0.5">
+          {resolvedDesktopTitle ? (
+            <h1
+              className={`truncate text-2xl font-extrabold leading-tight tracking-tight text-white sm:text-3xl ${titleClassName}`}
+              title={resolvedDesktopTitle}
+            >
+              {resolvedDesktopTitle}
+            </h1>
+          ) : null}
+          {subtitle ? (
+            <p
+              className={`mt-1.5 text-sm leading-relaxed text-white/80 ${subtitleClassName}`}
+            >
+              {subtitle}
+            </p>
+          ) : null}
+        </div>
+        {notificationAction ? (
+          <div className="absolute right-0 top-0">{notificationAction}</div>
+        ) : null}
+      </div>
+
+      {hasExpandableContent ? (
+        <div className="relative z-10 mt-4">
+          {search ? <div className="w-full">{search}</div> : null}
+          {children ? <div className={search ? "mt-3" : ""}>{children}</div> : null}
+        </div>
+      ) : null}
+    </header>
+  );
+
   const headerMarkup = (
     <header
       ref={headerRef}
@@ -229,81 +347,37 @@ export default function AppHeader({
       style={{ viewTransitionName: "qurbi-header", ...shrinkStyle }}
     >
       <div
-        className="relative z-10 flex flex-col items-center text-center"
+        className="relative z-20 flex flex-col items-center text-center"
       >
-        <div className="absolute left-0 top-0 z-20 flex flex-row items-center gap-1">
-          {!isAuthenticated && guestActionsOnLeft && (
-            <>
-              <Link
-                to="/auth?mode=login"
-                className="flex min-h-10 items-center rounded-md px-1.5 text-xs font-bold text-white"
-              >
-                {t("appHeader.login")}
-              </Link>
-              <Link
-                to="/auth?mode=register"
-                className="flex min-h-10 items-center rounded-md border border-white/30 bg-white/15 px-2 text-xs font-bold text-white"
-              >
-                {t("appHeader.signUp")}
-              </Link>
-            </>
-          )}
-          {backTo && (
+        <div className="absolute -top-2 left-0 z-30 flex flex-row items-center gap-1">
+          {(backTo || onBack) && (
             <button
               type="button"
-              onClick={() =>
-                navigateWithTransition(preferRecentBack ? recentPageOr(backTo) : backTo)
-              }
+              onClick={handleBack}
               aria-label={t("appHeader.goBack")}
               className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#F7EDE2]/60 bg-white/10 text-white transition-transform active:scale-90"
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
           )}
-          {!backTo && leftAction}
+          {!backTo && !onBack && leftAction}
         </div>
 
-        <div className="absolute right-0 top-0 z-20 flex flex-row items-center gap-1">
-          {!isAuthenticated && !guestActionsOnLeft && (
-            <>
-              <Link
-                to="/auth?mode=login"
-                className="flex min-h-10 items-center rounded-md px-1.5 text-xs font-bold text-white"
-              >
-                {t("appHeader.login")}
-              </Link>
-              <Link
-                to="/auth?mode=register"
-                className="flex min-h-10 items-center rounded-md border border-white/30 bg-white/15 px-2 text-xs font-bold text-white"
-              >
-                {t("appHeader.signUp")}
-              </Link>
-            </>
-          )}
-          {isAuthenticated && showNotificationAction && (
-            <Link
-              to="/notifications"
-              onClick={(event) => {
-                if (!event.defaultPrevented) {
-                  beginIconTransition("notification", event.currentTarget);
-                }
-              }}
-              aria-label={
-                unreadCount
-                  ? t("appHeader.notificationsUnread", { count: unreadCount })
-                  : t("appHeader.notifications")
-              }
-              className="relative flex h-11 w-11 items-center justify-center rounded-full bg-transparent text-white transition-transform active:scale-90"
+        <div className="pointer-events-auto absolute -top-2 right-0 z-30 flex flex-row items-center gap-1">
+          {!isAuthenticated && !isDesktop && (
+            <button
+              type="button"
+              onClick={() => requestSignIn({ returnTo: `${location.pathname}${location.search}${location.hash}` })}
+              aria-label={t("appHeader.openProfile")}
+              className="relative flex h-11 w-11 flex-none items-center justify-center transition-transform active:scale-90"
             >
-              <Bell className="h-5 w-5" />
-              {unreadCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-white bg-[#DC2626] px-1 text-[11px] font-bold leading-none text-white">
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </span>
-              )}
-            </Link>
+              <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/30 bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] shadow-lg">
+                <User className="h-5 w-5 text-[#41362D]" />
+              </div>
+            </button>
           )}
-          {isAuthenticated && (
+          {notificationAction}
+          {isAuthenticated && !isDesktop && (
             <button
               ref={profileButtonRef}
               type="button"
@@ -335,23 +409,27 @@ export default function AppHeader({
               }
               className="relative flex h-11 w-11 flex-none items-center justify-center transition-transform active:scale-90"
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/30 bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] shadow-lg">
-                <User className="h-5 w-5 text-[#41362D]" />
-              </div>
+              <ProfileAvatar
+                src={user?.avatarUrl || user?.avatar_url}
+                name={user?.display_name || user?.full_name || user?.email}
+                className="h-10 w-10 rounded-full border-2 text-xs"
+              />
             </button>
           )}
         </div>
 
-        <div className="qurbi-header-static-brand pointer-events-none flex items-center justify-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#F7EDE2]/70 bg-white/10 shadow-sm backdrop-blur-sm">
-            <Leaf className="h-3.5 w-3.5 text-white" />
+        {!isDesktop ? (
+          <div className="qurbi-header-static-brand pointer-events-none flex items-center justify-center gap-2 self-center">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#F7EDE2]/70 bg-white/10 shadow-sm backdrop-blur-sm">
+              <Leaf className="h-3.5 w-3.5 text-white" />
+            </div>
+            {eyebrow && (
+              <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white/80">
+                {eyebrow}
+              </p>
+            )}
           </div>
-          {eyebrow && (
-            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white/80">
-              {eyebrow}
-            </p>
-          )}
-        </div>
+        ) : null}
 
         {title && (
           <div
@@ -360,7 +438,7 @@ export default function AppHeader({
           >
             <div className="min-h-0 overflow-hidden">
               <h1
-                className={`mx-auto mt-1 max-w-[65%] text-xl font-bold leading-tight tracking-tight text-white sm:max-w-none ${headerCopyAnimation} ${titleClassName}`}
+                className={`mx-auto mt-1 max-w-[calc(100%-9rem)] text-xl font-bold leading-tight tracking-tight text-white sm:max-w-none ${headerCopyAnimation} ${titleClassName}`}
               >
                 {title}
               </h1>
@@ -388,15 +466,15 @@ export default function AppHeader({
       )}
 
       <div
-        className={`qurbi-header-route-copy relative z-10 grid ${extraVisible && !isContracting ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
-        aria-hidden={!hasExpandableContent}
+        className={`qurbi-header-route-copy relative z-10 grid ${expandedContentVisible ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+        aria-hidden={!expandedContentVisible}
       >
         <div
           className="min-h-0 overflow-hidden"
           style={shrinkingContentStyle}
         >
           <div
-            className={`pt-2 text-center transition-all duration-500 ease-in-out ${extraVisible && !isContracting ? "translate-y-0" : "-translate-y-2"}`}
+            className={`pt-2 text-center transition-all duration-500 ease-in-out ${expandedContentVisible ? "translate-y-0" : "-translate-y-2"}`}
           >
             {search && <div className="mx-auto max-w-xl">{search}</div>}
             {children && <div className="mt-2">{children}</div>}
@@ -459,6 +537,15 @@ export default function AppHeader({
         document.body,
       )
     : null;
+
+  if (useDesktopHeaderBox) {
+    return (
+      <>
+        {desktopHeaderMarkup}
+        {profileActionMenu}
+      </>
+    );
+  }
 
   if (!shrinkEnabled) {
     return (

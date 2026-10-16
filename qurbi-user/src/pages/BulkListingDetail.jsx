@@ -133,13 +133,13 @@ export default function BulkListingDetail() {
 
   if (error) {
     return (
-      <div className="aisyah-page flex flex-col items-center justify-center gap-4 p-8 text-center">
+      <div className="qurbi-page flex flex-col items-center justify-center gap-4 p-8 text-center">
         <p className="text-lg font-bold text-[#41362D]">{t("bulkListingDetail.loadError")}</p>
         <p className="max-w-xs text-sm text-[#6B594A]">{error}</p>
         <button
           type="button"
           onClick={load}
-          className="aisyah-primary-button flex min-h-12 items-center gap-2 px-6"
+          className="qurbi-primary-button flex min-h-12 items-center gap-2 px-6"
         >
           <RefreshCw className="h-4 w-4" /> {t("bulkListingDetail.retry")}
         </button>

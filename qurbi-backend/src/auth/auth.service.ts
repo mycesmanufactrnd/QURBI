@@ -197,7 +197,9 @@ export class AuthService {
         throw new UnauthorizedException('Account is not active');
       }
       user.googleId ??= identity.uid;
-      user.avatarUrl ??= identity.picture || null;
+      // Keep the QURBI profile picture aligned with the current Google
+      // account picture every time the user signs in with Google.
+      if (identity.picture) user.avatarUrl = identity.picture;
       user.emailVerifiedAt ??= new Date();
       user.lastLoginAt = new Date();
     }

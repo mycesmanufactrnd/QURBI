@@ -57,7 +57,7 @@ export default function Analytics() {
   return (
     <div className="animate-fade-in">
       <header className="flex items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-muted-foreground">{t("eyebrow")}</p>
           <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">{t("title")}</h1>
           <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted-foreground">{t("subtitle")}</p>
