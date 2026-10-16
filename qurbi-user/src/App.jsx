@@ -1,7 +1,12 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClientInstance } from "@/lib/query-client";
+<<<<<<< Updated upstream
 import { BrowserRouter as Router, Navigate, Route, Routes, useLocation } from "react-router-dom";
+=======
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+>>>>>>> Stashed changes
 import PageNotFound from "./lib/PageNotFound";
 import { AuthProvider } from "@/lib/AuthContext";
 import { CartProvider } from "@/lib/cart-context";
@@ -31,6 +36,45 @@ import Notifications from "@/pages/Notifications";
 import AdminTest from "@/pages/AdminTest";
 import { AuthPromptProvider } from "@/lib/auth-prompt-context";
 import AppErrorBoundary from "@/components/AppErrorBoundary";
+<<<<<<< Updated upstream
+=======
+import RouteSeo from "@/components/RouteSeo";
+import IconRouteOverlay from "@/components/IconRouteOverlay";
+import { DisplayModeProvider } from "@/lib/display-mode-context";
+import AgreementGate from "@/components/AgreementGate";
+import { useAuth } from "@/lib/AuthContext";
+import { hasHandledInitialEntry, markInitialEntryHandled } from "@/lib/initial-entry";
+
+function InitialEntryRedirect() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { isAuthenticated, isLoadingAuth, authChecked } = useAuth();
+
+  useEffect(() => {
+    if (!authChecked || isLoadingAuth) return;
+
+    if (isAuthenticated) {
+      markInitialEntryHandled();
+      return;
+    }
+
+    if (
+      hasHandledInitialEntry() ||
+      location.pathname === "/auth" ||
+      location.pathname === "/switch-session"
+    ) {
+      return;
+    }
+
+    const returnTo = `${location.pathname}${location.search}${location.hash}`;
+    navigate(`/auth?mode=login&returnTo=${encodeURIComponent(returnTo)}`, {
+      replace: true,
+    });
+  }, [authChecked, isAuthenticated, isLoadingAuth, location, navigate]);
+
+  return null;
+}
+>>>>>>> Stashed changes
 
 function LegacyAuthRedirect({ mode }) {
   const location = useLocation();
@@ -45,7 +89,13 @@ function App() {
       <QueryClientProvider client={queryClientInstance}>
         <UserProfileProvider>
           <CartProvider>
+<<<<<<< Updated upstream
             <Router>
+=======
+            <Router {...routerProps}>
+              <InitialEntryRedirect />
+              <RouteSeo />
+>>>>>>> Stashed changes
               <AuthPromptProvider>
                 <NotificationProvider>
                   <HeaderTransitionProvider>

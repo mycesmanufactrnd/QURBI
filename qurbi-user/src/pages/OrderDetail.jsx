@@ -1521,6 +1521,7 @@ export default function OrderDetail() {
                   </button>
                 )}
 
+<<<<<<< Updated upstream
                 {order
                   .tracking_photos
                   ?.received
@@ -1529,6 +1530,11 @@ export default function OrderDetail() {
                     Received proof saved.
                     You may now confirm
                     receipt.
+=======
+                {order.tracking_photos?.received?.image_url && (
+                  <p className="mt-2 text-xs font-semibold text-white"> 
+                    Received proof saved. You may now confirm receipt.
+>>>>>>> Stashed changes
                   </p>
                 )}
               </>

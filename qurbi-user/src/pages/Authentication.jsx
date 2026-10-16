@@ -6,6 +6,7 @@ import GoogleIcon from "@/components/GoogleIcon";
 import { useAuth } from "@/lib/AuthContext";
 import { safeReturnTo } from "@/lib/authReturnTo";
 import apiClient from "@/api/apiClient";
+import { markInitialEntryHandled } from "@/lib/initial-entry";
 
 const loginGoogleButton =
   "w-full bg-white border border-[#E3C19F] text-black py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm shadow-black/10";
@@ -17,18 +18,30 @@ const registerGuestButton =
   "flex w-full items-center justify-center gap-2 rounded-xl border border-[#E3C19F] bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] py-3 text-sm font-bold text-black transition-all active:scale-95";
 
 export default function Authentication() {
+<<<<<<< Updated upstream
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { loginWithGoogle, authError, isLoadingAuth } = useAuth();
   const mode = searchParams.get("mode") === "register" ? "register" : "login";
+=======
+  const { t } = useTranslation("auth");
+  const { t: ta } = useTranslation("account");
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { loginWithGoogle, loginWithEmail, registerWithEmail, authError, isLoadingAuth } = useAuth();
+  const [form, setForm] = useState({ fullName: "", email: "", password: "" });
+  const [formError, setFormError] = useState("");
+  const [mode, setMode] = useState(() =>
+    searchParams.get("mode") === "register" ? "register" : "login",
+  );
+>>>>>>> Stashed changes
   const isRegister = mode === "register";
   const returnTo = safeReturnTo();
 
   const changeMode = (nextMode) => {
     if (nextMode === mode) return;
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set("mode", nextMode);
-    setSearchParams(nextParams);
+    setFormError("");
+    setMode(nextMode);
   };
 
   const handleGoogle = async () => {
@@ -55,6 +68,7 @@ export default function Authentication() {
 
   const handleContinueHome = () => {
     sessionStorage.removeItem("gh_splash_shown");
+    markInitialEntryHandled();
     navigate("/");
   };
 

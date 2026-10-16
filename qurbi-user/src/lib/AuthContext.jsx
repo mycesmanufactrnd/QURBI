@@ -9,6 +9,7 @@ import {
 } from "@/api/apiClient";
 import { clearSession } from "@/lib/clearSession";
 import { firebaseAuth, googleAuthProvider } from "@/lib/firebase";
+import { markInitialEntryHandled } from "@/lib/initial-entry";
 
 const AuthContext = createContext(null);
 const ALLOWED_ROLES = new Set(["buyer", "farmer"]);
@@ -110,6 +111,10 @@ export const AuthProvider = ({ children }) => {
   }, [acceptSession, clearAuth]);
 
   const logout = useCallback(async (shouldRedirect = true) => {
+    // Logging out intentionally lands on the public Home page. Mark this
+    // browser session so the initial-entry redirect does not send it back to
+    // Login immediately.
+    markInitialEntryHandled();
     const refreshToken = getRefreshToken();
     try {
       if (refreshToken) await authApi.logout(refreshToken);

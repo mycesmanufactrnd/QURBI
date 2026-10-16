@@ -87,12 +87,48 @@ export default function AppHeader({
   }, [shrinkEnabled, location.pathname]);
 
   useEffect(() => {
-    if (!shrinkEnabled || !headerEntered || !extraVisible) return undefined;
-    const timer = window.setTimeout(() => {
-      if (headerRef.current) setExpandedHeight(headerRef.current.scrollHeight);
-    }, 850);
-    return () => window.clearTimeout(timer);
-  }, [shrinkEnabled, headerEntered, extraVisible, title]);
+    if (
+      !shrinkEnabled ||
+      !headerEntered ||
+      !extraVisible ||
+      isScrollShrunk ||
+      isContracting
+    ) {
+      return undefined;
+    }
+
+    let frame = 0;
+    const measureExpandedHeight = () => {
+      const header = headerRef.current;
+      if (!header) return;
+      const nextHeight = Math.ceil(header.scrollHeight);
+      if (nextHeight > HEADER_COLLAPSED_HEIGHT) {
+        setExpandedHeight((current) =>
+          current === nextHeight ? current : nextHeight,
+        );
+      }
+    };
+
+    // Measure once after layout, then again after the route-copy/grid
+    // transition has settled. This avoids capturing the collapsed 108px
+    // header as its expanded height when the user scrolls during page entry.
+    frame = window.requestAnimationFrame(measureExpandedHeight);
+    const settleTimer = window.setTimeout(measureExpandedHeight, 360);
+    window.addEventListener("resize", measureExpandedHeight);
+
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      window.clearTimeout(settleTimer);
+      window.removeEventListener("resize", measureExpandedHeight);
+    };
+  }, [
+    shrinkEnabled,
+    headerEntered,
+    extraVisible,
+    isScrollShrunk,
+    isContracting,
+    title,
+  ]);
 
   useLayoutEffect(() => {
     if (!shrinkEnabled || !expandedHeight || !headerRef.current) return undefined;

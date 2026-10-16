@@ -124,8 +124,12 @@ export default function BulkBuy() {
       <AppHeader
         sticky
         thresholdShrink
+<<<<<<< Updated upstream
         title="Bulk Buy"
         subtitle="Purchase complete livestock lots from trusted farmers."
+=======
+        title={t("bulkBuy.title")}
+>>>>>>> Stashed changes
         search={
           <label className="qurbi-search flex h-11 items-center gap-2 rounded-2xl border px-3 transition-all duration-200 ease-out focus-within:ring-2 focus-within:ring-[#E3C19F]">
             <Search className="h-4 w-4 text-black" />
