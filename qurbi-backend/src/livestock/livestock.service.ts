@@ -11,6 +11,9 @@ import {
   FarmerProfile,
   Livestock,
   LivestockStatus,
+  Notification,
+  NotificationAudience,
+  NotificationType,
   OrderItem,
   RequestStatus,
   Reservation,
@@ -477,10 +480,29 @@ export class LivestockService extends BaseCrudService<Livestock> {
     blocked: boolean,
     reason: string | null,
   ): Promise<LivestockWithVisibility> {
-    await this.findOne(id);
-    await this.repository.update(id, {
-      adminBlocked: blocked,
-      adminBlockReason: blocked ? reason : null,
+    await this.dataSource.transaction(async (manager) => {
+      const listing = await manager.findOne(Livestock, { where: { id } });
+      if (!listing) throw new NotFoundException(`Livestock ${id} not found`);
+      const changed = listing.adminBlocked !== blocked;
+      listing.adminBlocked = blocked;
+      listing.adminBlockReason = blocked ? reason : null;
+      await manager.save(listing);
+      if (changed) {
+        await manager.save(
+          manager.create(Notification, {
+            userId: listing.farmerId,
+            audience: NotificationAudience.FARMER,
+            type: NotificationType.LISTING,
+            title: blocked ? 'Listing hidden by admin' : 'Listing restored',
+            body: blocked
+              ? `Your livestock listing was hidden from the marketplace.${reason ? ` Reason: ${reason}` : ''}`
+              : 'The admin restriction was removed from your livestock listing.',
+            linkUrl: `/livestock/${listing.id}`,
+            relatedType: 'livestock',
+            relatedId: listing.id,
+          }),
+        );
+      }
     });
     return this.findOneWithVisibility(id);
   }
@@ -491,8 +513,29 @@ export class LivestockService extends BaseCrudService<Livestock> {
     id: string,
     featured: boolean,
   ): Promise<LivestockWithVisibility> {
-    await this.findOne(id);
-    await this.repository.update(id, { isFeatured: featured });
+    await this.dataSource.transaction(async (manager) => {
+      const listing = await manager.findOne(Livestock, { where: { id } });
+      if (!listing) throw new NotFoundException(`Livestock ${id} not found`);
+      const changed = listing.isFeatured !== featured;
+      listing.isFeatured = featured;
+      await manager.save(listing);
+      if (changed) {
+        await manager.save(
+          manager.create(Notification, {
+            userId: listing.farmerId,
+            audience: NotificationAudience.FARMER,
+            type: NotificationType.LISTING,
+            title: featured ? 'Listing featured' : 'Listing no longer featured',
+            body: featured
+              ? 'Your livestock listing was selected for featured placement.'
+              : 'Your livestock listing was removed from featured placement. It remains available in the marketplace if eligible.',
+            linkUrl: `/livestock/${listing.id}`,
+            relatedType: 'livestock',
+            relatedId: listing.id,
+          }),
+        );
+      }
+    });
     return this.findOneWithVisibility(id);
   }
 

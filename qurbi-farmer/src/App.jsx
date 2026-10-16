@@ -41,9 +41,10 @@ import AdminOrders from "@/pages/admin/AdminOrders";
 import AdminBreeds from "@/pages/admin/AdminBreeds";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminLivestockDetail from "@/pages/admin/AdminLivestockDetail";
+import NotificationPopup from "@/components/agri/NotificationPopup";
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated, user } = useAuth();
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -63,7 +64,9 @@ const AuthenticatedApp = () => {
 
   // Render the main app
   return (
-    <Routes>
+    <>
+      {isAuthenticated && user?.role === "farmer" && <NotificationPopup />}
+      <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/switch-session" element={<SwitchSession />} />
@@ -113,8 +116,9 @@ const AuthenticatedApp = () => {
         </Route>
       </Route>
 
-      <Route path="*" element={<PageNotFound />} />
-    </Routes>
+        <Route path="*" element={<PageNotFound />} />
+      </Routes>
+    </>
   );
 };
 

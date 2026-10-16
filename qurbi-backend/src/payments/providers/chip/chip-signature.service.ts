@@ -10,9 +10,13 @@ export class ChipSignatureService {
     if (!rawBody?.length || !signature) {
       throw new UnauthorizedException('Missing CHIP webhook signature');
     }
-    const encodedKey = this.config.get<string>('CHIP_WEBHOOK_PUBLIC_KEY_BASE64')?.trim();
+    const encodedKey = this.config
+      .get<string>('CHIP_WEBHOOK_PUBLIC_KEY_BASE64')
+      ?.trim();
     if (!encodedKey) {
-      throw new UnauthorizedException('CHIP webhook verification is not configured');
+      throw new UnauthorizedException(
+        'CHIP webhook verification is not configured',
+      );
     }
 
     let publicKey: string;

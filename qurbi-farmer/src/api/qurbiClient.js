@@ -54,7 +54,7 @@ const normalizeUser = (item) => item && ({ ...item, name: item.fullName, full_na
 function normalizeLivestock(item) {
   if (!item) return item;
   const attributes = item.attributes || {};
-  return { ...attributes, ...item, ownerId: item.farmerId, species: item.species?.name || attributes.species || "", breed: item.breed?.name || attributes.breed || "Unspecified", gender: item.sex ? titleCase(item.sex) : attributes.gender, status: titleCase(item.status), speciesApprovalStatus: titleCase(item.speciesApprovalStatus), breedApprovalStatus: titleCase(item.breedApprovalStatus), disabled: Boolean(item.adminBlocked), featured: Boolean(item.isFeatured), state: attributes.state || attributes.farmLocation || "", coverImage: item.images?.[0] || attributes.coverImage || "", price: Number(item.price), weight: item.weightKg || attributes.weight || "", created_date: item.createdAt, updated_date: item.updatedAt };
+  return { ...attributes, ...item, ownerId: item.farmerId, species: item.species?.name || attributes.species || "", breed: item.breed?.name || attributes.breed || "Unspecified", gender: item.sex ? titleCase(item.sex) : attributes.gender, status: titleCase(item.status), speciesApprovalStatus: titleCase(item.speciesApprovalStatus), breedApprovalStatus: titleCase(item.breedApprovalStatus), disabled: Boolean(item.adminBlocked), featured: Boolean(item.isFeatured), state: attributes.state || attributes.farmLocation || "", coverImage: item.images?.[0] || attributes.coverImage || "", price: Number(item.price), weight: item.weightKg || attributes.weight || "", listingExpiresAt: item.marketplaceExpiresAt || null, created_date: item.createdAt, updated_date: item.updatedAt };
 }
 
 function normalizeBulk(item, breeds = []) {
@@ -69,7 +69,9 @@ function normalizeBulk(item, breeds = []) {
 function normalizeNotification(item) {
   if (!item) return item;
   const isNewPaidOrder = item.audience === "farmer" && item.type === "payment" && item.relatedType === "order";
-  return { ...item, message: item.body, orderId: item.relatedType === "order" ? item.relatedId : null, livestockId: item.relatedType === "livestock" ? item.relatedId : null, created_date: item.createdAt, priority: item.type === "refund" ? "Important" : "Normal", type: isNewPaidOrder ? "New Order" : titleCase(item.type) };
+  const isRefund = String(item.title || "").toLowerCase().includes("refund");
+  const targetUrl = String(item.linkUrl || "").startsWith("/") ? item.linkUrl : null;
+  return { ...item, message: item.body, orderId: item.relatedType === "order" ? item.relatedId : null, livestockId: item.relatedType === "livestock" ? item.relatedId : null, targetUrl, created_date: item.createdAt, priority: isRefund ? "Important" : "Normal", type: isNewPaidOrder ? "New Order" : isRefund && String(item.title || "").toLowerCase().includes("requested") ? "Refund Requested" : titleCase(item.type) };
 }
 
 function normalizeOrderItem(orderItem) {
@@ -242,7 +244,7 @@ const FarmerNotification = {
   /** @type {SubscribeFn} */ subscribe: (callback) => {
     if (typeof window === "undefined" || !callback) return () => {};
     const refresh = () => callback();
-    const timer = window.setInterval(refresh, 15_000);
+    const timer = window.setInterval(refresh, 5_000);
     window.addEventListener("focus", refresh);
     return () => {
       window.clearInterval(timer);

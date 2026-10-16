@@ -23,16 +23,17 @@ function relativeTime(value) {
 }
 
 function notificationStyle(notification) {
+  const title = String(notification.title || "").toLowerCase();
   if (notification.priority === "Important" || notification.type === "Refund Requested") {
     return { Icon: ShieldAlert, className: "bg-destructive/10 text-destructive" };
   }
   if (notification.type === "New Order") {
     return { Icon: PackageCheck, className: "bg-sky-100 text-sky-700" };
   }
-  if (notification.type?.includes("Approved")) {
+  if (notification.type?.includes("Approved") || title.includes("approved")) {
     return { Icon: CheckCircle2, className: "bg-emerald-100 text-emerald-700" };
   }
-  if (notification.type?.includes("Rejected")) {
+  if (notification.type?.includes("Rejected") || title.includes("rejected")) {
     return { Icon: XCircle, className: "bg-destructive/10 text-destructive" };
   }
   return { Icon: Bell, className: "bg-primary/10 text-primary" };
@@ -75,7 +76,8 @@ export default function NotificationBell() {
       }
     }
     setOpen(false);
-    if (notification.orderId) navigate(`/orders/${notification.orderId}`);
+    if (notification.targetUrl) navigate(notification.targetUrl);
+    else if (notification.orderId) navigate(`/orders/${notification.orderId}`);
     else if (notification.livestockId) navigate(`/livestock/${notification.livestockId}`);
     else navigate("/notifications");
   };

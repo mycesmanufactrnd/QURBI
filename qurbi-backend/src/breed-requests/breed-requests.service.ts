@@ -5,7 +5,17 @@ import {
 } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, FindOptionsWhere, Repository } from 'typeorm';
-import { Breed, BreedRequest, Livestock, LivestockStatus, RequestStatus, UserRole } from '../entities';
+import {
+  Breed,
+  BreedRequest,
+  Livestock,
+  LivestockStatus,
+  Notification,
+  NotificationAudience,
+  NotificationType,
+  RequestStatus,
+  UserRole,
+} from '../entities';
 import { BaseCrudService } from '../common/base-crud.service';
 import { slugify } from '../common/slugify';
 import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
@@ -90,9 +100,12 @@ export class BreedRequestsService extends BaseCrudService<BreedRequest> {
     return this.dataSource.transaction(async (manager) => {
       const waitingListings = await manager
         .createQueryBuilder(Livestock, 'livestock')
-        .where("JSON_UNQUOTE(JSON_EXTRACT(livestock.attributes, '$.breedRequestId')) = :requestId", {
-          requestId: request.id,
-        })
+        .where(
+          "JSON_UNQUOTE(JSON_EXTRACT(livestock.attributes, '$.breedRequestId')) = :requestId",
+          {
+            requestId: request.id,
+          },
+        )
         .getMany();
       request.reviewedByUserId = input.reviewerId;
       request.reviewedAt = new Date();
@@ -110,7 +123,9 @@ export class BreedRequestsService extends BaseCrudService<BreedRequest> {
         request.createdBreedId = breed.id;
         for (const listing of waitingListings) {
           const attributes = listing.attributes ?? {};
-          const originalStatus = String(attributes.originalStatus ?? '').toLowerCase();
+          const originalStatus = String(
+            attributes.originalStatus ?? '',
+          ).toLowerCase();
           listing.breedId = breed.id;
           listing.breedApprovalStatus = RequestStatus.APPROVED;
           listing.attributes = {
@@ -119,10 +134,12 @@ export class BreedRequestsService extends BaseCrudService<BreedRequest> {
             breedRequestId: '',
             breedApprovalStatus: 'Approved',
           };
-          if (originalStatus === LivestockStatus.AVAILABLE) {
+          if (originalStatus === 'available') {
             listing.status = LivestockStatus.AVAILABLE;
-            listing.marketplaceExpiresAt = new Date(Date.now() + LISTING_LIFETIME_MS);
-          } else if (originalStatus === LivestockStatus.UNAVAILABLE) {
+            listing.marketplaceExpiresAt = new Date(
+              Date.now() + LISTING_LIFETIME_MS,
+            );
+          } else if (originalStatus === 'unavailable') {
             listing.status = LivestockStatus.UNAVAILABLE;
           } else {
             listing.status = LivestockStatus.DRAFT;
@@ -147,7 +164,22 @@ export class BreedRequestsService extends BaseCrudService<BreedRequest> {
         }
       }
 
-      return manager.save(request);
+      const savedRequest = await manager.save(request);
+      const decision = input.approve ? 'approved' : 'rejected';
+      const reviewNote = input.reviewNote ? ` Note: ${input.reviewNote}` : '';
+      await manager.save(
+        manager.create(Notification, {
+          userId: request.requestedByUserId,
+          audience: NotificationAudience.FARMER,
+          type: NotificationType.REQUEST_UPDATE,
+          title: `Breed request ${decision}`,
+          body: `Your request to add ${request.proposedName} was ${decision}.${reviewNote}`,
+          linkUrl: '/livestock',
+          relatedType: 'breed_request',
+          relatedId: request.id,
+        }),
+      );
+      return savedRequest;
     });
   }
 }

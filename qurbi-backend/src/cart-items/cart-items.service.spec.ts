@@ -19,7 +19,10 @@ describe('CartItemsService unique listing quantities', () => {
     getOrCreateForUser: jest.fn(async () => ({ id: 'cart-1' })),
   };
   const reservationsService = {
-    availability: jest.fn(async () => ({ available: true, state: 'available' })),
+    availability: jest.fn(async () => ({
+      available: true,
+      state: 'available',
+    })),
   };
   const service = new CartItemsService(
     repository as never,
@@ -30,12 +33,14 @@ describe('CartItemsService unique listing quantities', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('rejects a livestock quantity greater than one', async () => {
-    await expect(service.addItem({
-      userId: 'buyer-1',
-      itemType: OrderItemType.LIVESTOCK,
-      livestockId: 'livestock-1',
-      quantity: 20,
-    })).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.addItem({
+        userId: 'buyer-1',
+        itemType: OrderItemType.LIVESTOCK,
+        livestockId: 'livestock-1',
+        quantity: 20,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
     expect(reservationsService.availability).not.toHaveBeenCalled();
   });
 
@@ -58,7 +63,9 @@ describe('CartItemsService unique listing quantities', () => {
     });
 
     expect(result.quantity).toBe(1);
-    expect(repository.save).toHaveBeenCalledWith(expect.objectContaining({ quantity: 1 }));
+    expect(repository.save).toHaveBeenCalledWith(
+      expect.objectContaining({ quantity: 1 }),
+    );
   });
 
   it('rejects quantity updates for unique listings', async () => {
@@ -69,7 +76,8 @@ describe('CartItemsService unique listing quantities', () => {
       quantity: 1,
     });
 
-    await expect(service.updateQuantity('buyer-1', 'item-1', 2))
-      .rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.updateQuantity('buyer-1', 'item-1', 2),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

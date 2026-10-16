@@ -40,7 +40,8 @@ export default function Notifications() {
       setItems((current) => current.map((item) => item.id === notification.id ? { ...item, isRead: true } : item));
       await qurbi.entities.FarmerNotification.update(notification.id, { isRead: true }).catch(() => null);
     }
-    if (notification.orderId) navigate(`/orders/${notification.orderId}`);
+    if (notification.targetUrl) navigate(notification.targetUrl);
+    else if (notification.orderId) navigate(`/orders/${notification.orderId}`);
     else if (notification.livestockId) navigate(`/livestock/${notification.livestockId}`);
   };
 
@@ -80,12 +81,13 @@ export default function Notifications() {
         {loading ? (
           <div className="flex justify-center py-16"><Loader2 className="h-7 w-7 animate-spin text-primary" /></div>
         ) : items.length ? <>{items.slice(0, visibleCount).map((notification) => {
-          const approved = notification.type?.includes("Approved");
-          const rejected = notification.type?.includes("Rejected");
+          const title = String(notification.title || "").toLowerCase();
+          const approved = notification.type?.includes("Approved") || title.includes("approved");
+          const rejected = notification.type?.includes("Rejected") || title.includes("rejected");
           const newOrder = notification.type === "New Order";
           const important = notification.priority === "Important" || notification.type === "Refund Requested";
           const Icon = important ? ShieldAlert : newOrder ? PackageCheck : approved ? CheckCircle2 : rejected ? XCircle : Bell;
-          const linked = Boolean(notification.orderId || notification.livestockId);
+          const linked = Boolean(notification.targetUrl || notification.orderId || notification.livestockId);
           return (
             <button
               key={notification.id}

@@ -104,7 +104,8 @@ export class OrdersService {
         relations: { items: true, reservations: true },
         order: { createdAt: 'DESC' },
       });
-      for (const order of orders) await this.ensurePendingDeliveryFee(manager, order);
+      for (const order of orders)
+        await this.ensurePendingDeliveryFee(manager, order);
       return orders;
     });
   }
@@ -147,7 +148,12 @@ export class OrdersService {
       await this.reservationsService.expireDue(manager);
       const order = await manager.findOne(Order, {
         where: { id },
-        relations: { items: true, trackingEvents: true, reservations: true, buyer: true },
+        relations: {
+          items: true,
+          trackingEvents: true,
+          reservations: true,
+          buyer: true,
+        },
       });
       if (!order) throw new NotFoundException(`Order ${id} not found`);
       this.assertParty(order, actor, ['buyer', 'farmer']);
@@ -156,7 +162,10 @@ export class OrdersService {
     });
   }
 
-  private async ensurePendingDeliveryFee(manager: EntityManager, order: Order): Promise<void> {
+  private async ensurePendingDeliveryFee(
+    manager: EntityManager,
+    order: Order,
+  ): Promise<void> {
     if (
       order.status !== OrderStatus.PENDING_PAYMENT ||
       order.deliveryMethod !== DeliveryMethod.DELIVERY ||
@@ -248,7 +257,10 @@ export class OrdersService {
               await manager.save(existingOrder);
             }
             await this.ensurePendingDeliveryFee(manager, existingOrder);
-            await manager.delete(CartItem, items.map((item) => item.id));
+            await manager.delete(
+              CartItem,
+              items.map((item) => item.id),
+            );
             return existingOrder;
           }
 
@@ -443,10 +455,7 @@ export class OrdersService {
       }),
     );
 
-    if (
-      opts.images?.length &&
-      FULFILMENT_ADVANCE_TARGETS.includes(toStatus)
-    ) {
+    if (opts.images?.length && FULFILMENT_ADVANCE_TARGETS.includes(toStatus)) {
       const update = deliveryNotificationFor(toStatus);
       await manager.save(
         manager.create(Notification, {
@@ -458,6 +467,26 @@ export class OrdersService {
           linkUrl: `/orders/${order.id}`,
           relatedType: 'order_tracking_event',
           relatedId: trackingEvent.id,
+        }),
+      );
+    }
+
+    if (toStatus === OrderStatus.RECEIVED) {
+      const confirmedByBuyer = opts.userId === order.buyerId;
+      await manager.save(
+        manager.create(Notification, {
+          userId: order.farmerId,
+          audience: NotificationAudience.FARMER,
+          type: NotificationType.ORDER_UPDATE,
+          title: confirmedByBuyer
+            ? 'Order received by buyer'
+            : 'Order receipt confirmed',
+          body: confirmedByBuyer
+            ? `Buyer confirmed that order #${order.orderNumber} was received. The order is now complete.`
+            : `Receipt was confirmed for order #${order.orderNumber}. The order is now complete.`,
+          linkUrl: `/orders/${order.id}`,
+          relatedType: 'order',
+          relatedId: order.id,
         }),
       );
     }
@@ -481,6 +510,20 @@ export class OrdersService {
             type: NotificationType.ORDER_UPDATE,
             title: 'Order cancelled',
             body: `Order #${order.orderNumber} was cancelled. Reason: ${order.cancellationReason || 'No reason provided'}. ${releaseMessage}`,
+            linkUrl: `/orders/${order.id}`,
+            relatedType: 'order',
+            relatedId: order.id,
+          }),
+        );
+      }
+      if (opts.userId && opts.userId !== order.buyerId) {
+        await manager.save(
+          manager.create(Notification, {
+            userId: order.buyerId,
+            audience: NotificationAudience.BUYER,
+            type: NotificationType.ORDER_UPDATE,
+            title: 'Order cancelled',
+            body: `Order #${order.orderNumber} was cancelled. Reason: ${order.cancellationReason || 'No reason provided'}.`,
             linkUrl: `/orders/${order.id}`,
             relatedType: 'order',
             relatedId: order.id,
@@ -708,6 +751,18 @@ export class OrdersService {
       order.refundReviewedByUserId = null;
       order.refundReviewedAt = null;
       await manager.save(order);
+      await manager.save(
+        manager.create(Notification, {
+          userId: order.farmerId,
+          audience: NotificationAudience.FARMER,
+          type: NotificationType.ORDER_UPDATE,
+          title: 'Refund requested',
+          body: `The buyer requested a refund for order #${order.orderNumber}. Reason: ${reason}`,
+          linkUrl: `/orders/${order.id}`,
+          relatedType: 'order',
+          relatedId: order.id,
+        }),
+      );
       return order;
     });
   }
@@ -758,6 +813,31 @@ export class OrdersService {
         order.refundStatus = RefundStatus.REJECTED;
         await manager.save(order);
       }
+
+      const decision = input.approve ? 'approved' : 'rejected';
+      const note = input.note ? ` Note: ${input.note}` : '';
+      await manager.save([
+        manager.create(Notification, {
+          userId: order.buyerId,
+          audience: NotificationAudience.BUYER,
+          type: NotificationType.ORDER_UPDATE,
+          title: `Refund ${decision}`,
+          body: `Your refund request for order #${order.orderNumber} was ${decision}.${note}`,
+          linkUrl: `/orders/${order.id}`,
+          relatedType: 'order',
+          relatedId: order.id,
+        }),
+        manager.create(Notification, {
+          userId: order.farmerId,
+          audience: NotificationAudience.FARMER,
+          type: NotificationType.ORDER_UPDATE,
+          title: `Refund ${decision}`,
+          body: `The refund request for order #${order.orderNumber} was ${decision}.${note}`,
+          linkUrl: `/orders/${order.id}`,
+          relatedType: 'order',
+          relatedId: order.id,
+        }),
+      ]);
 
       return order;
     });
