@@ -130,8 +130,12 @@ function PackageCard({ order, onOpen }) {
         </>
       )}
 
-      <Button onClick={() => onOpen(order.id)} variant={needsFarmer ? "default" : "outline"} className="mt-4 h-12 w-full rounded-2xl text-sm font-bold">
-        {needsFarmer ? <Camera className="mr-2 h-4 w-4" /> : null}{needsFarmer ? t(`stageAction.${stage}`) : t("card.viewOrder")}<ChevronRight className="ml-auto h-4 w-4" />
+      <Button onClick={() => onOpen(order.id)} variant={needsFarmer ? "default" : "outline"} className="mt-4 h-auto min-h-12 w-full justify-start whitespace-normal rounded-2xl px-4 py-3 text-sm font-bold">
+        {needsFarmer ? <Camera className="h-4 w-4 shrink-0" /> : null}
+        <span className="min-w-0 flex-1 break-words text-center leading-snug">
+          {needsFarmer ? t(`stageAction.${stage}`) : t("card.viewOrder")}
+        </span>
+        <ChevronRight className="h-4 w-4 shrink-0" />
       </Button>
     </article>
   );
