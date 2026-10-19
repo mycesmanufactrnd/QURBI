@@ -74,9 +74,10 @@ export class LivestockService extends BaseCrudService<Livestock> {
     query: LivestockQuery,
     viewer?: AuthenticatedUser,
   ): Promise<Paginated<LivestockWithVisibility>> {
-    await this.dataSource.transaction((manager) =>
-      this.reservationsService.expireDue(manager),
-    );
+    await this.dataSource.transaction(async (manager) => {
+      await this.reservationsService.expireDue(manager);
+      await this.expireDueListings(manager);
+    });
     const { page, limit, skip, take } = resolvePage(query);
     const isOwnInventory =
       viewer?.role === UserRole.FARMER && query.farmerId === viewer.id;
@@ -411,7 +412,11 @@ export class LivestockService extends BaseCrudService<Livestock> {
       ageMonths: effectiveAgeMonths,
       ageRecordedAt: this.ageRecordedAt(effectiveAttributes),
     });
-    if (data.status === LivestockStatus.AVAILABLE) {
+    if (
+      data.status === LivestockStatus.AVAILABLE &&
+      (listing.status !== LivestockStatus.AVAILABLE ||
+        resolveMarketplaceExpiry(listing) <= new Date())
+    ) {
       data.marketplaceExpiresAt = listingExpiryFromEligibility(
         data.marketplaceEligibleFrom as Date | null,
       );
@@ -643,15 +648,81 @@ export class LivestockService extends BaseCrudService<Livestock> {
       if (!listing) return; // order item pointed at a listing that no longer exists
       if (listing.status === LivestockStatus.AVAILABLE) return; // idempotent no-op
 
-      listing.status = LivestockStatus.AVAILABLE;
+      const expiresAt = resolveMarketplaceExpiry(listing);
+      listing.status =
+        expiresAt > new Date()
+          ? LivestockStatus.AVAILABLE
+          : LivestockStatus.UNAVAILABLE;
       listing.soldAt = null;
-      listing.marketplaceExpiresAt = new Date(Date.now() + LISTING_LIFETIME_MS);
+      listing.marketplaceExpiresAt = expiresAt;
       await entityManager.save(listing);
     };
 
     if (manager) return run(manager);
     return this.dataSource.transaction(run);
   }
+
+  // Reconciles the legacy expiry stored in attributes with the canonical
+  // column, then expires listings before any buyer browse response is built.
+  // The status transition makes this idempotent and prevents duplicate alerts.
+  async expireDueListings(manager?: EntityManager): Promise<number> {
+    const run = async (entityManager: EntityManager): Promise<number> => {
+      const listings = await entityManager
+        .createQueryBuilder(Livestock, 'livestock')
+        .setLock('pessimistic_write')
+        .where('livestock.status = :available', {
+          available: LivestockStatus.AVAILABLE,
+        })
+        .getMany();
+      const now = new Date();
+      let expiredCount = 0;
+
+      for (const listing of listings) {
+        const expiresAt = resolveMarketplaceExpiry(listing);
+        if (expiresAt > now) continue;
+
+        listing.status = LivestockStatus.UNAVAILABLE;
+        listing.marketplaceExpiresAt = expiresAt;
+        await entityManager.save(listing);
+        await entityManager.save(
+          entityManager.create(Notification, {
+            userId: listing.farmerId,
+            audience: NotificationAudience.FARMER,
+            type: NotificationType.LISTING,
+            title: 'Listing expired',
+            body: 'Your livestock listing expired and is hidden from buyers. Review and renew it to return it to the marketplace.',
+            linkUrl: `/livestock/${listing.id}`,
+            relatedType: 'livestock',
+            relatedId: listing.id,
+          }),
+        );
+        expiredCount += 1;
+      }
+      return expiredCount;
+    };
+
+    if (manager) return run(manager);
+    return this.dataSource.transaction(run);
+  }
+}
+
+export function resolveMarketplaceExpiry(
+  listing: Pick<Livestock, 'marketplaceExpiresAt' | 'createdAt'> & {
+    attributes?: Record<string, unknown> | null;
+  },
+): Date {
+  const canonical = listing.marketplaceExpiresAt?.getTime();
+  const legacyValue = listing.attributes?.listingExpiresAt;
+  const legacy =
+    typeof legacyValue === 'string' ? Date.parse(legacyValue) : Number.NaN;
+  const candidates = [canonical, legacy].filter(
+    (value): value is number =>
+      typeof value === 'number' && Number.isFinite(value),
+  );
+  const expiry = candidates.length
+    ? Math.min(...candidates)
+    : listing.createdAt.getTime() + LISTING_LIFETIME_MS;
+  return new Date(expiry);
 }
 
 export function computeMarketplaceVisibility(
@@ -715,9 +786,7 @@ export function computeMarketplaceVisibility(
       marketplaceVisibilityReason: 'Not yet eligible for marketplace',
     };
   }
-  const expiresAt =
-    listing.marketplaceExpiresAt ??
-    new Date(listing.createdAt.getTime() + LISTING_LIFETIME_MS);
+  const expiresAt = resolveMarketplaceExpiry(listing);
   if (expiresAt <= new Date()) {
     return {
       marketplaceVisible: false,
