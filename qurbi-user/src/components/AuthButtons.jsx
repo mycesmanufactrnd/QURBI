@@ -59,7 +59,7 @@ export default function AuthButtons({ returnTo = null, onDark = false, compact =
       </button>
       <button
         onClick={() =>
-          navigate(`/auth?mode=register&returnTo=${encodeURIComponent(target)}`)
+          navigate("/auth", { state: { authMode: "register", returnTo: target } })
         }
         aria-label={t("authButtons.signUp")}
         title={compact ? t("authButtons.signUp") : undefined}

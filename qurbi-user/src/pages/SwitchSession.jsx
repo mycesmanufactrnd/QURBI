@@ -24,7 +24,7 @@ export default function SwitchSession() {
   return (
     <div className="fixed inset-0 flex items-center justify-center p-6 text-center">
       {failed
-        ? <p className="text-sm">This switch link is invalid. <a className="font-bold underline" href="/auth?mode=login">Log in</a></p>
+        ? <p className="text-sm">This switch link is invalid. <a className="font-bold underline" href="/auth">Log in</a></p>
         : <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#E3C19F] border-t-[#41362D]" />}
     </div>
   );

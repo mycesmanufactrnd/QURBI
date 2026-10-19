@@ -610,26 +610,28 @@ export default function Browse() {
         }
       >
         {/* Species filter */}
-        <div className="horizontal-filter-scroll no-scrollbar flex max-w-full gap-2 overflow-x-auto pb-1">
-          {speciesList.map((sp) => (
-            <button
-              key={sp}
-              type="button"
-              onClick={() =>
-                setActiveSpecies(sp)
-              }
-              aria-pressed={activeSpecies === sp}
-              className={`min-h-11 flex-shrink-0 rounded-full px-5 text-sm font-semibold transition-all active:scale-95 ${
-                activeSpecies === sp
-                  ? "bg-[#E3C19F] text-[#41362D] shadow-md"
-                  : "border border-white/25 bg-white/10 text-white"
-              }`}
-            >
-              {sp === "All"
-                ? t("browse.allSpecies")
-                : t(`home.species.${String(sp).toLowerCase()}`, { defaultValue: sp })}
-            </button>
-          ))}
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="horizontal-filter-scroll no-scrollbar flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1">
+            {speciesList.map((sp) => (
+              <button
+                key={sp}
+                type="button"
+                onClick={() =>
+                  setActiveSpecies(sp)
+                }
+                aria-pressed={activeSpecies === sp}
+                className={`min-h-11 flex-shrink-0 rounded-full px-5 text-sm font-semibold transition-all active:scale-95 ${
+                  activeSpecies === sp
+                    ? "bg-[#E3C19F] text-[#41362D] shadow-md"
+                    : "border border-white/25 bg-white/10 text-white"
+                }`}
+              >
+                {sp === "All"
+                  ? t("browse.allSpecies")
+                  : t(`home.species.${String(sp).toLowerCase()}`, { defaultValue: sp })}
+              </button>
+            ))}
+          </div>
         </div>
       </AppHeader>
 

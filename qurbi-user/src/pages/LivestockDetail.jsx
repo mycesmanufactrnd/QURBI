@@ -17,6 +17,8 @@ import {
   User,
   Leaf,
   Play,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   loadLivestockById,
@@ -53,6 +55,7 @@ import { qurbiApi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
 import { orderBlocksRepurchase } from "@/components/account/orderStatus";
 import { analyticsSource, trackBuyerActivity } from "@/lib/buyer-analytics";
+import { useDisplayMode } from "@/lib/display-mode-context";
 
 const SPECIES_VALUE_KEYS = {
   cow: "cow",
@@ -151,6 +154,7 @@ function AvailabilityModal({ state, onClose, onBrowse, backLabel }) {
 }
 
 export default function LivestockDetail() {
+  const { isDesktop } = useDisplayMode();
   const { t } = useTranslation("listings");
   const { t: tf } = useTranslation("shopflow");
   const { id } = useParams();
@@ -194,7 +198,17 @@ export default function LivestockDetail() {
   const [failedImageUrls, setFailedImageUrls] = useState(() => new Set());
   const [previewImage, setPreviewImage] = useState("");
   const farmSectionRef = React.useRef(null);
+  const relatedScrollRef = React.useRef(null);
   const farmViewTracked = React.useRef(false);
+
+  const scrollRelated = (direction) => {
+    const scroller = relatedScrollRef.current;
+    if (!scroller) return;
+    scroller.scrollBy({
+      left: direction * Math.max(220, scroller.clientWidth * 0.7),
+      behavior: "smooth",
+    });
+  };
   useEffect(() => {
     setActiveMedia(0);
     setFailedImageUrls(new Set());
@@ -530,7 +544,7 @@ export default function LivestockDetail() {
     >
       {/* Shared image/video gallery. */}
       <div
-        className={`qurbi-page-header relative pb-14 bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] ${reveal()}`}
+        className={`qurbi-page-header relative bg-gradient-to-br from-[#E3C19F] to-[#F7EDE2] ${reveal()}`}
       >
         <button
           type="button"
@@ -577,14 +591,21 @@ export default function LivestockDetail() {
             {t("livestockDetail.noImage")}
           </div>
         )}
+      </div>
+
+      <DetailOuterSheet
+        raised={detailsRaised}
+        withActionBar={showPurchaseActions}
+        className={isDesktop ? "qurbi-almond-gradient-outline" : ""}
+      >
         {media.length > 1 && (
-          <div className="no-scrollbar flex gap-2 overflow-x-auto p-3">
+          <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
             {media.map((item, index) => (
               <button key={item.type + item.url} type="button"
                 onClick={() => setActiveMedia(index)}
                 aria-label={item.type === "video" ? t("livestockDetail.videos") + " " + (index - allImages.length + 1) : tf("detail.showPhoto", { number: index + 1, total: allImages.length })}
                 aria-pressed={selectedMedia === item}
-                className={`flex h-16 w-16 flex-none items-center justify-center overflow-hidden rounded-xl border-2 bg-[#41362D] text-white ${selectedMedia === item ? "border-[#41362D] ring-2 ring-[#41362D]/40" : "border-[#E3C19F] opacity-80"}`}>
+                className={`flex h-16 w-16 flex-none items-center justify-center overflow-hidden rounded-xl border-2 bg-[#41362D] text-white ${selectedMedia === item ? "border-[#E3C19F] ring-2 ring-[#E3C19F]/35" : "border-white/30 opacity-80"}`}>
                 {item.type === "image" && !failedImageUrls.has(item.url) ? (
                   <img
                     src={item.url}
@@ -607,9 +628,7 @@ export default function LivestockDetail() {
             ))}
           </div>
         )}
-      </div>
 
-      <DetailOuterSheet raised={detailsRaised} withActionBar={showPurchaseActions}>
         {/* Title + price + status */}
         <section className={reveal()} style={{ animationDelay: "80ms" }} aria-labelledby="livestock-title">
           <h1 id="livestock-title" className="break-words text-2xl font-extrabold leading-tight text-white sm:text-3xl">
@@ -646,11 +665,22 @@ export default function LivestockDetail() {
                   {t("livestockDetail.relatedTitle")}
                 </h2>
               </div>
-              <span className="text-xs font-semibold text-white/60">
-                {t("livestockDetail.swipeToExplore")}
-              </span>
+              {isDesktop ? (
+                <div className="flex items-center gap-1.5">
+                  <button type="button" onClick={() => scrollRelated(-1)} aria-label={t("livestockDetail.previousRelated", "Previous similar livestock")} className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white shadow-sm transition-all hover:brightness-110 active:scale-95">
+                    <ChevronLeft aria-hidden="true" className="h-5 w-5" />
+                  </button>
+                  <button type="button" onClick={() => scrollRelated(1)} aria-label={t("livestockDetail.nextRelated", "Next similar livestock")} className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white shadow-sm transition-all hover:brightness-110 active:scale-95">
+                    <ChevronRight aria-hidden="true" className="h-5 w-5" />
+                  </button>
+                </div>
+              ) : (
+                <span className="text-xs font-semibold text-white/60">
+                  {t("livestockDetail.swipeToExplore")}
+                </span>
+              )}
             </div>
-            <div className="no-scrollbar -mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-3">
+            <div ref={relatedScrollRef} className="no-scrollbar -mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-3">
               {relatedLivestock.map((item) => {
                 const image = mediaUrl(item.coverImage || item.images?.[0]);
                 const label = item.breed || translatedListingValue(t, "speciesValues", SPECIES_VALUE_KEYS, item.species) || t("livestockDetail.livestockFallback");

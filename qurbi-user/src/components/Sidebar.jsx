@@ -32,7 +32,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="sticky top-0 z-[60] flex h-dvh w-[260px] flex-col overflow-hidden border-r border-white/10 bg-gradient-to-b from-[#41362D] to-[#6B594A] shadow-[4px_0_24px_rgba(65,54,45,0.3)]"
+      className="qurbi-desktop-sidebar sticky top-0 z-[60] flex h-dvh w-[260px] flex-col overflow-hidden border-r border-white/10 shadow-[4px_0_24px_rgba(65,54,45,0.3)]"
       style={{ viewTransitionName: "qurbi-desktop-sidebar" }}
     >
       <div className="flex min-h-[76px] items-center gap-3 border-b border-white/15 px-5">

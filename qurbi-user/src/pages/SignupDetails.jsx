@@ -70,7 +70,7 @@ export default function SignupDetails() {
   };
 
   if (authChecked && !isAuthenticated) {
-    return <Navigate to="/auth?mode=register" replace />;
+    return <Navigate to="/auth" replace state={{ authMode: "register" }} />;
   }
 
   if (authChecked && isAuthenticated &&

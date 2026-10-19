@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { Home, LogIn, ShieldCheck, UserPlus, CircleAlert, Mail, Lock, User } from "lucide-react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 import { useAuth } from "@/lib/AuthContext";
-import { safeReturnTo } from "@/lib/authReturnTo";
+import { clearRememberedAuthReturnTo, safeReturnTo } from "@/lib/authReturnTo";
 import apiClient from "@/api/apiClient";
 
 const googleButton =
@@ -16,23 +16,25 @@ const guestButton =
 export default function Authentication() {
   const { t } = useTranslation("auth");
   const { t: ta } = useTranslation("account");
-  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const { loginWithGoogle, loginWithEmail, registerWithEmail, authError, isLoadingAuth } = useAuth();
   const [form, setForm] = useState({ fullName: "", email: "", password: "" });
   const [formError, setFormError] = useState("");
-  const mode = searchParams.get("mode") === "register" ? "register" : "login";
+  const [mode, setMode] = useState(() =>
+    location.state?.authMode === "register" ? "register" : "login",
+  );
   const isRegister = mode === "register";
-  const returnTo = safeReturnTo();
+  const returnTo = safeReturnTo(location.state?.returnTo);
 
   const changeMode = (nextMode) => {
     if (nextMode === mode) return;
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set("mode", nextMode);
-    setSearchParams(nextParams);
+    setFormError("");
+    setMode(nextMode);
   };
 
   const continueAfterSignIn = async (signedInUser) => {
+    clearRememberedAuthReturnTo();
     if (!signedInUser?.privacyPolicyAcceptedAt || !signedInUser?.userAgreementAcceptedAt) {
       navigate(`/user-agreement?returnTo=${encodeURIComponent(returnTo)}`, { replace: true });
       return;
@@ -97,7 +99,7 @@ export default function Authentication() {
       onModeChange={changeMode}
       showLanguageToggle
     >
-      <div className={isRegister ? "auth-mode-content-register" : "auth-mode-content-login"}>
+      <div className="auth-mode-content">
         {authError?.type === "auth_failed" && (
           <div role="alert" className="mb-4 flex items-start gap-2 rounded-xl border border-[#E8A39A] bg-[#FBE4E1] px-3 py-3 text-sm font-semibold text-[#8A1C12]">
             <CircleAlert className="mt-0.5 h-4 w-4 flex-none" aria-hidden="true" />

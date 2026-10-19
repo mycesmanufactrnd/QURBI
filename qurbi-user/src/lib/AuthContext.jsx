@@ -9,6 +9,7 @@ import {
 } from "@/api/apiClient";
 import { clearSession } from "@/lib/clearSession";
 import { firebaseAuth, googleAuthProvider } from "@/lib/firebase";
+import { rememberAuthReturnTo } from "@/lib/authReturnTo";
 
 const AuthContext = createContext(null);
 const ALLOWED_ROLES = new Set(["buyer", "farmer"]);
@@ -160,7 +161,8 @@ export const AuthProvider = ({ children }) => {
 
   const navigateToLogin = useCallback(() => {
     const returnTo = `${window.location.pathname}${window.location.search}`;
-    window.location.assign(`/auth?mode=login&returnTo=${encodeURIComponent(returnTo)}`);
+    rememberAuthReturnTo(returnTo);
+    window.location.assign("/auth");
   }, []);
 
   return (

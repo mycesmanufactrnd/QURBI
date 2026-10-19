@@ -17,7 +17,10 @@ import { UserRole } from '../entities';
 import { AnalyticsService } from './analytics.service';
 import { TrackBuyerActivityDto } from './dto/track-buyer-activity.dto';
 
-@Controller('analytics')
+// Keep the original route for compatibility while exposing a neutral alias.
+// Some browser privacy filters block requests containing `/analytics/`
+// before they can reach NestJS.
+@Controller(['activity', 'analytics'])
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 

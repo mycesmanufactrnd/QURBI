@@ -9,6 +9,7 @@ import {
   Package,
   ReceiptText,
   User,
+  ChevronLeft,
   ChevronRight,
   Search,
   MapPin,
@@ -23,6 +24,7 @@ import ViewCartCard from "@/components/ViewCartCard";
 import LivestockCard from "@/components/shop/LivestockCard";
 import { loadLivestockWithFarmers } from "@/lib/farmerClient";
 import { isProductExpired } from "@/lib/product-expiry";
+import { useDisplayMode } from "@/lib/display-mode-context";
 import cowImage from "@/assets/home-categories/Lembu-white.webp";
 import goatImage from "@/assets/home-categories/Kambing-white.webp";
 
@@ -79,6 +81,7 @@ function FeaturedSkeleton() {
 }
 
 export default function Home() {
+  const { isDesktop } = useDisplayMode();
   const { t } = useTranslation("shop");
   const { t: tf } = useTranslation("shopflow");
   const { t: tseo } = useTranslation("seo");
@@ -122,6 +125,22 @@ export default function Home() {
   const highlightTouchStartX = useRef(null);
   const highlightDragXRef = useRef(0);
   const blockHighlightClick = useRef(false);
+  const featuredScrollRef = useRef(null);
+
+  const scrollFeatured = (direction) => {
+    const scroller = featuredScrollRef.current;
+    if (!scroller) return;
+    scroller.scrollBy({
+      left: direction * Math.max(240, scroller.clientWidth * 0.72),
+      behavior: "smooth",
+    });
+  };
+
+  const moveHighlight = (direction) => {
+    setActiveHighlight((current) =>
+      (current + direction + HIGHLIGHTS.length) % HIGHLIGHTS.length,
+    );
+  };
 
   const [searchText, setSearchText] = useState("");
   const [livestock, setLivestock] = useState(/** @type {any[]} */ ([]));
@@ -363,12 +382,24 @@ export default function Home() {
               </h2>
               <p className="text-sm text-[#6B594A]">{tf("home.featuredSubtitle")}</p>
             </div>
-            <Link
-              to="/browse"
-              className="inline-flex min-h-11 flex-none items-center gap-1 rounded-xl px-2 text-sm font-bold text-[#41362D] underline-offset-4 hover:underline"
-            >
-              {tf("home.seeAll")} <ChevronRight aria-hidden="true" className="h-4 w-4" />
-            </Link>
+            <div className="flex flex-none items-center gap-1.5">
+              {isDesktop && (
+                <>
+                  <button type="button" onClick={() => scrollFeatured(-1)} aria-label={tf("home.previousFeatured", "Previous livestock")} className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white shadow-sm transition-all hover:brightness-110 active:scale-95">
+                    <ChevronLeft aria-hidden="true" className="h-5 w-5" />
+                  </button>
+                  <button type="button" onClick={() => scrollFeatured(1)} aria-label={tf("home.nextFeatured", "Next livestock")} className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white shadow-sm transition-all hover:brightness-110 active:scale-95">
+                    <ChevronRight aria-hidden="true" className="h-5 w-5" />
+                  </button>
+                </>
+              )}
+              <Link
+                to="/browse"
+                className="inline-flex min-h-11 items-center gap-1 rounded-xl px-2 text-sm font-bold text-[#41362D] underline-offset-4 hover:underline"
+              >
+                {tf("home.seeAll")} <ChevronRight aria-hidden="true" className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
 
           {livestockLoading && !livestock.length ? (
@@ -392,7 +423,7 @@ export default function Home() {
               </Link>
             </div>
           ) : (
-            <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto overscroll-x-contain px-4 pb-3 sm:-mx-5 sm:px-5">
+            <div ref={featuredScrollRef} className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto overscroll-x-contain px-4 pb-3 sm:-mx-5 sm:px-5">
               {featured.map((item, index) => (
                 <div key={item.id} className="w-[46%] flex-none snap-start sm:w-56">
                   <LivestockCard livestock={item} index={index} showFeatured />
@@ -427,13 +458,25 @@ export default function Home() {
             }
           }}
         >
-          <div className="mb-3 flex items-center justify-between">
+          <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="text-lg font-bold text-[#41362D]">
               {t("home.highlightsTitle")}
             </h2>
-            <span className="text-sm font-semibold text-[#6B594A]">
-              {activeHighlight + 1} / {HIGHLIGHTS.length}
-            </span>
+            <div className="flex items-center gap-1.5">
+              {isDesktop && (
+                <>
+                  <button type="button" onClick={() => moveHighlight(-1)} aria-label={t("home.previousHighlight", "Previous highlight")} className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white shadow-sm transition-all hover:brightness-110 active:scale-95">
+                    <ChevronLeft aria-hidden="true" className="h-5 w-5" />
+                  </button>
+                  <button type="button" onClick={() => moveHighlight(1)} aria-label={t("home.nextHighlight", "Next highlight")} className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#E3C19F] bg-gradient-to-br from-[#41362D] to-[#6B594A] text-white shadow-sm transition-all hover:brightness-110 active:scale-95">
+                    <ChevronRight aria-hidden="true" className="h-5 w-5" />
+                  </button>
+                </>
+              )}
+              <span className="ml-1 text-sm font-semibold text-[#6B594A]">
+                {activeHighlight + 1} / {HIGHLIGHTS.length}
+              </span>
+            </div>
           </div>
 
           <div className="overflow-hidden rounded-3xl border border-white/20 shadow-[0_16px_35px_-15px_rgba(65,54,45,0.65),0_6px_14px_-8px_rgba(65,54,45,0.45)] ring-1 ring-[#41362D]/10">

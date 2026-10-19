@@ -20,7 +20,7 @@ function sessionId() {
 export function trackBuyerActivity({ eventType, targetType, targetId, source }) {
   if (!targetId) return Promise.resolve();
   return apiClient
-    .post("/analytics/events", {
+    .post("/activity/events", {
       eventType,
       targetType,
       targetId,
