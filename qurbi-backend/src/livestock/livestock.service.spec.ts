@@ -1,5 +1,7 @@
 import {
   LivestockStatus,
+  Notification,
+  NotificationAudience,
   RequestStatus,
   ReservationStatus,
   VerificationStatus,
@@ -9,6 +11,7 @@ import {
   computeMarketplaceVisibility,
   LISTING_LIFETIME_MS,
   LivestockService,
+  resolveMarketplaceExpiry,
 } from './livestock.service';
 
 jest.mock('@nestjs/typeorm', () => ({
@@ -107,6 +110,21 @@ describe('computeMarketplaceVisibility', () => {
     });
   });
 
+  it('uses the earlier legacy expiry when an automatic release extended the canonical date', () => {
+    const legacyExpiry = new Date(now - 1);
+    const listing = {
+      ...visibleListing,
+      marketplaceExpiresAt: new Date(now + LISTING_LIFETIME_MS),
+      attributes: { listingExpiresAt: legacyExpiry.toISOString() },
+    };
+
+    expect(resolveMarketplaceExpiry(listing)).toEqual(legacyExpiry);
+    expect(
+      computeMarketplaceVisibility(listing, VerificationStatus.VERIFIED)
+        .marketplaceVisible,
+    ).toBe(false);
+  });
+
   it('uses createdAt plus 14 days for a legacy listing without an expiry date', () => {
     const result = computeMarketplaceVisibility(
       {
@@ -141,6 +159,45 @@ describe('computeMarketplaceVisibility', () => {
       marketplaceVisible: false,
       marketplaceVisibilityReason: 'Breed request was rejected',
     });
+  });
+});
+
+describe('LivestockService expiry enforcement', () => {
+  it('marks an expired listing unavailable and notifies its farmer once', async () => {
+    const legacyExpiry = new Date(Date.now() - 60_000);
+    const listing = {
+      id: 'livestock-1',
+      farmerId: 'farmer-1',
+      status: LivestockStatus.AVAILABLE,
+      marketplaceExpiresAt: new Date(Date.now() + LISTING_LIFETIME_MS),
+      createdAt: new Date(),
+      attributes: { listingExpiresAt: legacyExpiry.toISOString() },
+    };
+    const queryBuilder = {
+      setLock: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([listing]),
+    };
+    const manager = {
+      createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
+      create: jest.fn((_entity: unknown, value: unknown) => value),
+      save: jest.fn((value: unknown) => Promise.resolve(value)),
+    };
+    const service = new LivestockService({} as never, {} as never, {} as never);
+
+    await expect(service.expireDueListings(manager as never)).resolves.toBe(1);
+
+    expect(listing.status).toBe(LivestockStatus.UNAVAILABLE);
+    expect(listing.marketplaceExpiresAt).toEqual(legacyExpiry);
+    expect(manager.create).toHaveBeenCalledWith(
+      Notification,
+      expect.objectContaining({
+        userId: listing.farmerId,
+        audience: NotificationAudience.FARMER,
+        title: 'Listing expired',
+        relatedId: listing.id,
+      }),
+    );
   });
 });
 
