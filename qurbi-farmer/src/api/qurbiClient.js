@@ -54,7 +54,7 @@ const normalizeUser = (item) => item && ({ ...item, name: item.fullName, full_na
 function normalizeLivestock(item) {
   if (!item) return item;
   const attributes = item.attributes || {};
-  return { ...attributes, ...item, ownerId: item.farmerId, species: item.species?.name || attributes.species || "", breed: item.breed?.name || attributes.breed || "Unspecified", gender: item.sex ? titleCase(item.sex) : attributes.gender, status: titleCase(item.status), speciesApprovalStatus: titleCase(item.speciesApprovalStatus), breedApprovalStatus: titleCase(item.breedApprovalStatus), disabled: Boolean(item.adminBlocked), featured: Boolean(item.isFeatured), state: attributes.state || attributes.farmLocation || "", coverImage: item.images?.[0] || attributes.coverImage || "", price: Number(item.price), weight: item.weightKg || attributes.weight || "", created_date: item.createdAt, updated_date: item.updatedAt };
+  return { ...attributes, ...item, ownerId: item.farmerId, species: item.species?.name || attributes.species || "", breed: item.breed?.name || attributes.breed || "Unspecified", gender: item.sex ? titleCase(item.sex) : attributes.gender, status: titleCase(item.status), speciesApprovalStatus: titleCase(item.speciesApprovalStatus), breedApprovalStatus: titleCase(item.breedApprovalStatus), disabled: Boolean(item.adminBlocked), featured: Boolean(item.isFeatured), state: attributes.state || attributes.farmLocation || "", coverImage: item.images?.[0] || attributes.coverImage || "", price: Number(item.price), weight: item.weightKg || attributes.weight || "", listingExpiresAt: item.marketplaceExpiresAt || null, created_date: item.createdAt, updated_date: item.updatedAt };
 }
 
 function normalizeBulk(item, breeds = []) {
