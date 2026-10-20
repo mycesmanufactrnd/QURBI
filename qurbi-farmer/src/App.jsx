@@ -35,6 +35,9 @@ import AdminRoute from "@/components/agri/AdminRoute";
 import AdminLayout from "@/components/agri/AdminLayout";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminFarmers from "@/pages/admin/AdminFarmers";
+import AdminCouriers from "@/pages/admin/AdminCouriers";
+import AdminCourierReview from "@/pages/admin/AdminCourierReview";
+import AdminDeliveries from "@/pages/admin/AdminDeliveries";
 import AdminFarmerReview from "@/pages/admin/AdminFarmerReview";
 import AdminLivestock from "@/pages/admin/AdminLivestock";
 import AdminOrders from "@/pages/admin/AdminOrders";
@@ -103,6 +106,9 @@ const AuthenticatedApp = () => {
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/farmers" element={<AdminFarmers />} />
             <Route path="/admin/farmers/:id" element={<AdminFarmerReview />} />
+            <Route path="/admin/couriers" element={<AdminCouriers />} />
+            <Route path="/admin/couriers/:id" element={<AdminCourierReview />} />
+            <Route path="/admin/deliveries" element={<AdminDeliveries />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/livestock" element={<AdminLivestock />} />
             <Route path="/admin/livestock/:id" element={<AdminLivestockDetail />} />

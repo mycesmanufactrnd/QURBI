@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
@@ -41,6 +42,14 @@ export class PaymentsService {
   async createChipCheckout(buyerId: string, requestedOrderIds: string[]) {
     const orderIds = [...new Set(requestedOrderIds)].sort();
     if (!orderIds.length) throw new BadRequestException('At least one order is required');
+
+    // Fail with a clear message before any payment session is created, instead
+    // of a bare 500 from a missing CHIP setting.
+    const missing = ['CHIP_SECRET_KEY', 'CHIP_BRAND_ID', 'CHIP_WEBHOOK_URL']
+      .filter((key) => !this.config.get<string>(key)?.trim());
+    if (missing.length) {
+      throw new ServiceUnavailableException(`CHIP is not configured on the server (missing ${missing.join(', ')})`);
+    }
 
     const prepared = await this.dataSource.transaction(async (manager) => {
       await this.reservationsService.expireDue(manager);
@@ -278,16 +287,24 @@ function sameIds(left: string[], right: string[]): boolean {
 function returnUrl(config: ConfigService, key: string, sessionId: string, orderIds: string[]): string {
   const configured = config.get<string>(key)?.trim();
   if (!configured) throw new BadRequestException(`${key} is not configured`);
-  const url = new URL(configured);
+  const url = parseConfiguredUrl(key, configured);
   url.searchParams.set('payment_session_id', sessionId);
   url.searchParams.set('order_ids', orderIds.join(','));
   return url.toString();
 }
 
+function parseConfiguredUrl(key: string, value: string): URL {
+  try {
+    return new URL(value);
+  } catch {
+    throw new BadRequestException(`${key} is not a valid URL`);
+  }
+}
+
 function requiredHttpsUrl(config: ConfigService, key: string): string {
   const configured = config.get<string>(key)?.trim();
   if (!configured) throw new BadRequestException(`${key} is not configured`);
-  const url = new URL(configured);
+  const url = parseConfiguredUrl(key, configured);
   if (url.protocol !== 'https:' || url.port) {
     throw new BadRequestException(`${key} must use HTTPS without an explicit port`);
   }

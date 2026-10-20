@@ -1,0 +1,28 @@
+# Netlify settings for the courier app (qurbi-courier).
+# If this repo is deployed as a monorepo, set "Base directory" to qurbi-courier.
+# This app is a private working area, so it is kept out of search engines.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Client-side routes (/jobs, /earnings ...) all load the app.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+    # The camera and GPS are the whole point of this app; nothing else needs them.
+    Permissions-Policy = "camera=(self), geolocation=(self), microphone=()"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    X-Robots-Tag = "noindex, nofollow"

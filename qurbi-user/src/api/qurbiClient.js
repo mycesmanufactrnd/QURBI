@@ -332,7 +332,7 @@ const functionHandlers = {
     const notifications = await request({
       method: "get",
       url: "/notifications",
-      params: { userId: currentUserId(), audience: "buyer" },
+      params: { audience: "buyer" },
     });
     return wrap({ notifications: (Array.isArray(notifications) ? notifications : []).map(notificationForUser) });
   },
@@ -342,7 +342,7 @@ const functionHandlers = {
   /** @param {{ notificationId?: string, clearAll?: boolean }} [payload] */
   async clearMyNotifications({ notificationId, clearAll } = {}) {
     if (clearAll) {
-      await request({ method: "patch", url: "/notifications/clear-all", data: { userId: currentUserId(), audience: "buyer" } });
+      await request({ method: "patch", url: "/notifications/clear-all", data: { audience: "buyer" } });
       return wrap({ success: true });
     }
     return wrap({ notification: await request({ method: "patch", url: `/notifications/${notificationId}/clear` }) });
@@ -400,6 +400,14 @@ const functionHandlers = {
     }
     const order = await request({ method: "patch", url: `/orders/${orderId}/received`, data: { proofImages } });
     return wrap({ order: orderForUser(order) });
+  },
+  /** The courier on a delivery order (name, vehicle, rating) and where the trip stands. */
+  async fetchCourierSummary({ orderId }) {
+    return wrap(await request({ method: "get", url: `/courier-jobs/order/${orderId}/summary`, params: { _ts: Date.now() } }));
+  },
+  /** The 6-digit handover code the buyer gives the courier; null unless the courier is on the way. */
+  async fetchDeliveryCode({ orderId }) {
+    return wrap(await request({ method: "get", url: `/orders/${orderId}/delivery-code`, params: { _ts: Date.now() } }));
   },
   async requestMyOrderRefund({ orderId, reason }) {
     const order = await request({ method: "patch", url: `/orders/${orderId}/refund-request`, data: { reason } });

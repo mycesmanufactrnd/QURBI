@@ -1,0 +1,8 @@
+{
+  "title": "Notifications",
+  "empty": "No notifications yet",
+  "emptyHint": "Job updates and decisions from QURBI show up here.",
+  "markAll": "Mark all read",
+  "unread": "Unread",
+  "loadFailed": "Could not load notifications."
+}

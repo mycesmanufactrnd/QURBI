@@ -2,6 +2,7 @@ export enum UserRole {
   BUYER = 'buyer',
   FARMER = 'farmer',
   ADMIN = 'admin',
+  COURIER = 'courier',
 }
 
 export enum UserStatus {
@@ -97,6 +98,7 @@ export enum NotificationAudience {
   BUYER = 'buyer',
   FARMER = 'farmer',
   ADMIN = 'admin',
+  COURIER = 'courier',
 }
 
 export enum NotificationType {
@@ -119,4 +121,35 @@ export enum AddressLabel {
 export enum UploadVisibility {
   PUBLIC = 'public',
   PRIVATE = 'private',
+}
+
+// A courier's current standing. UNVERIFIED = registered but no documents
+// submitted yet; the audit trail of each submission lives in
+// CourierVerification. SUSPENDED is an admin action on an approved courier.
+export enum CourierVerificationStatus {
+  UNVERIFIED = 'unverified',
+  PENDING = 'pending',
+  APPROVED = 'approved',
+  REJECTED = 'rejected',
+  SUSPENDED = 'suspended',
+}
+
+// The courier-side delivery track. Mapped onto OrderStatus by
+// CourierJobsService (picked up -> preparing, in transit -> in_transit,
+// delivered -> delivered); FAILED and CANCELLED never move the order status.
+export enum DeliveryAssignmentStatus {
+  ACCEPTED = 'accepted',
+  PICKED_UP = 'picked_up',
+  IN_TRANSIT = 'in_transit',
+  DELIVERED = 'delivered',
+  FAILED = 'failed',
+  CANCELLED = 'cancelled',
+}
+
+// Where in the delivery a proof photo was taken.
+export enum ProofStage {
+  PICKUP = 'pickup',
+  TRANSIT = 'transit',
+  DELIVERY = 'delivery',
+  FAILED = 'failed',
 }

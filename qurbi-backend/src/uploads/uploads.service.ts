@@ -7,7 +7,17 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Order, UploadedFile, UploadVisibility, UserRole } from '../entities';
+import { createHash } from 'crypto';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
+import {
+  Order,
+  OrderTrackingEvent,
+  UploadedFile,
+  UploadVisibility,
+  UserRole,
+} from '../entities';
+import { getPrivateUploadsDir } from './storage/local-disk-storage.service';
 import { StorageService } from './storage/storage.service';
 import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 
@@ -49,6 +59,8 @@ export class UploadsService {
     private readonly uploadedFileRepository: Repository<UploadedFile>,
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
+    @InjectRepository(OrderTrackingEvent)
+    private readonly trackingEventRepository: Repository<OrderTrackingEvent>,
   ) {}
 
   async upload(
@@ -119,6 +131,11 @@ export class UploadsService {
     const isAdmin = viewer.role === UserRole.ADMIN;
     let isOrderFarmer = false;
 
+    // Proof photos on an order's timeline are visible to everyone party to
+    // that order: its buyer, its farmer and the courier assigned to it.
+    const isOrderParty =
+      !isOwner && !isAdmin && (await this.isOrderParty(file.id, viewer.id));
+
     if (!isOwner && !isAdmin && viewer.role === UserRole.FARMER) {
       const proofUrl = `/uploads/private/${file.id}`;
       const farmerOrders = await this.orderRepository.find({
@@ -130,9 +147,66 @@ export class UploadsService {
       );
     }
 
-    if (!isOwner && !isAdmin && !isOrderFarmer) {
+    if (!isOwner && !isAdmin && !isOrderFarmer && !isOrderParty) {
       throw new NotFoundException('File not found');
     }
     return file;
+  }
+
+  // True when this file is attached to a tracking event of an order the
+  // viewer is the buyer, farmer or assigned courier of.
+  private async isOrderParty(
+    fileId: string,
+    viewerId: string,
+  ): Promise<boolean> {
+    const count = await this.trackingEventRepository
+      .createQueryBuilder('event')
+      .innerJoin('event.order', 'o')
+      .where('JSON_CONTAINS(event.images, :url)', {
+        url: JSON.stringify(`/uploads/private/${fileId}`),
+      })
+      .andWhere(
+        '(o.buyerId = :viewerId OR o.farmerId = :viewerId OR EXISTS (' +
+          'SELECT 1 FROM delivery_assignments da ' +
+          'WHERE da.orderId = o.id AND da.courierUserId = :viewerId))',
+        { viewerId },
+      )
+      .getCount();
+    return count > 0;
+  }
+
+  // For the courier proof flow: resolves a private upload URL back to the
+  // stored bytes, but only if the caller uploaded it themselves and it is an
+  // image. The server hashes what it actually stored rather than trusting a
+  // client-supplied hash.
+  async readOwnedPrivateImage(
+    url: string,
+    uploaderId: string,
+  ): Promise<{ id: string; url: string; sha256: string }> {
+    const match = /^\/uploads\/private\/([0-9a-f-]{36})$/i.exec(url);
+    if (!match) {
+      throw new BadRequestException('Photos must be private uploads');
+    }
+    const file = await this.uploadedFileRepository.findOne({
+      where: { id: match[1] },
+    });
+    if (
+      !file ||
+      file.visibility !== UploadVisibility.PRIVATE ||
+      file.uploaderId !== uploaderId ||
+      !file.mimeType.startsWith('image/')
+    ) {
+      throw new BadRequestException(
+        'Each photo must be an image you uploaded yourself',
+      );
+    }
+    const buffer = await readFile(
+      join(getPrivateUploadsDir(), file.storageKey),
+    );
+    return {
+      id: file.id,
+      url,
+      sha256: createHash('sha256').update(buffer).digest('hex'),
+    };
   }
 }

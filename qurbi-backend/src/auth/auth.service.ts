@@ -11,6 +11,7 @@ import * as argon2 from 'argon2';
 import { createHash, randomBytes } from 'crypto';
 import { IsNull, Repository } from 'typeorm';
 import {
+  CourierProfile,
   FarmerProfile,
   RefreshToken,
   User,
@@ -45,6 +46,8 @@ type SafeUser = Omit<User, 'passwordHash'>;
 // account actually is, and `availableRoles` is what it may switch between.
 type MeResponse = Omit<SafeUser, 'farmerProfile'> & {
   farmerProfile?: FarmerProfile | null;
+  // Only attached for role === courier, same convention as farmerProfile.
+  courierProfile?: CourierProfile | null;
   accountRole: UserRole;
   availableRoles: UserRole[];
 };
@@ -355,6 +358,15 @@ export class AuthService {
         where: { userId },
       });
       return { ...safe, farmerProfile: farmerProfile ?? null };
+    }
+
+    // Couriers are single-role accounts. Fetched through the user
+    // repository's manager so AuthService keeps its existing constructor.
+    if (user.role === UserRole.COURIER) {
+      const courierProfile = await this.userRepository.manager
+        .getRepository(CourierProfile)
+        .findOne({ where: { userId } });
+      return { ...safe, courierProfile: courierProfile ?? null };
     }
 
     return safe;

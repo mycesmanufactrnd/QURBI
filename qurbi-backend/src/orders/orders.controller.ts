@@ -92,6 +92,28 @@ export class OrdersController {
     return this.ordersService.advanceStatus(id, user, status, opts);
   }
 
+  // Farmer (own order) hands a delivery order to the courier pool.
+  @Roles(UserRole.FARMER, UserRole.ADMIN)
+  @UseGuards(RolesGuard)
+  @Patch(':id/ready-for-pickup')
+  readyForPickup(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.ordersService.markReadyForPickup(id, user);
+  }
+
+  // The buyer's handover code, shown only while a courier is on the way.
+  @Roles(UserRole.BUYER, UserRole.ADMIN)
+  @UseGuards(RolesGuard)
+  @Get(':id/delivery-code')
+  deliveryCode(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.ordersService.deliveryCodeForBuyer(id, user);
+  }
+
   @Patch(':id/cancel')
   cancel(
     @Param('id') id: string,

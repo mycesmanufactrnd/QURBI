@@ -93,7 +93,8 @@
       "after": "After",
       "received": "Received",
       "ownerFarmer": "Farmer",
-      "ownerYou": "You"
+      "ownerYou": "You",
+      "ownerCourier": "Courier"
     },
     "proofAlt": "{{stage}} order proof",
     "legacyTracking": {
@@ -173,6 +174,49 @@
     "signIn": "Sign In",
     "paymentError": {
       "stayOnOrder": "Stay on To Pay Order"
+    },
+    "courier": {
+      "title": "Your courier",
+      "photosTitle": "Live photos from the courier",
+      "photoAlt": "Courier photo: {{stage}}",
+      "stage": {
+        "pickup": "Collected from the farm",
+        "transit": "On the road",
+        "delivery": "Handed over to you",
+        "failed": "Problem report"
+      },
+      "codeTitle": "Your handover code",
+      "codeHint": "Give this code to the courier only when they are at your door with the animal. It proves you received it.",
+      "state": {
+        "not_requested": {
+          "title": "The farm is preparing your order",
+          "body": "A courier will deliver it once the farmer hands it over."
+        },
+        "waiting_for_courier": {
+          "title": "Finding a courier",
+          "body": "The farmer has the animal ready. Couriers in the area can accept the job now."
+        },
+        "accepted": {
+          "title": "Courier on the way to the farm",
+          "body": "They will collect your animal shortly."
+        },
+        "picked_up": {
+          "title": "Collected from the farm",
+          "body": "The courier has your animal and is about to set off."
+        },
+        "in_transit": {
+          "title": "On the way to you",
+          "body": "Have your code ready. Photos are added as the courier goes."
+        },
+        "delivered": {
+          "title": "Delivered",
+          "body": "The courier handed over your animal. Please check it and confirm receipt below."
+        },
+        "failed": {
+          "title": "There is a problem with the delivery",
+          "body": "The courier reported an issue. QURBI has been told and will contact you."
+        }
+      }
     }
   },
   "notifications": {

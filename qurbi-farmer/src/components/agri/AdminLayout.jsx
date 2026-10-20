@@ -4,7 +4,7 @@ import { qurbi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
 import BrandLogo from "@/components/agri/BrandLogo";
 import AdminBottomNav from "@/components/agri/AdminBottomNav";
-import { LogOut, LayoutDashboard, UserCheck, Users, ShoppingBag, Tags } from "lucide-react";
+import { LogOut, LayoutDashboard, UserCheck, Users, ShoppingBag, Tags, Bike, PackageCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isPendingRefund } from "@/components/admin/adminFormat";
 import CowSilhouetteIcon from "@/components/agri/CowSilhouetteIcon";
@@ -12,6 +12,8 @@ import CowSilhouetteIcon from "@/components/agri/CowSilhouetteIcon";
 const TABS = [
   { to: "/admin", label: "Overview", icon: LayoutDashboard, end: true },
   { to: "/admin/farmers", label: "Farmers", icon: UserCheck },
+  { to: "/admin/couriers", label: "Couriers", icon: Bike },
+  { to: "/admin/deliveries", label: "Deliveries", icon: PackageCheck },
   { to: "/admin/users", label: "Buyers", icon: Users },
   { to: "/admin/livestock", label: "Livestock", icon: CowSilhouetteIcon },
   { to: "/admin/breeds", label: "Breeds", icon: Tags },

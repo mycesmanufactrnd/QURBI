@@ -1,0 +1,124 @@
+{
+  "title": "Tugasan",
+  "tabs": {
+    "available": "Tersedia",
+    "active": "Tugasan saya",
+    "history": "Sejarah"
+  },
+  "offline": {
+    "title": "Anda di luar talian",
+    "body": "Pergi dalam talian untuk melihat tugasan dari ladang di kawasan perkhidmatan anda.",
+    "action": "Pergi dalam talian"
+  },
+  "empty": {
+    "available": "Tiada tugasan sekarang",
+    "availableHint": "Tugasan baharu muncul di sini sebaik sahaja penternak melepaskan pesanan di kawasan anda. Senarai ini dimuat semula sendiri.",
+    "active": "Tiada tugasan aktif",
+    "activeHint": "Terima tugasan dari tab Tersedia untuk bermula.",
+    "history": "Belum ada tugasan selesai",
+    "historyHint": "Tugasan yang dihantar dan dibatalkan muncul di sini."
+  },
+  "loadFailed": "Tugasan tidak dapat dimuatkan.",
+  "card": {
+    "earning": "Anda dapat",
+    "distance": "{{km}} km",
+    "from": "Ambil di",
+    "to": "Hantar ke",
+    "ready": "Sedia {{time}}",
+    "open": "Lihat tugasan"
+  },
+  "status": {
+    "accepted": "Diterima",
+    "picked_up": "Sudah diambil",
+    "in_transit": "Dalam perjalanan",
+    "delivered": "Dihantar",
+    "failed": "Masalah dilaporkan",
+    "cancelled": "Dilepaskan"
+  },
+  "steps": {
+    "accepted": "Diterima",
+    "picked_up": "Diambil",
+    "in_transit": "Dalam perjalanan",
+    "delivered": "Dihantar"
+  },
+  "detail": {
+    "notFound": "Tugasan ini sudah tidak tersedia.",
+    "loadFailed": "Tugasan ini tidak dapat dimuatkan.",
+    "pickup": "Ambil dari",
+    "dropoff": "Hantar ke",
+    "areaOnly": "Alamat penuh dan nombor telefon dipaparkan selepas anda menerima tugasan.",
+    "items": "Ternakan",
+    "tag": "Tag {{tag}}",
+    "weight": "{{kg}} kg",
+    "quantity": "×{{count}}",
+    "earning": "Anda dapat",
+    "approvedRate": "Kadar anda yang diluluskan",
+    "orderFee": "Yuran penghantaran pesanan",
+    "navigate": "Navigasi",
+    "callFarmer": "Telefon penternak",
+    "callBuyer": "Telefon pembeli",
+    "whatsapp": "WhatsApp",
+    "farmerConfirmed": "Penternak mengesahkan serahan",
+    "farmerNotConfirmed": "Menunggu penternak mengesahkan serahan",
+    "timeline": "Bukti setakat ini",
+    "photoTaken": "Diambil {{time}}",
+    "flagged": "Ditanda untuk semakan"
+  },
+  "actions": {
+    "accept": "Terima tugasan",
+    "accepting": "Menerima…",
+    "acceptFailed": "Tugasan ini tidak dapat diterima.",
+    "release": "Lepaskan tugasan",
+    "releaseTitle": "Lepaskan tugasan ini?",
+    "releaseBody": "Ia terus kembali ke kolam untuk kurier lain. Lakukan ini hanya sebelum anda mengambil haiwan.",
+    "releaseReason": "Sebab (pilihan)",
+    "releaseConfirm": "Lepaskan tugasan",
+    "releasing": "Melepaskan…",
+    "startPickup": "Saya di ladang: ambil",
+    "startTransit": "Mulakan perjalanan",
+    "startDelivery": "Saya sudah tiba: serahkan",
+    "reportProblem": "Laporkan masalah",
+    "next": {
+      "accepted": "Pergi ke ladang",
+      "acceptedHint": "Semak haiwan dengan tag telinga, kemudian ambil gambar pengambilan.",
+      "picked_up": "Sedia bertolak?",
+      "picked_upHint": "Ambil gambar semasa anda bertolak. Pembeli dimaklumkan anda sedang dalam perjalanan.",
+      "in_transit": "Hantar kepada pembeli",
+      "in_transitHint": "Minta kod 6 digit daripada pembeli, kemudian ambil dua gambar serahan."
+    }
+  },
+  "problem": {
+    "title": "Laporkan masalah",
+    "subtitle": "Pembeli, penternak dan QURBI dimaklumkan serta-merta.",
+    "category": "Apa yang berlaku?",
+    "categories": {
+      "buyer_unreachable": "Pembeli tidak dapat dihubungi",
+      "wrong_address": "Alamat salah atau tidak jelas",
+      "livestock_issue": "Masalah dengan haiwan",
+      "vehicle_issue": "Kenderaan rosak",
+      "other": "Perkara lain"
+    },
+    "reason": "Terangkan",
+    "reasonHint": "Jelaskan supaya QURBI boleh memutuskan langkah seterusnya.",
+    "submit": "Hantar laporan"
+  },
+  "pickupFlow": {
+    "title": "Ambil ternakan",
+    "checklistTitle": "Semak sebelum mengambil",
+    "earTag": "Tag telinga sepadan dengan pesanan",
+    "healthy": "Haiwan kelihatan sihat",
+    "secured": "Haiwan diikat dengan selamat dalam kenderaan saya",
+    "blocked": "Jangan ambil haiwan sehingga ketiga-tiganya benar. Laporkan masalah sebaliknya.",
+    "submit": "Sahkan pengambilan"
+  },
+  "transitFlow": {
+    "title": "Mulakan perjalanan",
+    "submit": "Hantar gambar dan mula"
+  },
+  "deliverFlow": {
+    "title": "Serahkan kepada pembeli",
+    "codeLabel": "Kod 6 digit pembeli",
+    "codeHint": "Pembeli boleh melihatnya di halaman pesanan semasa anda dalam perjalanan.",
+    "submit": "Sahkan penghantaran"
+  }
+}
