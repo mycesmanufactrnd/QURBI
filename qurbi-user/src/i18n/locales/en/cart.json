@@ -148,7 +148,8 @@
     "backToReview": "Back to Review",
     "continueToPayment": "Continue to Payment",
     "backToDelivery": "Back to Delivery",
-    "stateUnavailable": "State unavailable"
+    "stateUnavailable": "State unavailable",
+    "farmUnavailable": "Farm unavailable"
   },
   "receipt": {
     "loadingLabel": "Loading your receipt…",

@@ -1,0 +1,25 @@
+{
+  "greeting": "Hello, {{name}}",
+  "status": {
+    "online": "You are online",
+    "offline": "You are offline",
+    "onlineHint": "New jobs in your area appear in the pool.",
+    "offlineHint": "Go online to see and accept jobs.",
+    "goOnline": "Go online",
+    "goOffline": "Go offline",
+    "failed": "Could not change your status. Please try again."
+  },
+  "today": "Earned today",
+  "deliveriesToday_one": "{{count}} delivery today",
+  "deliveriesToday_other": "{{count}} deliveries today",
+  "activeJobs": "Your active jobs",
+  "noActive": "No active jobs",
+  "noActiveHint": "Go online and pick a job from the pool.",
+  "browseJobs": "Browse available jobs",
+  "viewAll": "See all",
+  "rateTitle": "Set your delivery rate",
+  "rateBody": "Tell QURBI how much you charge per delivery. Until it is approved, jobs pay the order's delivery fee.",
+  "rateAction": "Set rate",
+  "ratePending": "Your rate request of RM {{fee}} is waiting for approval.",
+  "loadFailed": "Could not load your dashboard."
+}

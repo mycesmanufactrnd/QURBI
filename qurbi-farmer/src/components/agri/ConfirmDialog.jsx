@@ -18,7 +18,7 @@ export default function ConfirmDialog({
   title,
   description,
   confirmText,
-  cancelText,
+  cancelText = undefined,
   destructive = false,
   loading = false,
   onConfirm,

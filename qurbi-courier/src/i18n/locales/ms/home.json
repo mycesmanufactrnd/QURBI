@@ -1,0 +1,25 @@
+{
+  "greeting": "Helo, {{name}}",
+  "status": {
+    "online": "Anda dalam talian",
+    "offline": "Anda di luar talian",
+    "onlineHint": "Tugasan baharu di kawasan anda muncul dalam kolam tugasan.",
+    "offlineHint": "Pergi dalam talian untuk melihat dan menerima tugasan.",
+    "goOnline": "Pergi dalam talian",
+    "goOffline": "Pergi luar talian",
+    "failed": "Status anda tidak dapat ditukar. Sila cuba lagi."
+  },
+  "today": "Pendapatan hari ini",
+  "deliveriesToday_one": "{{count}} penghantaran hari ini",
+  "deliveriesToday_other": "{{count}} penghantaran hari ini",
+  "activeJobs": "Tugasan aktif anda",
+  "noActive": "Tiada tugasan aktif",
+  "noActiveHint": "Pergi dalam talian dan pilih tugasan daripada kolam.",
+  "browseJobs": "Lihat tugasan tersedia",
+  "viewAll": "Lihat semua",
+  "rateTitle": "Tetapkan kadar penghantaran anda",
+  "rateBody": "Beritahu QURBI berapa anda caj bagi setiap penghantaran. Sehingga diluluskan, tugasan dibayar mengikut yuran penghantaran pesanan.",
+  "rateAction": "Tetapkan kadar",
+  "ratePending": "Permohonan kadar anda sebanyak RM {{fee}} sedang menunggu kelulusan.",
+  "loadFailed": "Papan pemuka anda tidak dapat dimuatkan."
+}

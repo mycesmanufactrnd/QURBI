@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, MoreHorizontal, ShoppingBag, Tags, UserCheck, Users } from "lucide-react";
+import { Bike, LayoutDashboard, MoreHorizontal, PackageCheck, ShoppingBag, Tags, UserCheck, Users } from "lucide-react";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import CowSilhouetteIcon from "@/components/agri/CowSilhouetteIcon";
@@ -13,6 +13,8 @@ const PRIMARY_ITEMS = [
 ];
 
 const MORE_ITEMS = [
+  { to: "/admin/couriers", label: "Couriers", description: "Approve couriers and delivery rates", icon: Bike },
+  { to: "/admin/deliveries", label: "Deliveries", description: "Flagged proof photos and failed deliveries", icon: PackageCheck },
   { to: "/admin/livestock", label: "Livestock", description: "Review all animal listings", icon: CowSilhouetteIcon },
   { to: "/admin/breeds", label: "Breeds", description: "Approve and manage breeds", icon: Tags },
 ];

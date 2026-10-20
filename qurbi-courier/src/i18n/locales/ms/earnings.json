@@ -1,0 +1,37 @@
+{
+  "title": "Pendapatan",
+  "totals": {
+    "today": "Hari ini",
+    "week": "Minggu ini",
+    "month": "Bulan ini",
+    "allTime": "Keseluruhan"
+  },
+  "deliveries_one": "{{count}} penghantaran",
+  "deliveries_other": "{{count}} penghantaran",
+  "rate": {
+    "title": "Kadar penghantaran anda",
+    "approved": "Kadar diluluskan",
+    "none": "Belum ada kadar diluluskan. Tugasan dibayar mengikut yuran penghantaran pesanan.",
+    "perDelivery": "setiap penghantaran",
+    "pending": "Permohonan RM {{fee}} sedang menunggu kelulusan.",
+    "rejected": "Permohonan terakhir anda ditolak: {{reason}}",
+    "propose": "Mohon kadar baharu",
+    "proposeHint": "Jumlah tetap yang anda mahu bagi setiap penghantaran. Ia hanya terpakai selepas QURBI meluluskannya, dan hanya untuk tugasan yang anda terima selepas itu.",
+    "amount": "Jumlah (RM)",
+    "submit": "Hantar permohonan",
+    "sending": "Menghantar…",
+    "sent": "Permohonan dihantar. Kami akan memaklumkan anda apabila ia disemak.",
+    "invalid": "Masukkan jumlah antara RM 1 dan RM 1,000.",
+    "failed": "Permohonan anda tidak dapat dihantar. Sila cuba lagi."
+  },
+  "weeks": {
+    "title": "Jumlah mingguan",
+    "empty": "Jumlah mingguan anda muncul selepas penghantaran pertama.",
+    "weekOf": "Minggu {{date}}"
+  },
+  "recent": {
+    "title": "Penghantaran terkini",
+    "empty": "Belum ada penghantaran."
+  },
+  "loadFailed": "Pendapatan anda tidak dapat dimuatkan."
+}

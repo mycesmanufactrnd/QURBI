@@ -1,0 +1,26 @@
+{
+  "title": "Profile",
+  "account": "Account",
+  "vehicle": "Vehicle",
+  "serviceArea": "Service area",
+  "bank": "Payout details",
+  "standing": {
+    "approved": "Approved",
+    "pending": "Under review",
+    "rejected": "Rejected",
+    "suspended": "Suspended",
+    "unverified": "Not submitted"
+  },
+  "stats": {
+    "deliveries": "Deliveries",
+    "rating": "Rating",
+    "noRating": "No ratings yet"
+  },
+  "edit": "Edit",
+  "saved": "Saved",
+  "saveFailed": "Could not save. Please try again.",
+  "noBank": "No bank details yet. Add them so QURBI can pay you.",
+  "language": "Language",
+  "languages": { "en": "English", "ms": "Bahasa Melayu" },
+  "stateRequired": "Choose at least one state."
+}

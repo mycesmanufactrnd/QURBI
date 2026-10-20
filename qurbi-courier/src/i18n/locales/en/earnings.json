@@ -1,0 +1,37 @@
+{
+  "title": "Earnings",
+  "totals": {
+    "today": "Today",
+    "week": "This week",
+    "month": "This month",
+    "allTime": "All time"
+  },
+  "deliveries_one": "{{count}} delivery",
+  "deliveries_other": "{{count}} deliveries",
+  "rate": {
+    "title": "Your delivery rate",
+    "approved": "Approved rate",
+    "none": "No approved rate yet. Jobs pay the order's delivery fee.",
+    "perDelivery": "per delivery",
+    "pending": "Request of RM {{fee}} is waiting for approval.",
+    "rejected": "Your last request was rejected: {{reason}}",
+    "propose": "Request a new rate",
+    "proposeHint": "A flat amount you want for each delivery. It only applies after QURBI approves it, and only to jobs you accept afterwards.",
+    "amount": "Amount (RM)",
+    "submit": "Send request",
+    "sending": "Sending…",
+    "sent": "Request sent. We will notify you when it is reviewed.",
+    "invalid": "Enter an amount between RM 1 and RM 1,000.",
+    "failed": "Could not send your request. Please try again."
+  },
+  "weeks": {
+    "title": "Weekly totals",
+    "empty": "Your weekly totals appear after your first delivery.",
+    "weekOf": "Week of {{date}}"
+  },
+  "recent": {
+    "title": "Recent deliveries",
+    "empty": "No deliveries yet."
+  },
+  "loadFailed": "Could not load your earnings."
+}

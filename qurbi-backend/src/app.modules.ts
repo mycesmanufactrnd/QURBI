@@ -20,6 +20,8 @@ import { UploadsModule } from './uploads/uploads.module';
 import { ReservationsModule } from './reservations/reservations.module';
 import { PaymentsModule } from './payments/payments.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { CouriersModule } from './couriers/couriers.module';
+import { CourierJobsModule } from './courier-jobs/courier-jobs.module';
 
 export const APP_MODULES = [
   AuthModule,
@@ -44,4 +46,6 @@ export const APP_MODULES = [
   ReservationsModule,
   PaymentsModule,
   AnalyticsModule,
+  CouriersModule,
+  CourierJobsModule,
 ];

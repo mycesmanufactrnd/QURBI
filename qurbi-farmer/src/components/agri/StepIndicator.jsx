@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-export default function StepIndicator({ current, className, steps: stepsProp }) {
+export default function StepIndicator({ current, className, steps: stepsProp = undefined }) {
   const { t } = useTranslation("shared");
   const trackRef = useRef(null);
   const stepRefs = useRef(new Map());

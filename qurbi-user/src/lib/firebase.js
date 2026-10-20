@@ -12,13 +12,15 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
+// Prerender/SSR only renders markup and never signs anyone in, so skip Firebase
+// there; it would otherwise throw when no API key is present at build time.
+const firebaseApp = import.meta.env.SSR ? null : getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-export const firebaseAuth = getAuth(firebaseApp);
+export const firebaseAuth = firebaseApp ? getAuth(firebaseApp) : null;
 export const googleAuthProvider = new GoogleAuthProvider();
 
 export const analyticsPromise =
-  typeof window === "undefined"
+  !firebaseApp || typeof window === "undefined"
     ? Promise.resolve(null)
     : isSupported()
         .then((supported) => (supported ? getAnalytics(firebaseApp) : null))

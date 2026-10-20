@@ -1,0 +1,41 @@
+{
+  "appName": "QURBI Kurier",
+  "loading": "Memuatkan…",
+  "retry": "Cuba lagi",
+  "cancel": "Batal",
+  "close": "Tutup",
+  "save": "Simpan",
+  "saving": "Menyimpan…",
+  "back": "Kembali",
+  "next": "Seterusnya",
+  "refresh": "Muat semula",
+  "yes": "Ya",
+  "no": "Tidak",
+  "optional": "pilihan",
+  "required": "wajib",
+  "language": "Bahasa",
+  "logOut": "Log keluar",
+  "offlineBanner": "Anda di luar talian. Gambar yang dihantar disimpan dalam telefon ini dan dimuat naik secara automatik apabila isyarat kembali.",
+  "queue": {
+    "pending_one": "{{count}} gambar menunggu dimuat naik",
+    "pending_other": "{{count}} gambar menunggu dimuat naik",
+    "failed_one": "{{count}} muat naik ditolak",
+    "failed_other": "{{count}} muat naik ditolak",
+    "failedTitle": "Muat naik yang ditolak",
+    "failedHint": "Pelayan tidak menerima gambar ini. Buka tugasan dan ambil gambar semula.",
+    "dismiss": "Tutup",
+    "openJob": "Buka tugasan"
+  },
+  "errors": {
+    "generic": "Sesuatu tidak kena. Sila cuba lagi.",
+    "network": "Tiada sambungan. Semak isyarat anda dan cuba lagi.",
+    "notCourier": "Portal ini untuk kurier sahaja. Sila guna aplikasi QURBI yang betul untuk akaun anda.",
+    "authRequired": "Sila log masuk untuk teruskan.",
+    "sessionExpired": "Sesi anda telah tamat. Sila log masuk semula."
+  },
+  "notFound": {
+    "title": "Halaman tidak dijumpai",
+    "body": "Halaman itu tidak wujud.",
+    "home": "Ke laman utama"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "title": "Notifikasi",
+  "empty": "Belum ada notifikasi",
+  "emptyHint": "Kemas kini tugasan dan keputusan daripada QURBI muncul di sini.",
+  "markAll": "Tandakan semua dibaca",
+  "unread": "Belum dibaca",
+  "loadFailed": "Notifikasi tidak dapat dimuatkan."
+}

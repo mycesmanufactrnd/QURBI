@@ -148,7 +148,8 @@
     "backToReview": "Kembali ke Semakan",
     "continueToPayment": "Teruskan ke Pembayaran",
     "backToDelivery": "Kembali ke Penghantaran",
-    "stateUnavailable": "Negeri tidak tersedia"
+    "stateUnavailable": "Negeri tidak tersedia",
+    "farmUnavailable": "Ladang tidak tersedia"
   },
   "receipt": {
     "loadingLabel": "Memuatkan resit anda…",

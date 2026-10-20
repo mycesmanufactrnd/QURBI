@@ -119,7 +119,8 @@
     },
     "owner": {
       "You": "You",
-      "Buyer": "Buyer"
+      "Buyer": "Buyer",
+      "Courier": "Courier"
     },
     "packageNotFound": "Package not found.",
     "packageLoadFailed": "Package could not be loaded.",
@@ -134,7 +135,11 @@
     "tryAgain": "Try again",
     "title": "Order details",
     "sectionTabsAria": "Order detail sections",
-    "tabs": { "overview": "Overview", "delivery": "Delivery", "evidence": "Evidence" },
+    "tabs": {
+      "overview": "Overview",
+      "delivery": "Delivery",
+      "evidence": "Evidence"
+    },
     "refreshAria": "Refresh order",
     "multiNotice": "This order contains packages from multiple farmers. Photo upload is locked so one farmer can't change another farmer's delivery status.",
     "issueNotice": "Delivery steps are paused because this order has a return or refund in progress.",
@@ -199,6 +204,59 @@
     "dialogTitle": "Save this delivery photo?",
     "dialogDescription": "This saves <1>{{file}}</1> as the <3>{{stage}}</3> photo for this order. It can't be changed afterwards, so make sure it's clear and shows the right animal.",
     "cancel": "Cancel",
-    "savePhoto": "Save photo"
+    "savePhoto": "Save photo",
+    "byCourier": "Taken by the courier when they deliver."
+  },
+  "courier": {
+    "title": "Courier delivery",
+    "vehicle": "{{type}} · {{plate}}",
+    "problem": "Problem reported:",
+    "proofTitle": "Photos from the courier",
+    "proofAlt": "Courier proof photo",
+    "release": "Ready for courier pickup",
+    "releasing": "Releasing…",
+    "releaseHint": "Tap this when the animal is ready to be collected. Couriers in your state will see the job and one of them will accept it.",
+    "releaseFailed": "Could not release the order. Please try again.",
+    "confirmHandover": "I handed the animal to the courier",
+    "confirming": "Confirming…",
+    "handoverHint": "Confirm once the courier has the animal. QURBI keeps this on record.",
+    "handoverConfirmed": "You confirmed the handover to the courier.",
+    "handoverFailed": "Could not confirm the handover. Please try again.",
+    "stage": {
+      "pickup": "Collected from your farm",
+      "transit": "On the road",
+      "delivery": "Handed to the buyer",
+      "failed": "Problem report"
+    },
+    "state": {
+      "not_requested": {
+        "title": "Not released to a courier yet",
+        "body": "A courier delivers this order. Release it when the animal is ready."
+      },
+      "waiting_for_courier": {
+        "title": "Waiting for a courier",
+        "body": "Couriers in your area can see this job. You will be notified as soon as one accepts."
+      },
+      "accepted": {
+        "title": "Courier on the way to your farm",
+        "body": "Have the animal ready for handover."
+      },
+      "picked_up": {
+        "title": "Collected by the courier",
+        "body": "The courier has the animal and is about to start the trip."
+      },
+      "in_transit": {
+        "title": "On the way to the buyer",
+        "body": "The courier is delivering the order. The buyer can follow it."
+      },
+      "delivered": {
+        "title": "Delivered",
+        "body": "The courier handed the animal to the buyer with a photo and the buyer's code."
+      },
+      "failed": {
+        "title": "Delivery problem",
+        "body": "The courier reported a problem. QURBI has been told and will contact you."
+      }
+    }
   }
 }

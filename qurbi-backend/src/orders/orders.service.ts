@@ -12,6 +12,8 @@ import {
   DeepPartial,
   EntityManager,
   FindOptionsWhere,
+  In,
+  LessThanOrEqual,
   Like,
   Repository,
 } from 'typeorm';
@@ -19,6 +21,8 @@ import {
   BulkListing,
   CartItem,
   DeliveryAddressSnapshot,
+  DeliveryAssignment,
+  DeliveryAssignmentStatus,
   DeliveryMethod,
   Livestock,
   Notification,
@@ -35,6 +39,7 @@ import {
   UserRole,
 } from '../entities';
 import { createHash } from 'crypto';
+import { deliveryCodeFor } from './delivery-code';
 import { CartsService } from '../carts/carts.service';
 import { LivestockService } from '../livestock/livestock.service';
 import { BulkListingsService } from '../bulk-listings/bulk-listings.service';
@@ -403,7 +408,9 @@ export class OrdersService {
   // here. Every transition appends a tracking event in the same transaction
   // (order_tracking_events is append-only), and CANCELLED releases every
   // item on the order back to the market.
-  private async applyStatusChange(
+  // Public because CourierJobsService drives the same transitions for
+  // couriers; it must never write order.status any other way.
+  async applyStatusChange(
     manager: EntityManager,
     order: Order,
     toStatus: OrderStatus,
@@ -413,6 +420,10 @@ export class OrdersService {
       location?: string;
       userId?: string;
       extra?: DeepPartial<Order>;
+      // Courier proof metadata copied onto the tracking event.
+      proof?: DeepPartial<OrderTrackingEvent>;
+      // Replaces the default farmer-flavoured buyer notification text.
+      buyerNotice?: { title: string; body: string };
     } = {},
   ): Promise<Order> {
     const previousStatus = order.status;
@@ -440,6 +451,7 @@ export class OrdersService {
         images: opts.images ?? null,
         location: opts.location ?? null,
         createdByUserId: opts.userId ?? null,
+        ...(opts.proof ?? {}),
       }),
     );
 
@@ -447,7 +459,7 @@ export class OrdersService {
       opts.images?.length &&
       FULFILMENT_ADVANCE_TARGETS.includes(toStatus)
     ) {
-      const update = deliveryNotificationFor(toStatus);
+      const update = opts.buyerNotice ?? deliveryNotificationFor(toStatus);
       await manager.save(
         manager.create(Notification, {
           userId: order.buyerId,
@@ -610,11 +622,154 @@ export class OrdersService {
 
     return this.dataSource.transaction(async (manager) => {
       const order = await this.loadOwnedOrder(manager, id, actor, ['farmer']);
+      if (actor.role === UserRole.FARMER) {
+        await this.assertFarmerMayAdvance(manager, order, toStatus);
+      }
       return this.applyStatusChange(manager, order, toStatus, {
         ...opts,
         userId: actor.id,
       });
     });
+  }
+
+  // Couriers, not farmers, dispatch and hand over DELIVERY orders. The farmer
+  // still takes the "preparing" photo. Orders that were already in transit
+  // before couriers existed (no assignment ever) can still be finished by
+  // the farmer so nothing is stranded; admins are never restricted.
+  private async assertFarmerMayAdvance(
+    manager: EntityManager,
+    order: Order,
+    toStatus: OrderStatus,
+  ): Promise<void> {
+    if (order.deliveryMethod !== DeliveryMethod.DELIVERY) return;
+    if (toStatus === OrderStatus.PREPARING) return;
+    if (toStatus === OrderStatus.IN_TRANSIT) {
+      throw new ForbiddenException(
+        'A courier dispatches delivery orders. Mark the order ready for pickup instead.',
+      );
+    }
+    const assignments = await manager.count(DeliveryAssignment, {
+      where: { orderId: order.id },
+    });
+    if (assignments > 0 || order.status !== OrderStatus.IN_TRANSIT) {
+      throw new ForbiddenException(
+        'Only the assigned courier can mark a delivery order as delivered.',
+      );
+    }
+  }
+
+  // Farmer hands a DELIVERY order to the courier pool. A paid order is moved
+  // to PREPARING first so the order status always reads "being prepared"
+  // while it waits for a courier.
+  async markReadyForPickup(id: string, actor: Actor): Promise<Order> {
+    if (actor.role !== UserRole.FARMER && actor.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only the farmer can release an order');
+    }
+    return this.dataSource.transaction(async (manager) => {
+      const order = await this.loadOwnedOrder(manager, id, actor, ['farmer']);
+      if (order.deliveryMethod !== DeliveryMethod.DELIVERY) {
+        throw new ConflictException(
+          'Only delivery orders use a courier. Pickup orders are handed over at the farm.',
+        );
+      }
+      if (order.refundStatus === RefundStatus.REQUESTED) {
+        throw new ConflictException('This order has a pending refund request');
+      }
+      if (order.readyForPickupAt) return order;
+      if (order.status === OrderStatus.PAID) {
+        await this.applyStatusChange(manager, order, OrderStatus.PREPARING, {
+          note: 'Order ready for courier pickup',
+          userId: actor.id,
+        });
+      } else if (order.status !== OrderStatus.PREPARING) {
+        throw new ConflictException(
+          `Order ${id} cannot be released for pickup while ${order.status}`,
+        );
+      }
+      order.readyForPickupAt = new Date();
+      order.poolAlertedAt = null;
+      return manager.save(order);
+    });
+  }
+
+  // Buyer-only: the code is shown while a courier is actually on the way.
+  async deliveryCodeForBuyer(
+    id: string,
+    actor: Actor,
+  ): Promise<{ code: string | null; courierName: string | null }> {
+    const order = await this.repository.findOne({ where: { id } });
+    if (
+      !order ||
+      (actor.role !== UserRole.ADMIN &&
+        !(actor.role === UserRole.BUYER && order.buyerId === actor.id))
+    ) {
+      throw new NotFoundException(`Order ${id} not found`);
+    }
+    const assignment = await this.dataSource
+      .getRepository(DeliveryAssignment)
+      .findOne({
+        where: { orderId: id, status: DeliveryAssignmentStatus.IN_TRANSIT },
+        relations: { courierProfile: { user: true } },
+      });
+    if (!assignment) return { code: null, courierName: null };
+    return {
+      code: deliveryCodeFor(assignment.id),
+      courierName: assignment.courierProfile?.user?.fullName ?? null,
+    };
+  }
+
+  // Scheduler hook: a buyer who never answers after the courier proof must
+  // not leave the order open forever. Skips orders with a live refund
+  // dispute. Each order is its own transaction so one failure never blocks
+  // the rest.
+  async autoConfirmDelivered(hours: number): Promise<number> {
+    const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
+    const due = await this.repository.find({
+      where: {
+        status: OrderStatus.DELIVERED,
+        deliveredAt: LessThanOrEqual(cutoff),
+        refundStatus: In([RefundStatus.NONE, RefundStatus.REJECTED]),
+      },
+      select: { id: true },
+      take: 100,
+    });
+    let confirmed = 0;
+    for (const { id } of due) {
+      try {
+        await this.dataSource.transaction(async (manager) => {
+          const order = await manager.findOne(Order, {
+            where: { id },
+            lock: { mode: 'pessimistic_write' },
+          });
+          if (
+            !order ||
+            order.status !== OrderStatus.DELIVERED ||
+            order.refundStatus === RefundStatus.REQUESTED
+          ) {
+            return;
+          }
+          await this.applyStatusChange(manager, order, OrderStatus.RECEIVED, {
+            note: `Automatically confirmed ${hours} hours after delivery`,
+          });
+          await manager.save(
+            manager.create(Notification, {
+              userId: order.buyerId,
+              audience: NotificationAudience.BUYER,
+              type: NotificationType.ORDER_UPDATE,
+              title: 'Order automatically confirmed',
+              body: `Order #${order.orderNumber} was confirmed as received because no issue was reported within ${hours} hours.`,
+              linkUrl: `/orders/${order.id}`,
+              relatedType: 'order',
+              relatedId: order.id,
+            }),
+          );
+          confirmed += 1;
+        });
+      } catch {
+        // Retried on the next scheduler run.
+      }
+    }
+    return confirmed;
   }
 
   // Buyer (own order) or admin confirms delivery. Farmers never call this.

@@ -1,0 +1,58 @@
+{
+  "stage": {
+    "pickup": "Pickup",
+    "transit": "On the road",
+    "delivery": "Handover",
+    "failed": "Problem"
+  },
+  "photoLabels": {
+    "pickup": "Livestock at the farm",
+    "transit": "On the road",
+    "deliveryAnimal": "Livestock at the address",
+    "deliveryHandover": "Handover to the buyer",
+    "failed": "What went wrong"
+  },
+  "camera": {
+    "title": "Take a live photo",
+    "step": "Photo {{current}} of {{total}}",
+    "capture": "Take photo",
+    "retake": "Retake",
+    "usePhoto": "Use this photo",
+    "close": "Close camera",
+    "starting": "Starting camera…",
+    "liveOnly": "Photos are taken live. You cannot pick one from your gallery.",
+    "gps": {
+      "searching": "Finding your location…",
+      "good": "Location locked (±{{meters}} m)",
+      "weak": "Location too weak (±{{meters}} m). Move to an open area.",
+      "needed": "A location of ±{{max}} m or better is needed to take the photo."
+    },
+    "errors": {
+      "unsupported": "This browser cannot open the camera. Use the latest Chrome or Safari on your phone.",
+      "denied": "Camera access was blocked. Allow the camera for this site in your browser settings, then try again.",
+      "notFound": "No camera was found on this device.",
+      "inUse": "The camera is being used by another app. Close it and try again.",
+      "generic": "The camera could not start. Please try again.",
+      "gpsDenied": "Location access was blocked. Allow location for this site in your browser settings, then try again.",
+      "gpsUnavailable": "Your location is not available right now. Move to an open area and try again.",
+      "gpsUnsupported": "This browser cannot read your location.",
+      "capture": "The photo could not be taken. Please try again."
+    }
+  },
+  "review": {
+    "title": "Check your photos",
+    "hint": "Make sure the animal and the place are clearly visible. The time and location are printed on every photo.",
+    "retake": "Retake",
+    "missing": "Take every photo to continue."
+  },
+  "submit": {
+    "sending": "Sending…",
+    "sent": "Sent",
+    "queuedTitle": "Saved on this phone",
+    "queuedBody": "There is no signal right now. Your photos keep their original time and location and upload automatically when you are back online. Do not clear this site's data.",
+    "rejectedTitle": "Not accepted",
+    "rejectedBody": "The server did not accept this step:",
+    "tryAgain": "Fix and try again",
+    "backToJob": "Back to the job"
+  }
+}

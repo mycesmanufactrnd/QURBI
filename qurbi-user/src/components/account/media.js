@@ -22,16 +22,25 @@ export function accountMediaUrl(value) {
  * stage name ("before delivery evidence"). Merge them with any photos already on
  * the order (e.g. the buyer's locally previewed "received" photo).
  * @param {any} order
- * @returns {Record<string, { image_url: string, uploaded_at?: string }>}
+ * @returns {Record<string, { image_url: string, uploaded_at?: string, by_courier?: boolean }>}
  */
 export function orderProofPhotos(order) {
-  /** @type {Record<string, { image_url: string, uploaded_at?: string }>} */
+  /** @type {Record<string, { image_url: string, uploaded_at?: string, by_courier?: boolean }>} */
   const photos = {};
   const events = Array.isArray(order?.tracking_events) ? order.tracking_events : [];
   for (const event of events) {
     const stage = String(event?.note || "").match(/^(before|during|after)/i)?.[1]?.toLowerCase();
     const image = Array.isArray(event?.images) ? event.images[0] : "";
     if (stage && image) photos[stage] = { image_url: accountMediaUrl(image), uploaded_at: event.createdAt };
+  }
+  // Courier proof: the photo taken on the road fills the "during" slot and the
+  // handover photo the "after" slot, flagged so the screen can name the courier.
+  for (const event of events) {
+    const slot = event?.stage === "transit" ? "during" : event?.stage === "delivery" ? "after" : "";
+    const image = Array.isArray(event?.images) ? event.images[0] : "";
+    if (slot && image) {
+      photos[slot] = { image_url: accountMediaUrl(image), uploaded_at: event.capturedAt || event.createdAt, by_courier: true };
+    }
   }
   const proofImages = Array.isArray(order?.receivedProofImages) ? order.receivedProofImages : [];
   if (proofImages[0]) photos.received = { image_url: accountMediaUrl(proofImages[0]) };

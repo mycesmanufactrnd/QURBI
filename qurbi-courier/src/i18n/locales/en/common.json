@@ -1,0 +1,41 @@
+{
+  "appName": "QURBI Courier",
+  "loading": "Loading…",
+  "retry": "Try again",
+  "cancel": "Cancel",
+  "close": "Close",
+  "save": "Save",
+  "saving": "Saving…",
+  "back": "Back",
+  "next": "Next",
+  "refresh": "Refresh",
+  "yes": "Yes",
+  "no": "No",
+  "optional": "optional",
+  "required": "required",
+  "language": "Language",
+  "logOut": "Log out",
+  "offlineBanner": "You are offline. Photos you send are saved on this phone and upload automatically when the signal returns.",
+  "queue": {
+    "pending_one": "{{count}} photo waiting to upload",
+    "pending_other": "{{count}} photos waiting to upload",
+    "failed_one": "{{count}} upload was rejected",
+    "failed_other": "{{count}} uploads were rejected",
+    "failedTitle": "Uploads that were rejected",
+    "failedHint": "The server did not accept these. Open the job and take the photos again.",
+    "dismiss": "Dismiss",
+    "openJob": "Open job"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "network": "No connection. Check your signal and try again.",
+    "notCourier": "This portal is for couriers only. Please use the right QURBI app for your account.",
+    "authRequired": "Please sign in to continue.",
+    "sessionExpired": "Your session has expired. Please sign in again."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "That page does not exist.",
+    "home": "Go to home"
+  }
+}

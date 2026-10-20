@@ -96,6 +96,13 @@ function normalizeOrder(item) {
   const statusMap = { pending_payment: "pending", paid: "paid", preparing: "processing", in_transit: "shipped", delivered: "delivered", received: "completed", cancelled: "cancelled", refunded: "refunded" };
   const tracking = {};
   (item.trackingEvents || []).forEach((event) => { const stage = event.note?.match(/^(before|during|after)/i)?.[1]?.toLowerCase(); if (stage && event.images?.[0]) tracking[stage] = { image_url: resolveApiAssetUrl(event.images[0]), uploaded_at: event.createdAt }; });
+  // Courier proof photos: "on the road" fills the old "during" slot and the handover fills "after",
+  // so the existing progress and evidence screens show them without any change.
+  const courierEvents = (item.trackingEvents || []).filter((event) => event.stage).map((event) => ({ ...event, images: (event.images || []).map((url) => resolveApiAssetUrl(url)) }));
+  courierEvents.forEach((event) => {
+    const slot = event.stage === "transit" ? "during" : event.stage === "delivery" ? "after" : "";
+    if (slot && event.images[0]) tracking[slot] = { image_url: event.images[0], uploaded_at: event.capturedAt || event.createdAt, by_courier: true };
+  });
   const cancellationEvent = (item.trackingEvents || []).find((event) => event.status === "cancelled");
   const cancelledBy = cancellationEvent?.createdByUserId === item.buyerId
     ? "Buyer"
@@ -104,7 +111,7 @@ function normalizeOrder(item) {
       : cancellationEvent?.createdByUserId
         ? "Administrator"
         : "System";
-  return { ...item, order_number: item.orderNumber, status: item.refundStatus === "requested" ? "refund_requested" : statusMap[item.status] || item.status, payment_status: item.paymentStatus, fulfillment_method: item.deliveryMethod === "self_pickup" ? "pickup" : "delivery", farmer_total: Number(item.subtotal), total_amount: Number(item.total), buyer_name: item.buyer?.fullName || "Buyer", buyer_email: item.buyer?.email || "", buyer_phone: item.deliveryAddress?.recipientPhone, delivery_address: item.deliveryAddress, buyer_notes: item.buyerNotes || "", created_date: item.createdAt, cancellation_reason: item.cancellationReason, cancelled_at: item.cancelledAt, cancelled_by: cancelledBy, refund_status: item.refundStatus, refund_reason: item.refundReason, tracking_photos: tracking, tracking_enabled: true, multi_farmer_order: false, items: (item.items || []).map(normalizeOrderItem) };
+  return { ...item, order_number: item.orderNumber, status: item.refundStatus === "requested" ? "refund_requested" : statusMap[item.status] || item.status, payment_status: item.paymentStatus, fulfillment_method: item.deliveryMethod === "self_pickup" ? "pickup" : "delivery", farmer_total: Number(item.subtotal), total_amount: Number(item.total), buyer_name: item.buyer?.fullName || "Buyer", buyer_email: item.buyer?.email || "", buyer_phone: item.deliveryAddress?.recipientPhone, delivery_address: item.deliveryAddress, buyer_notes: item.buyerNotes || "", created_date: item.createdAt, cancellation_reason: item.cancellationReason, cancelled_at: item.cancelledAt, cancelled_by: cancelledBy, refund_status: item.refundStatus, refund_reason: item.refundReason, tracking_photos: tracking, courier_events: courierEvents, ready_for_pickup_at: item.readyForPickupAt, tracking_enabled: true, multi_farmer_order: false, items: (item.items || []).map(normalizeOrderItem) };
 }
 
 async function allSpecies() { return (await data(apiClient.get("/species"))).map(normalizeSpecies); }
