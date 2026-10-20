@@ -447,7 +447,9 @@ export default function Profile() {
             icon={Clock}
             title={t("profile.transactionHistoryCard.title")}
             subtitle={t("profile.transactionHistoryCard.subtitle")}
-            onClick={() => requireAuth(() => navigateFromIconPage("/transaction-history"))}
+            onClick={() =>
+              requireAuth(() => navigateWithTransition("/transaction-history"))
+            }
           />
         </SettingsGroup>
 

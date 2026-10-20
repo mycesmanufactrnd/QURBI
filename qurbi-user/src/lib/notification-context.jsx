@@ -225,7 +225,7 @@ export function NotificationProvider({ children }) {
   const openBanner = useCallback(
     async (notification) => {
       closeBanner();
-      if (!notification.is_read) await markAsRead(notification.id);
+      if (!notification.is_read) void markAsRead(notification.id);
       if (notification.order_id) {
         navigate(`/orders/${encodeURIComponent(notification.order_id)}`, {
           state: {
