@@ -2,6 +2,17 @@
   "backAria": "Kembali ke butiran senarai",
   "title": "Semak & tandatangan",
   "subtitle": "Semak senarai anda, baca polisi penjual, kemudian tandatangan.",
+  "flow": {
+    "ariaLabel": "Kemajuan semakan dan tandatangan",
+    "review": "Semak",
+    "policy": "Polisi",
+    "sign": "Tandatangan",
+    "next": "Teruskan",
+    "reviewHint": "Semak butiran senarai sebelum meneruskan.",
+    "policyHint": "Baca polisi dan tandakan persetujuan untuk meneruskan.",
+    "policyDone": "Polisi telah dipersetujui. Teruskan ke tandatangan.",
+    "agreeFirst": "Tandakan persetujuan sebelum meneruskan."
+  },
   "summary": {
     "heading": "1. Semak senarai anda",
     "description": "Inilah yang akan dilihat oleh pembeli. Ketik Sunting untuk mengubah sebarang butiran.",

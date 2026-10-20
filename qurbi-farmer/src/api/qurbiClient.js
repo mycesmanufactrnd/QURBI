@@ -122,7 +122,7 @@ async function livestockPayload(input, partial = false) {
     ? null
     : input.breedId || await resolveBreedId(input.breed, speciesId);
   const ageMonths = input.ageInputMode === "Age" && input.ageValue !== "" && input.ageValue != null ? Math.round(Number(input.ageValue) * (input.ageUnit === "Years" ? 12 : 1)) : input.ageMonths;
-  const excluded = new Set(["ownerId", "speciesId", "breedId", "title", "tagNumber", "description", "gender", "sex", "ageMonths", "birthDate", "weightKg", "price", "currency", "images", "videos", "status", "marketplaceEligibleFrom", "attributes"]);
+  const excluded = new Set(["ownerId", "speciesId", "breedId", "title", "tagNumber", "description", "gender", "sex", "ageMonths", "birthDate", "weightKg", "price", "currency", "images", "videos", "status", "marketplaceEligibleFrom", "attributes", "healthCertificateUrl", "vaccinationRecordUrl", "requestRegistrationAssistance", "assistanceContactName", "assistancePhone", "assistanceIdentityNumber", "assistancePremiseId", "assistanceFarmAddress", "assistanceAnimalCount", "assistanceNotes"]);
   const legacy = Object.fromEntries(Object.entries(input).filter(([key]) => !excluded.has(key)));
   const requestedStatus = input.status ? STATUS_TO_API[input.status] || input.status : undefined;
   return Object.fromEntries(Object.entries({ speciesId, breedId, title: input.title || (input.species ? `${input.species}${input.breed && input.breed !== "Unspecified" ? ` - ${input.breed}` : ""}` : undefined), tagNumber: input.tagNumber, description: input.description, sex: input.sex || (input.gender ? String(input.gender).toLowerCase() : undefined), ageMonths, birthDate: input.birthDate || undefined, weightKg: input.weightKg || (input.weight ? String(input.weight) : undefined), price: input.price != null ? String(input.price) : undefined, currency: input.currency || (partial ? undefined : "MYR"), images: input.images, videos: input.videos, status: !partial && input.breedRequestId ? "draft" : requestedStatus, attributes: { ...(input.attributes || {}), ...legacy, originalStatus: !partial && input.breedRequestId ? requestedStatus : input.originalStatus, species: input.species, breed: input.breed } }).filter(([, value]) => value !== undefined && value !== ""));
@@ -187,6 +187,7 @@ const Livestock = {
     return normalizeLivestock(updated || await data(apiClient.get(`/livestock/${id}`)));
   },
   delete: (id) => data(apiClient.delete(`/livestock/${id}`)),
+  reviewCompliance: async (id, decision, note = "") => normalizeLivestock(await data(apiClient.patch(`/livestock/${id}/compliance-review`, { decision, note: note || undefined }))),
 };
 
 const BulkListing = {

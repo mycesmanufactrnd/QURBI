@@ -11,6 +11,7 @@ import {
   computeMarketplaceVisibility,
   LISTING_LIFETIME_MS,
   LivestockService,
+  marketplaceComplianceEvidenceComplete,
   resolveMarketplaceExpiry,
 } from './livestock.service';
 
@@ -159,6 +160,73 @@ describe('computeMarketplaceVisibility', () => {
       marketplaceVisible: false,
       marketplaceVisibilityReason: 'Breed request was rejected',
     });
+  });
+});
+
+describe('marketplace compliance policy', () => {
+  it('requires an animal ID plus health and vaccination evidence', () => {
+    expect(
+      marketplaceComplianceEvidenceComplete({
+        earTagId: 'DVS-SGR-001',
+        healthCertificateUrl: '/uploads/private/health',
+        vaccinationRecordUrl: '/uploads/private/vaccine',
+      }),
+    ).toBe(true);
+    expect(
+      marketplaceComplianceEvidenceComplete({
+        earTagId: 'DVS-SGR-001',
+        healthCertificateUrl: '/uploads/private/health',
+      }),
+    ).toBe(false);
+  });
+
+  it('forces a new listing to draft and ignores client self-approval', async () => {
+    const repository = {
+      create: jest.fn((value: unknown) => value),
+      save: jest.fn((value: unknown) =>
+        Promise.resolve({ ...(value as object), id: 'livestock-1' }),
+      ),
+    };
+    const speciesRepository = {
+      findOne: jest.fn().mockResolvedValue({ id: 'species-1', name: 'Cow' }),
+    };
+    const userRepository = { find: jest.fn().mockResolvedValue([]) };
+    const dataSource = {
+      getRepository: jest.fn((entity: { name?: string }) =>
+        entity?.name === 'Species' ? speciesRepository : userRepository,
+      ),
+    };
+    const service = new LivestockService(
+      repository as never,
+      dataSource as never,
+      {} as never,
+    );
+
+    const result = await service.createForFarmer('farmer-1', {
+      speciesId: 'species-1',
+      title: 'Cow - Brahman',
+      tagNumber: 'DVS-SGR-001',
+      price: '2500',
+      images: ['/uploads/public/cow.jpg'],
+      status: LivestockStatus.AVAILABLE,
+      ageMonths: 18,
+      attributes: {
+        marketplaceCompliance: {
+          earTagId: 'DVS-SGR-001',
+          healthCertificateUrl: '/uploads/private/health',
+          vaccinationRecordUrl: '/uploads/private/vaccine',
+          reviewStatus: 'approved',
+        },
+      },
+    } as never);
+
+    expect(result.status).toBe(LivestockStatus.DRAFT);
+    expect(result.attributes?.marketplaceCompliance.reviewStatus).toBe(
+      'pending',
+    );
+    expect(result.attributes?.marketplaceCompliance.requestedStatus).toBe(
+      LivestockStatus.AVAILABLE,
+    );
   });
 });
 

@@ -185,6 +185,19 @@
       "breedPending": "Baka ini sedang menunggu kelulusan superadmin. Senarai disimpan tetapi kekal tersembunyi daripada pembeli.",
       "breedRejected": "Baka yang dicadangkan telah ditolak dan kekal Tidak dinyatakan sehingga anda memilih baka lain."
     },
+    "compliance": {
+      "incompleteTitle": "Maklumat pematuhan belum lengkap",
+      "incompleteText": "Senarai kekal sebagai draf sehingga ID haiwan, bukti kesihatan dan rekod vaksin dihantar.",
+      "pendingTitle": "Semakan pematuhan sedang diproses",
+      "pendingText": "QURBI sedang menyemak ID haiwan, bukti kesihatan dan rekod vaksin yang dihantar.",
+      "approvedTitle": "Pematuhan pasaran diluluskan",
+      "approvedText": "Bukti yang dihantar telah diluluskan untuk penerbitan di pasaran QURBI.",
+      "rejectedTitle": "Perubahan pematuhan diperlukan",
+      "rejectedText": "Kemas kini bukti yang diminta oleh penyemak dan hantar semula.",
+      "assistanceText": "Permohonan bantuan pendaftaran QURBI anda sedang diproses. Pasukan kami akan menghubungi anda melalui butiran yang diberi.",
+      "reviewNote": "Catatan penyemak: {{note}}",
+      "update": "Kemas kini pematuhan"
+    },
     "specs": {
       "heading": "Maklumat haiwan",
       "weight": "Berat",
@@ -225,6 +238,7 @@
     "wizard": {
       "animal": "Haiwan",
       "listing": "Senarai",
+      "compliance": "Pematuhan",
       "media": "Gambar",
       "review": "Semakan",
       "step": "Langkah {{current}} daripada {{total}}",
@@ -244,7 +258,44 @@
       "priceTitle": "Harga & keterlihatan",
       "moreTitle": "Butiran lanjut",
       "moreOptional": "(pilihan)",
-      "moreDescription": "Berat, saiz, nombor tag dan pemakanan"
+      "moreDescription": "Berat, saiz, RFID dan pemakanan"
+    },
+    "compliance": {
+      "title": "Pematuhan pasaran",
+      "description": "Pengenalan, bukti kesihatan veterinar dan rekod vaksin untuk haiwan ini.",
+      "policyTitle": "Diperlukan sebelum diterbitkan di pasaran",
+      "policyText": "QURBI menggunakan semakan ini untuk menyokong daya jejak dan syarat pemindahan DVS. Syarat kerajaan sebenar boleh berbeza mengikut negeri, spesies dan tujuan pemindahan.",
+      "dvsLink": "Lihat panduan rasmi DVS",
+      "earTagLabel": "Tag telinga rasmi / ID haiwan",
+      "earTagHint": "Masukkan nombor pengenalan tag telinga, RFID atau mikrocip yang dapat dilihat.",
+      "earTagPlaceholder": "cth. DVS-SGR-012345",
+      "healthCertificateLabel": "Bukti kesihatan veterinar",
+      "healthCertificateHint": "Muat naik sijil kesihatan veterinar atau deklarasi kesihatan berkaitan sebagai gambar jelas atau PDF.",
+      "vaccinationLabel": "Rekod vaksinasi / rawatan ladang",
+      "vaccinationHint": "Muat naik rekod vaksinasi atau rawatan berkaitan haiwan ini. Syarat boleh berbeza mengikut laluan pemindahan.",
+      "uploadEvidence": "Muat naik gambar atau PDF",
+      "completeTitle": "Bukti sedia untuk semakan admin",
+      "completeText": "Senarai kekal sebagai draf sehingga QURBI meluluskan bukti yang dihantar.",
+      "incompleteTitle": "Senarai akan disimpan sebagai draf",
+      "incompleteText": "Pembeli tidak dapat melihat haiwan ini sehingga ketiga-tiga perkara diberi dan diluluskan.",
+      "requestHelp": "Mohon bantuan pendaftaran QURBI",
+      "requestHelpText": "Gunakan pilihan ini jika haiwan atau ladang belum berdaftar, atau anda perlukan bantuan menyediakan maklumat berkaitan DVS. QURBI akan menghubungi anda; kelulusan bukan automatik.",
+      "openRequestPage": "Buka borang permohonan",
+      "editRequest": "Sunting butiran permohonan",
+      "select": "Pilih",
+      "selected": "Dipilih",
+      "contactName": "Nama untuk dihubungi",
+      "phone": "Nombor telefon",
+      "identityNumber": "No. IC / pendaftaran syarikat",
+      "premiseId": "ID premis DVS",
+      "premiseIdPlaceholder": "Biarkan kosong jika belum berdaftar",
+      "farmAddress": "Alamat penuh ladang",
+      "animalCount": "Bilangan haiwan yang memerlukan bantuan",
+      "notes": "Apakah bantuan yang diperlukan?",
+      "reviewLabel": "Pematuhan",
+      "readyForReview": "Bukti dihantar — semakan admin diperlukan",
+      "assistanceRequested": "Bantuan QURBI dimohon — disimpan sebagai draf",
+      "savedAsDraft": "Belum lengkap — disimpan sebagai draf"
     },
     "agePolicy": {
       "title": "Umur minimum pasaran pembeli",
@@ -314,7 +365,31 @@
         "messageAge": "Masukkan umur semasa haiwan."
       },
       "price": { "label": "Harga", "message": "Masukkan harga jualan anda dalam RM." },
-      "status": { "label": "Status senarai", "message": "Pilih cara senarai ini hendak disimpan." }
+      "status": { "label": "Status senarai", "message": "Pilih cara senarai ini hendak disimpan." },
+      "assistanceContact": { "label": "Nama untuk dihubungi", "message": "Masukkan nama individu yang patut dihubungi QURBI." },
+      "assistancePhone": { "label": "Nombor telefon", "message": "Masukkan nombor telefon untuk permohonan bantuan." },
+      "assistanceAddress": { "label": "Alamat ladang", "message": "Masukkan alamat penuh ladang." },
+      "assistanceCount": { "label": "Bilangan haiwan", "message": "Masukkan sekurang-kurangnya seekor haiwan." }
+    }
+  },
+  "registrationAssistance": {
+    "eyebrow": "Perkhidmatan QURBI",
+    "title": "Bantuan pendaftaran",
+    "backAria": "Kembali ke pematuhan ternakan",
+    "heroTitle": "Beritahu kami bantuan yang diperlukan",
+    "heroText": "Berikan butiran di bawah supaya pasukan QURBI boleh menyemak kes anda dan menghubungi anda.",
+    "notesPlaceholder": "cth. Haiwan belum berdaftar, tiada ID premis atau perlukan bantuan menyediakan maklumat DVS",
+    "notice": "Menyimpan butiran ini tidak mendaftarkan haiwan secara automatik. Senarai anda kekal sebagai draf sehingga bukti wajib dilengkapkan dan diluluskan.",
+    "missing": "{{count}} perkara wajib masih perlu dilengkapkan.",
+    "ready": "Butiran ini akan dilampirkan pada permohonan ternakan ini.",
+    "save": "Simpan butiran permohonan",
+    "errors": {
+      "contactName": "Masukkan nama individu yang patut dihubungi QURBI.",
+      "phone": "Masukkan nombor telefon untuk permohonan ini.",
+      "identity": "Masukkan nombor IC atau pendaftaran syarikat.",
+      "address": "Masukkan alamat penuh ladang.",
+      "state": "Pilih negeri ladang.",
+      "count": "Masukkan sekurang-kurangnya seekor haiwan."
     }
   },
   "breedSelector": {

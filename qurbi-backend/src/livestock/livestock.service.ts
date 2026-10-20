@@ -36,6 +36,42 @@ export interface DerivedMarketplaceVisibility {
 export type LivestockWithVisibility = Livestock & DerivedMarketplaceVisibility;
 
 export const LISTING_LIFETIME_MS = 14 * 24 * 60 * 60 * 1000;
+export const MARKETPLACE_COMPLIANCE_POLICY_VERSION = 'QURBI-MY-DVS-2026-01';
+
+type MarketplaceCompliance = {
+  policyVersion?: string;
+  earTagId?: string;
+  healthCertificateUrl?: string;
+  vaccinationRecordUrl?: string;
+  reviewStatus?: 'incomplete' | 'pending' | 'approved' | 'rejected';
+  reviewNote?: string | null;
+  requestedStatus?: LivestockStatus;
+  submittedAt?: string | null;
+  reviewedAt?: string | null;
+  assistance?: {
+    requested?: boolean;
+    status?: 'pending' | 'contacted' | 'completed' | 'cancelled';
+    contactName?: string;
+    phone?: string;
+    identityOrCompanyNumber?: string;
+    premiseId?: string;
+    farmAddress?: string;
+    state?: string;
+    animalCount?: number;
+    notes?: string;
+    requestedAt?: string | null;
+  };
+};
+
+export function marketplaceComplianceEvidenceComplete(
+  compliance: MarketplaceCompliance | null | undefined,
+): boolean {
+  return Boolean(
+    compliance?.earTagId?.trim() &&
+    compliance.healthCertificateUrl?.trim() &&
+    compliance.vaccinationRecordUrl?.trim(),
+  );
+}
 
 // Marketplace policy, enforced by the API rather than trusted from clients.
 export const MIN_MARKETPLACE_AGE_MONTHS: Readonly<Record<string, number>> = {
@@ -298,8 +334,39 @@ export class LivestockService extends BaseCrudService<Livestock> {
     const attributes = data.attributes ?? {};
     const speciesPending = Boolean(attributes.speciesRequestId);
     const breedPending = Boolean(attributes.breedRequestId);
-    const status =
-      speciesPending || breedPending ? LivestockStatus.DRAFT : data.status;
+    const requestedStatus = data.status ?? LivestockStatus.DRAFT;
+    const suppliedCompliance = (attributes.marketplaceCompliance ??
+      {}) as MarketplaceCompliance;
+    const evidenceComplete = marketplaceComplianceEvidenceComplete({
+      ...suppliedCompliance,
+      earTagId: data.tagNumber || suppliedCompliance.earTagId,
+    });
+    const assistanceRequested = Boolean(
+      suppliedCompliance.assistance?.requested,
+    );
+    const marketplaceCompliance: MarketplaceCompliance = {
+      ...suppliedCompliance,
+      policyVersion: MARKETPLACE_COMPLIANCE_POLICY_VERSION,
+      earTagId: data.tagNumber || suppliedCompliance.earTagId || '',
+      reviewStatus: evidenceComplete ? 'pending' : 'incomplete',
+      reviewNote: null,
+      requestedStatus,
+      submittedAt:
+        evidenceComplete || assistanceRequested
+          ? new Date().toISOString()
+          : null,
+      reviewedAt: null,
+      assistance: {
+        ...(suppliedCompliance.assistance ?? {}),
+        requested: assistanceRequested,
+        status: assistanceRequested ? 'pending' : undefined,
+        requestedAt: assistanceRequested ? new Date().toISOString() : null,
+      },
+    };
+    // Every listing created under the new compliance policy starts as a draft.
+    // A client cannot self-approve by posting reviewStatus: "approved".
+    const status = LivestockStatus.DRAFT;
+    data.attributes = { ...attributes, marketplaceCompliance };
     this.normalizeAgeFields(data);
     this.requireAgeWhenPublishing(status, data.birthDate, data.ageMonths);
     const marketplaceEligibleFrom = computeMarketplaceEligibleFrom({
@@ -308,15 +375,12 @@ export class LivestockService extends BaseCrudService<Livestock> {
       ageMonths: data.ageMonths,
       ageRecordedAt: this.ageRecordedAt(attributes),
     });
-    return this.create({
+    const listing = await this.create({
       ...data,
       status,
       farmerId,
       marketplaceEligibleFrom,
-      marketplaceExpiresAt:
-        status === LivestockStatus.AVAILABLE
-          ? listingExpiryFromEligibility(marketplaceEligibleFrom)
-          : null,
+      marketplaceExpiresAt: null,
       speciesApprovalStatus: speciesPending
         ? RequestStatus.PENDING
         : RequestStatus.APPROVED,
@@ -324,6 +388,12 @@ export class LivestockService extends BaseCrudService<Livestock> {
         ? RequestStatus.PENDING
         : RequestStatus.APPROVED,
     });
+    await this.notifyAdminsOfComplianceSubmission(
+      listing,
+      evidenceComplete,
+      assistanceRequested,
+    );
+    return listing;
   }
 
   async updateOwned(
@@ -353,6 +423,8 @@ export class LivestockService extends BaseCrudService<Livestock> {
     }
     let speciesApprovalStatus = listing.speciesApprovalStatus;
     let breedApprovalStatus = listing.breedApprovalStatus;
+    let complianceSubmissionChanged = false;
+    let assistanceRequestedNow = false;
     const attributes = data.attributes ?? {};
     const speciesId = data.speciesId ?? listing.speciesId;
     const breedId = data.breedId === undefined ? listing.breedId : data.breedId;
@@ -377,6 +449,62 @@ export class LivestockService extends BaseCrudService<Livestock> {
     if (attributes.breedRequestId) {
       breedApprovalStatus = RequestStatus.PENDING;
       data.breedApprovalStatus = breedApprovalStatus;
+    }
+    const effectiveAttributesBeforeUpdate = {
+      ...(listing.attributes ?? {}),
+      ...(data.attributes ?? {}),
+    };
+    const existingCompliance = listing.attributes?.marketplaceCompliance as
+      MarketplaceCompliance | undefined;
+    if (existingCompliance?.policyVersion) {
+      const submittedCompliance =
+        effectiveAttributesBeforeUpdate.marketplaceCompliance as
+          MarketplaceCompliance | undefined;
+      const evidenceChanged = Boolean(
+        submittedCompliance &&
+        (submittedCompliance.earTagId !== existingCompliance.earTagId ||
+          submittedCompliance.healthCertificateUrl !==
+            existingCompliance.healthCertificateUrl ||
+          submittedCompliance.vaccinationRecordUrl !==
+            existingCompliance.vaccinationRecordUrl),
+      );
+      const nextCompliance: MarketplaceCompliance = {
+        ...existingCompliance,
+        ...(submittedCompliance ?? {}),
+        policyVersion: MARKETPLACE_COMPLIANCE_POLICY_VERSION,
+        earTagId:
+          (data.tagNumber as string | undefined) ??
+          submittedCompliance?.earTagId ??
+          existingCompliance.earTagId,
+      };
+      if (evidenceChanged) {
+        complianceSubmissionChanged = true;
+        nextCompliance.reviewStatus = marketplaceComplianceEvidenceComplete(
+          nextCompliance,
+        )
+          ? 'pending'
+          : 'incomplete';
+        nextCompliance.reviewNote = null;
+        nextCompliance.reviewedAt = null;
+        nextCompliance.submittedAt = new Date().toISOString();
+      } else {
+        // Farmers cannot alter an admin decision through the generic endpoint.
+        nextCompliance.reviewStatus = existingCompliance.reviewStatus;
+        nextCompliance.reviewNote = existingCompliance.reviewNote;
+        nextCompliance.reviewedAt = existingCompliance.reviewedAt;
+      }
+      assistanceRequestedNow = Boolean(
+        nextCompliance.assistance?.requested &&
+        !existingCompliance.assistance?.requested,
+      );
+      effectiveAttributesBeforeUpdate.marketplaceCompliance = nextCompliance;
+      data.attributes = effectiveAttributesBeforeUpdate;
+      if (
+        data.status === LivestockStatus.AVAILABLE &&
+        nextCompliance.reviewStatus !== 'approved'
+      ) {
+        data.status = LivestockStatus.DRAFT;
+      }
     }
     if (data.status === LivestockStatus.AVAILABLE) {
       if (speciesApprovalStatus !== RequestStatus.APPROVED) {
@@ -421,7 +549,17 @@ export class LivestockService extends BaseCrudService<Livestock> {
         data.marketplaceEligibleFrom as Date | null,
       );
     }
-    return super.update(listing.id, data);
+    const updated = await super.update(listing.id, data);
+    if (complianceSubmissionChanged || assistanceRequestedNow) {
+      const compliance = updated.attributes
+        ?.marketplaceCompliance as MarketplaceCompliance;
+      await this.notifyAdminsOfComplianceSubmission(
+        updated,
+        marketplaceComplianceEvidenceComplete(compliance),
+        Boolean(compliance?.assistance?.requested),
+      );
+    }
+    return updated;
   }
 
   private normalizeAgeFields(data: DeepPartial<Livestock>): void {
@@ -446,6 +584,115 @@ export class LivestockService extends BaseCrudService<Livestock> {
         'Enter a birth date or current age before publishing this livestock',
       );
     }
+  }
+
+  async reviewMarketplaceCompliance(
+    id: string,
+    decision: 'approved' | 'rejected',
+    note: string | null,
+  ): Promise<Livestock> {
+    return this.dataSource.transaction(async (manager) => {
+      const listing = await manager
+        .createQueryBuilder(Livestock, 'livestock')
+        .setLock('pessimistic_write')
+        .where('livestock.id = :id', { id })
+        .getOne();
+      if (!listing) throw new NotFoundException(`Livestock ${id} not found`);
+
+      const compliance = listing.attributes?.marketplaceCompliance as
+        MarketplaceCompliance | undefined;
+      if (!compliance?.policyVersion) {
+        throw new BadRequestException(
+          'This legacy listing is not enrolled in the marketplace compliance workflow',
+        );
+      }
+      if (
+        decision === 'approved' &&
+        !marketplaceComplianceEvidenceComplete(compliance)
+      ) {
+        throw new BadRequestException(
+          'Ear tag ID, veterinary health evidence and vaccination record are required before approval',
+        );
+      }
+
+      const approved = decision === 'approved';
+      const nextCompliance: MarketplaceCompliance = {
+        ...compliance,
+        reviewStatus: decision,
+        reviewNote: note,
+        reviewedAt: new Date().toISOString(),
+      };
+      listing.attributes = {
+        ...(listing.attributes ?? {}),
+        marketplaceCompliance: nextCompliance,
+      };
+      const referenceDataApproved =
+        listing.speciesApprovalStatus === RequestStatus.APPROVED &&
+        listing.breedApprovalStatus === RequestStatus.APPROVED;
+      listing.status =
+        approved &&
+        referenceDataApproved &&
+        compliance.requestedStatus === LivestockStatus.AVAILABLE
+          ? LivestockStatus.AVAILABLE
+          : approved
+            ? compliance.requestedStatus || LivestockStatus.DRAFT
+            : LivestockStatus.DRAFT;
+      if (listing.status === LivestockStatus.AVAILABLE) {
+        listing.marketplaceExpiresAt = listingExpiryFromEligibility(
+          listing.marketplaceEligibleFrom,
+        );
+      }
+      await manager.save(listing);
+      await manager.save(
+        manager.create(Notification, {
+          userId: listing.farmerId,
+          audience: NotificationAudience.FARMER,
+          type: NotificationType.REQUEST_UPDATE,
+          title: approved
+            ? 'Livestock compliance approved'
+            : 'Livestock compliance needs changes',
+          body: approved
+            ? 'Your ear tag, health and vaccination evidence were approved. The listing can now follow your requested marketplace status.'
+            : `Your livestock remains a draft.${note ? ` Reason: ${note}` : ' Review the required evidence and resubmit.'}`,
+          linkUrl: `/livestock/${listing.id}`,
+          relatedType: 'livestock',
+          relatedId: listing.id,
+        }),
+      );
+      return listing;
+    });
+  }
+
+  private async notifyAdminsOfComplianceSubmission(
+    listing: Livestock,
+    evidenceComplete: boolean,
+    assistanceRequested: boolean,
+  ): Promise<void> {
+    if (!evidenceComplete && !assistanceRequested) return;
+    const userRepository = this.dataSource.getRepository(User);
+    const notificationRepository = this.dataSource.getRepository(Notification);
+    const admins = await userRepository.find({
+      where: { role: UserRole.ADMIN },
+    });
+    if (!admins.length) return;
+    await notificationRepository.save(
+      admins.map((admin) =>
+        notificationRepository.create({
+          userId: admin.id,
+          audience: NotificationAudience.ADMIN,
+          type: NotificationType.REQUEST_UPDATE,
+          title: assistanceRequested
+            ? 'Livestock registration assistance requested'
+            : 'Livestock compliance review required',
+          body: assistanceRequested
+            ? 'A farmer needs help with DVS-related livestock registration and documentation.'
+            : 'A farmer submitted ear tag, veterinary health and vaccination evidence for review.',
+          linkUrl: `/admin/livestock/${listing.id}`,
+          relatedType: 'livestock',
+          relatedId: listing.id,
+        }),
+      ),
+    );
   }
 
   private ageRecordedAt(

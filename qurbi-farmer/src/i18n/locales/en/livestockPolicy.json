@@ -2,6 +2,17 @@
   "backAria": "Back to listing details",
   "title": "Review & sign",
   "subtitle": "Check your listing, read the seller policy, then sign.",
+  "flow": {
+    "ariaLabel": "Review and signature progress",
+    "review": "Review",
+    "policy": "Policy",
+    "sign": "Sign",
+    "next": "Continue",
+    "reviewHint": "Check the listing details before continuing.",
+    "policyHint": "Read the policy and tick the agreement to continue.",
+    "policyDone": "Policy accepted. Continue to your signature.",
+    "agreeFirst": "Tick the agreement before continuing."
+  },
   "summary": {
     "heading": "1. Check your listing",
     "description": "This is what buyers will see. Tap Edit to change anything.",

@@ -19,6 +19,7 @@ import Home from "@/pages/Home";
 import MyLivestock from "@/pages/MyLivestock";
 import AddLivestock from "@/pages/AddLivestock";
 import LivestockPolicy from "@/pages/LivestockPolicy";
+import RegistrationAssistance from "@/pages/RegistrationAssistance";
 import EditLivestock from "@/pages/EditLivestock";
 import LivestockDetail from "@/pages/LivestockDetail";
 import Orders from "@/pages/Orders";
@@ -86,8 +87,10 @@ const AuthenticatedApp = () => {
             <Route path="/livestock" element={<MyLivestock />} />
             <Route path="/livestock/add" element={<AddLivestock />} />
             <Route path="/livestock/add/policy" element={<LivestockPolicy />} />
+            <Route path="/livestock/add/registration-assistance" element={<RegistrationAssistance />} />
             <Route path="/livestock/:id" element={<LivestockDetail />} />
             <Route path="/livestock/:id/edit" element={<EditLivestock />} />
+            <Route path="/livestock/:id/registration-assistance" element={<RegistrationAssistance />} />
             <Route path="/bulk" element={<BulkListings />} />
             <Route path="/bulk/add" element={<AddBulkListing />} />
             <Route path="/bulk/:id" element={<BulkListingDetail />} />

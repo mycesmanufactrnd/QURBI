@@ -2,15 +2,16 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   AlertCircle, ArrowLeft, Building2, CalendarDays, CheckCircle2, ChevronRight, Eye, EyeOff, Hash, Loader2, Mail, MapPin,
-  Palette, Ruler, Star, Tag, UserRound, Utensils, Weight,
+  FileText, Palette, Phone, Ruler, ShieldCheck, Star, Tag, UserRound, Utensils, Weight, XCircle,
 } from "lucide-react";
 import { qurbi } from "@/api/qurbiClient";
-import { resolveApiAssetUrl } from "@/api/apiClient";
+import { resolveApiAssetUrl, uploadApi } from "@/api/apiClient";
 import SectionHeader from "@/components/agri/SectionHeader";
 import StatusBadge from "@/components/agri/StatusBadge";
 import ConfirmDialog from "@/components/agri/ConfirmDialog";
 import { Image } from "@/components/ui/image";
 import { useToast } from "@/components/ui/use-toast";
+import { Textarea } from "@/components/ui/textarea";
 import { formatAge, malaysiaState } from "@/lib/agri";
 import { cn } from "@/lib/utils";
 import { formatPrice, genderLabel, listingTitle, livestockStatusInfo } from "@/components/admin/adminFormat";
@@ -27,6 +28,8 @@ export default function AdminLivestockDetail() {
   const [updatingVisibility, setUpdatingVisibility] = useState(false);
   const [updatingFeatured, setUpdatingFeatured] = useState(false);
   const [confirmHide, setConfirmHide] = useState(false);
+  const [reviewingCompliance, setReviewingCompliance] = useState(false);
+  const [complianceNote, setComplianceNote] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -75,6 +78,34 @@ export default function AdminLivestockDetail() {
       toast({ variant: "destructive", title: "Could not update featured", description: error.message || "Failed to update" });
     } finally {
       setUpdatingFeatured(false);
+    }
+  };
+
+  const reviewCompliance = async (decision) => {
+    setReviewingCompliance(true);
+    try {
+      const updated = await qurbi.entities.Livestock.reviewCompliance(id, decision, complianceNote);
+      setItem(updated);
+      setComplianceNote("");
+      toast({
+        title: decision === "approved" ? "Compliance approved" : "Changes requested",
+        description: decision === "approved" ? "The farmer was notified and the requested listing status was restored." : "The listing remains a draft and the farmer was notified.",
+      });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Could not review compliance", description: error.message || "Please try again." });
+    } finally {
+      setReviewingCompliance(false);
+    }
+  };
+
+  const openPrivateEvidence = async (fileUrl) => {
+    try {
+      const blob = await uploadApi.getPrivateFile(fileUrl);
+      const objectUrl = URL.createObjectURL(blob);
+      window.open(objectUrl, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+    } catch (error) {
+      toast({ variant: "destructive", title: "Could not open evidence", description: error.message || "Please try again." });
     }
   };
 
@@ -173,6 +204,17 @@ export default function AdminLivestockDetail() {
             <p className="mt-2 text-xs text-muted-foreground">Featured listings are highlighted on the buyer home page.</p>
           </section>
 
+          {item.marketplaceCompliance?.policyVersion && (
+            <ComplianceReviewCard
+              compliance={item.marketplaceCompliance}
+              note={complianceNote}
+              setNote={setComplianceNote}
+              reviewing={reviewingCompliance}
+              onReview={reviewCompliance}
+              onOpenEvidence={openPrivateEvidence}
+            />
+          )}
+
           <ApprovalMessages item={item} />
 
           <button type="button" onClick={() => navigate(`/admin/farmers/${item.ownerId}`)} className="soft-card group flex w-full items-center gap-3 p-4 text-left transition-all hover:border-primary/20 hover:shadow-sm">
@@ -216,6 +258,45 @@ export default function AdminLivestockDetail() {
       />
     </div>
   );
+}
+
+function ComplianceReviewCard({ compliance, note, setNote, reviewing, onReview, onOpenEvidence }) {
+  const evidenceComplete = Boolean(compliance.earTagId && compliance.healthCertificateUrl && compliance.vaccinationRecordUrl);
+  const assistance = compliance.assistance || {};
+  const tone = compliance.reviewStatus === "approved" ? "text-emerald-800 bg-emerald-50" : compliance.reviewStatus === "rejected" ? "text-destructive bg-destructive/10" : "text-amber-900 bg-amber-50";
+  return (
+    <section className="soft-card p-4 sm:p-5" aria-labelledby="compliance-review-heading">
+      <div className="flex items-start justify-between gap-3">
+        <div><h2 id="compliance-review-heading" className="flex items-center gap-2 text-base font-extrabold"><ShieldCheck className="h-5 w-5" />Marketplace compliance</h2><p className="mt-1 text-xs text-muted-foreground">QURBI policy {compliance.policyVersion}</p></div>
+        <span className={cn("rounded-full px-2.5 py-1 text-xs font-extrabold capitalize", tone)}>{compliance.reviewStatus || "incomplete"}</span>
+      </div>
+      <dl className="mt-4 divide-y divide-border/60 rounded-2xl bg-muted/40 px-4 text-sm">
+        <ReviewFact label="Ear tag / animal ID" value={compliance.earTagId || "Missing"} />
+        <ReviewFact label="Veterinary health evidence" value={compliance.healthCertificateUrl ? "Submitted" : "Missing"} action={compliance.healthCertificateUrl ? () => onOpenEvidence(compliance.healthCertificateUrl) : null} />
+        <ReviewFact label="Vaccination record" value={compliance.vaccinationRecordUrl ? "Submitted" : "Missing"} action={compliance.vaccinationRecordUrl ? () => onOpenEvidence(compliance.vaccinationRecordUrl) : null} />
+      </dl>
+
+      {assistance.requested && <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
+        <p className="font-extrabold">Registration assistance requested</p>
+        <p className="mt-1 flex items-center gap-1.5"><Phone className="h-4 w-4" />{assistance.contactName || "Farmer"} · {assistance.phone || "No phone"}</p>
+        <p className="mt-1">{assistance.farmAddress || "No farm address"}</p>
+        <p className="mt-1">Animals: {assistance.animalCount || 1}{assistance.premiseId ? ` · Premise ID: ${assistance.premiseId}` : " · Premise not registered"}</p>
+        {assistance.notes && <p className="mt-2 whitespace-pre-wrap text-xs leading-5">{assistance.notes}</p>}
+      </div>}
+
+      {compliance.reviewNote && <p className="mt-3 rounded-xl bg-muted p-3 text-sm"><span className="font-bold">Previous review note:</span> {compliance.reviewNote}</p>}
+      <Textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Review note for the farmer (required when rejecting)" rows={3} className="mt-4 resize-none" />
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <button type="button" onClick={() => onReview("rejected")} disabled={reviewing || !note.trim()} className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-destructive/10 px-3 text-sm font-bold text-destructive disabled:opacity-50"><XCircle className="h-4 w-4" />Request changes</button>
+        <button type="button" onClick={() => onReview("approved")} disabled={reviewing || !evidenceComplete} className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-3 text-sm font-bold text-white disabled:opacity-50">{reviewing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}Approve</button>
+      </div>
+      {!evidenceComplete && <p className="mt-2 text-xs font-medium text-amber-800">Approval stays disabled until all three evidence items are present.</p>}
+    </section>
+  );
+}
+
+function ReviewFact({ label, value, action }) {
+  return <div className="flex items-center justify-between gap-3 py-3"><dt className="text-muted-foreground">{label}</dt><dd className="flex items-center gap-2 text-right font-bold">{value}{action && <button type="button" onClick={action} className="flex min-h-8 items-center gap-1 rounded-lg bg-card px-2 text-xs text-primary ring-1 ring-border"><FileText className="h-3.5 w-3.5" />Open</button>}</dd></div>;
 }
 
 function ApprovalMessages({ item }) {

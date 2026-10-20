@@ -1,11 +1,12 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from "react";
-import { AlertCircle, ArrowLeft, ArrowRight, ChevronDown, Loader2, MapPin, RotateCcw, Tag } from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, ChevronDown, ExternalLink, FileCheck2, HandHelping, Loader2, MapPin, RotateCcw, ShieldCheck, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ImageUploader from "@/components/agri/ImageUploader";
 import VideoUploader from "@/components/agri/VideoUploader";
+import DocUploader from "@/components/agri/DocUploader";
 import BreedSelector from "@/components/agri/BreedSelector";
 import SpeciesSelector from "@/components/agri/SpeciesSelector";
 import FormField, { scrollToField } from "@/components/agri/FormField";
@@ -40,13 +41,14 @@ function legacyAge(initial) {
 
 const LivestockForm = forwardRef(
   /**
-   * @param {{ initial?: any, registeredState?: string, onSubmit: (data: any) => void | Promise<void>, submitting?: boolean, submitLabel?: string, hideActions?: boolean, enableOcr?: boolean, onValidationChange?: (state: { missing: MissingField[], attempted: boolean }) => void }} props
+   * @param {{ initial?: any, registeredState?: string, onSubmit: (data: any) => void | Promise<void>, onRequestRegistrationAssistance?: (data: any) => void, submitting?: boolean, submitLabel?: string, hideActions?: boolean, enableOcr?: boolean, onValidationChange?: (state: { missing: MissingField[], attempted: boolean }) => void }} props
    * @param {React.ForwardedRef<{ submit: () => boolean }>} ref
    */
   function LivestockForm({
   initial = {},
   registeredState = "",
   onSubmit,
+  onRequestRegistrationAssistance,
   submitting,
   submitLabel,
   hideActions = false,
@@ -56,6 +58,8 @@ const LivestockForm = forwardRef(
   const display = useLivestockDisplay();
   const { t } = display;
   const previousAge = legacyAge(initial);
+  const initialCompliance = initial.marketplaceCompliance || {};
+  const initialAssistance = initialCompliance.assistance || {};
   const [showAdvanced, setShowAdvanced] = useState(Boolean(
     initial.weight || initial.height || initial.bodyLength || initial.chestGirth ||
     initial.tagNumber || initial.earTag || initial.rfid || initial.feedDetails || initial.specialNotes
@@ -87,6 +91,16 @@ const LivestockForm = forwardRef(
     feedDetails: initial.feedDetails || "",
     specialNotes: initial.specialNotes || "",
     status: initial.status || "Available",
+    healthCertificateUrl: initialCompliance.healthCertificateUrl || "",
+    vaccinationRecordUrl: initialCompliance.vaccinationRecordUrl || "",
+    requestRegistrationAssistance: Boolean(initialAssistance.requested),
+    assistanceContactName: initialAssistance.contactName || "",
+    assistancePhone: initialAssistance.phone || "",
+    assistanceIdentityNumber: initialAssistance.identityOrCompanyNumber || "",
+    assistancePremiseId: initialAssistance.premiseId || "",
+    assistanceFarmAddress: initialAssistance.farmAddress || "",
+    assistanceAnimalCount: initialAssistance.animalCount || 1,
+    assistanceNotes: initialAssistance.notes || "",
   });
   const [images, setImages] = useState(initial.images || []);
   const [videos, setVideos] = useState(initial.videos || []);
@@ -143,27 +157,47 @@ const LivestockForm = forwardRef(
     onValidationChange?.({ missing, attempted });
   }, [missing, attempted, onValidationChange]);
 
+  const buildNormalized = (sourceForm = form) => ({
+    ...sourceForm,
+    ageValue: sourceForm.ageInputMode === "Age" ? Number(sourceForm.ageValue) : null,
+    ageRecordedAt: ageTouched ? todayForInput() : sourceForm.ageRecordedAt,
+    birthDate: sourceForm.ageInputMode === "Birth Date" ? sourceForm.birthDate : "",
+    price: sourceForm.price === "" ? "" : Number(sourceForm.price),
+    images,
+    videos,
+    coverImage: cover || images[0] || null,
+    farmLocation: sourceForm.state,
+    marketplaceCompliance: {
+      ...(initialCompliance || {}),
+      earTagId: sourceForm.tagNumber.trim(),
+      healthCertificateUrl: sourceForm.healthCertificateUrl,
+      vaccinationRecordUrl: sourceForm.vaccinationRecordUrl,
+      assistance: {
+        ...(initialAssistance || {}),
+        requested: sourceForm.requestRegistrationAssistance,
+        contactName: sourceForm.assistanceContactName.trim(),
+        phone: sourceForm.assistancePhone.trim(),
+        identityOrCompanyNumber: sourceForm.assistanceIdentityNumber.trim(),
+        premiseId: sourceForm.assistancePremiseId.trim(),
+        farmAddress: sourceForm.assistanceFarmAddress.trim(),
+        state: sourceForm.state,
+        animalCount: Number(sourceForm.assistanceAnimalCount || 1),
+        notes: sourceForm.assistanceNotes.trim(),
+      },
+    },
+  });
+
   const submit = () => {
     if (!valid) {
       setAttempted(true);
       const firstMissing = missing[0]?.id;
-      const targetStep = ["species", "gender", "breed", "age", "state"].includes(firstMissing) ? 1 : ["price", "status"].includes(firstMissing) ? 2 : 3;
+      const targetStep = ["species", "gender", "breed", "age", "state"].includes(firstMissing) ? 1 : ["price", "status"].includes(firstMissing) ? 2 : 4;
       setCurrentStep(targetStep);
       window.setTimeout(() => scrollToField(missing.map((item) => item.id)), 0);
       return false;
     }
 
-    const normalized = {
-      ...form,
-      ageValue: form.ageInputMode === "Age" ? Number(form.ageValue) : null,
-      ageRecordedAt: ageTouched ? todayForInput() : form.ageRecordedAt,
-      birthDate: form.ageInputMode === "Birth Date" ? form.birthDate : "",
-      price: Number(form.price),
-      images,
-      videos,
-      coverImage: cover || images[0] || null,
-      farmLocation: form.state,
-    };
+    const normalized = buildNormalized();
     const visibility = marketplaceVisibility(normalized);
     onSubmit({
       ...normalized,
@@ -176,6 +210,12 @@ const LivestockForm = forwardRef(
   };
 
   useImperativeHandle(ref, () => ({ submit }));
+
+  const openRegistrationAssistance = () => {
+    const nextForm = { ...form, requestRegistrationAssistance: true };
+    setForm(nextForm);
+    onRequestRegistrationAssistance?.(buildNormalized(nextForm));
+  };
 
   const changeSpecies = ({ species, speciesRequestId, speciesApprovalStatus }) => {
     setForm((current) => ({
@@ -227,6 +267,7 @@ const LivestockForm = forwardRef(
     2: Boolean(form.species && form.gender && form.breed && form.state),
     3: validAge,
     4: form.price !== "" && Number(form.price) >= 0 && Boolean(form.status),
+    5: Boolean(form.tagNumber && form.healthCertificateUrl && form.vaccinationRecordUrl),
   };
 
   const stepMissing = currentStep === 1
@@ -234,8 +275,10 @@ const LivestockForm = forwardRef(
     : currentStep === 2
       ? missing.filter((item) => ["price", "status"].includes(item.id))
       : currentStep === 3
-        ? missing.filter((item) => item.id === "photos")
-        : missing;
+        ? []
+        : currentStep === 4
+          ? missing.filter((item) => item.id === "photos")
+          : missing;
 
   const goNext = () => {
     if (stepMissing.length) {
@@ -243,22 +286,23 @@ const LivestockForm = forwardRef(
       scrollToField(stepMissing.map((item) => item.id));
       return;
     }
-    setCurrentStep((step) => Math.min(4, step + 1));
+    setCurrentStep((step) => Math.min(5, step + 1));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const wizardSteps = [
     { n: 1, label: t("form.wizard.animal") },
     { n: 2, label: t("form.wizard.listing") },
-    { n: 3, label: t("form.wizard.media") },
-    { n: 4, label: t("form.wizard.review") },
+    { n: 3, label: t("form.wizard.compliance") },
+    { n: 4, label: t("form.wizard.media") },
+    { n: 5, label: t("form.wizard.review") },
   ];
 
   return (
     <div>
       <StepIndicator current={currentStep} steps={wizardSteps} className="pb-1" />
 
-      {currentStep === 3 && <div className="mx-auto mt-5 max-w-3xl space-y-5">
+      {currentStep === 4 && <div className="mx-auto mt-5 max-w-3xl space-y-5">
         <Section title={t("form.sections.photosTitle")} step={1} done={sectionDone[1]} description={t("form.sections.photosDescription")}>
           <div className="space-y-5">
             <FormField id="photos" label={t("form.fields.photos")} required error={errorFor("photos")}>
@@ -434,10 +478,7 @@ const LivestockForm = forwardRef(
                 <FormField label={t("form.fields.bodyLength")}><Input inputMode="decimal" value={form.bodyLength} onChange={setFromInput("bodyLength")} className="h-12" /></FormField>
                 <FormField label={t("form.fields.chestGirth")}><Input inputMode="decimal" value={form.chestGirth} onChange={setFromInput("chestGirth")} className="h-12" /></FormField>
               </Grid>
-              <Grid>
-                <FormField label={t("form.fields.tagNumber")}><Input value={form.tagNumber} onChange={setFromInput("tagNumber")} className="h-12" /></FormField>
-                <FormField label={t("form.fields.rfid")}><Input value={form.rfid} onChange={setFromInput("rfid")} className="h-12" /></FormField>
-              </Grid>
+              <FormField label={t("form.fields.rfid")}><Input value={form.rfid} onChange={setFromInput("rfid")} className="h-12" /></FormField>
               <FormField label={t("form.fields.feed")}><Textarea value={form.feedDetails} onChange={setFromInput("feedDetails")} placeholder={t("form.fields.feedPlaceholder")} rows={2} className="resize-none text-base" /></FormField>
               <FormField label={t("form.fields.specialNotes")}><Textarea value={form.specialNotes} onChange={setFromInput("specialNotes")} rows={2} className="resize-none text-base" /></FormField>
             </div>
@@ -480,7 +521,15 @@ const LivestockForm = forwardRef(
         </Section>
         }
 
-        {currentStep === 4 && <section className="soft-card rounded-[1.5rem] p-4 sm:p-5">
+        {currentStep === 3 && <ComplianceStep
+          form={form}
+          setValue={setValue}
+          t={t}
+          sectionDone={sectionDone[5]}
+          onRequestAssistance={openRegistrationAssistance}
+        />}
+
+        {currentStep === 5 && <section className="soft-card rounded-[1.5rem] p-4 sm:p-5">
           <h2 className="text-lg font-extrabold">{t("form.wizard.reviewTitle")}</h2>
           <p className="mt-1 text-sm text-muted-foreground">{t("form.wizard.reviewDescription")}</p>
           <dl className="mt-4 divide-y divide-border/60 rounded-2xl bg-muted/40 px-4">
@@ -491,6 +540,7 @@ const LivestockForm = forwardRef(
             <ReviewRow label={t("form.fields.state")} value={form.state || t("form.wizard.notSet")} />
             <ReviewRow label={t("form.fields.price")} value={form.price === "" ? t("form.wizard.notSet") : `RM ${Number(form.price).toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
             <ReviewRow label={t("form.fields.visibility")} value={form.status ? display.status(form.status).label : t("form.wizard.notSet")} />
+            <ReviewRow label={t("form.compliance.reviewLabel")} value={form.tagNumber && form.healthCertificateUrl && form.vaccinationRecordUrl ? t("form.compliance.readyForReview") : form.requestRegistrationAssistance ? t("form.compliance.assistanceRequested") : t("form.compliance.savedAsDraft")} />
             <ReviewRow label={t("form.fields.photos")} value={t("form.wizard.photoCount", { count: images.length })} />
           </dl>
           {missing.length > 0 && <div className="mt-4 rounded-xl bg-destructive/10 p-3 text-sm text-destructive"><MissingSummary missing={missing} /></div>}
@@ -500,11 +550,11 @@ const LivestockForm = forwardRef(
       {!hideActions && (
         <div>
           <StickyActionBar
-            hint={attempted && stepMissing.length ? <MissingSummary missing={stepMissing} /> : t("form.wizard.step", { current: currentStep, total: 4 })}
+            hint={attempted && stepMissing.length ? <MissingSummary missing={stepMissing} /> : t("form.wizard.step", { current: currentStep, total: 5 })}
             hintTone="danger"
           >
             {currentStep > 1 && <Button type="button" variant="outline" onClick={() => setCurrentStep((step) => Math.max(1, step - 1))} disabled={submitting} className="h-12 w-[34%] shrink-0 rounded-2xl"><ArrowLeft className="mr-1.5 h-4 w-4" />{t("form.wizard.back")}</Button>}
-            {currentStep < 4
+            {currentStep < 5
               ? <Button type="button" onClick={goNext} className="h-12 flex-1 rounded-2xl text-base font-semibold">{t("form.wizard.next")}<ArrowRight className="ml-1.5 h-5 w-5" /></Button>
               : <Button onClick={submit} disabled={submitting} className="h-12 flex-1 rounded-2xl text-base font-semibold">{submitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}{submitLabel || t("form.submitLabel")}</Button>}
           </StickyActionBar>
@@ -530,6 +580,80 @@ export function MissingSummary({ missing }) {
         </span>
       ))}
     </span>
+  );
+}
+
+function ComplianceStep({ form, setValue, t, sectionDone, onRequestAssistance }) {
+  const evidenceComplete = Boolean(
+    form.tagNumber && form.healthCertificateUrl && form.vaccinationRecordUrl
+  );
+
+  return (
+    <Section
+      title={t("form.compliance.title")}
+      done={sectionDone}
+      description={t("form.compliance.description")}
+    >
+      <div className="space-y-5">
+        <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-950">
+          <p className="flex items-center gap-2 font-extrabold"><ShieldCheck className="h-5 w-5" />{t("form.compliance.policyTitle")}</p>
+          <p className="mt-1">{t("form.compliance.policyText")}</p>
+          <a href="https://www.dvs.gov.my/index.php/pages/view/1945" target="_blank" rel="noreferrer" className="mt-2 inline-flex min-h-9 items-center gap-1 font-bold underline underline-offset-2">
+            {t("form.compliance.dvsLink")}<ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        </div>
+
+        <FormField id="earTag" label={t("form.compliance.earTagLabel")} hint={t("form.compliance.earTagHint")}>
+          <Input value={form.tagNumber} onChange={(event) => setValue("tagNumber", event.target.value)} placeholder={t("form.compliance.earTagPlaceholder")} className="h-12" />
+        </FormField>
+
+        <DocUploader
+          id="healthCertificate"
+          label={t("form.compliance.healthCertificateLabel")}
+          hint={t("form.compliance.healthCertificateHint")}
+          value={form.healthCertificateUrl}
+          onChange={(value) => setValue("healthCertificateUrl", value || "")}
+          accept="image/jpeg,image/png,image/webp,application/pdf"
+          documentMode
+          aspectClassName="min-h-36"
+          uploadLabel={t("form.compliance.uploadEvidence")}
+        />
+
+        <DocUploader
+          id="vaccinationRecord"
+          label={t("form.compliance.vaccinationLabel")}
+          hint={t("form.compliance.vaccinationHint")}
+          value={form.vaccinationRecordUrl}
+          onChange={(value) => setValue("vaccinationRecordUrl", value || "")}
+          accept="image/jpeg,image/png,image/webp,application/pdf"
+          documentMode
+          aspectClassName="min-h-36"
+          uploadLabel={t("form.compliance.uploadEvidence")}
+        />
+
+        <div className={cn("rounded-2xl border p-4 text-sm", evidenceComplete ? "border-emerald-200 bg-emerald-50 text-emerald-950" : "border-amber-200 bg-amber-50 text-amber-950")}>
+          <p className="flex items-center gap-2 font-extrabold"><FileCheck2 className="h-5 w-5" />{evidenceComplete ? t("form.compliance.completeTitle") : t("form.compliance.incompleteTitle")}</p>
+          <p className="mt-1 leading-5">{evidenceComplete ? t("form.compliance.completeText") : t("form.compliance.incompleteText")}</p>
+        </div>
+
+        <div className={cn("rounded-2xl border p-4", form.requestRegistrationAssistance ? "border-emerald-200 bg-emerald-50" : "border-border bg-muted/35")}>
+          <div className="flex items-start gap-3">
+            <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl", form.requestRegistrationAssistance ? "bg-emerald-600 text-white" : "bg-card text-primary ring-1 ring-border")}><HandHelping className="h-5 w-5" /></span>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-extrabold text-foreground">{t("form.compliance.requestHelp")}</p>
+                {form.requestRegistrationAssistance && <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-extrabold uppercase text-emerald-800">{t("form.compliance.selected")}</span>}
+              </div>
+              <p className="mt-1 text-sm leading-5 text-muted-foreground">{t("form.compliance.requestHelpText")}</p>
+            </div>
+          </div>
+          <button type="button" onClick={onRequestAssistance} className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground">
+            {form.requestRegistrationAssistance ? t("form.compliance.editRequest") : t("form.compliance.openRequestPage")}
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </Section>
   );
 }
 

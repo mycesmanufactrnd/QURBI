@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { uploadApi } from "@/api/apiClient";
 import { Image } from "@/components/ui/image";
-import { Upload, X, Loader2, FileCheck2, CheckCircle2 } from "lucide-react";
+import { Upload, X, Loader2, FileCheck2, CheckCircle2, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 
@@ -35,7 +35,7 @@ async function compressFile(file) {
 }
 
 /**
- * @param {{ label: React.ReactNode, value?: string, onChange: (url: string) => void, hint?: React.ReactNode, required?: boolean, capture?: boolean | "user" | "environment", aspectClassName?: string, fittingType?: string, uploadLabel?: string, replaceLabel?: string, error?: React.ReactNode, id?: string }} props
+ * @param {{ label: React.ReactNode, value?: string, onChange: (url: string) => void, hint?: React.ReactNode, required?: boolean, capture?: boolean | "user" | "environment", aspectClassName?: string, fittingType?: string, uploadLabel?: string, replaceLabel?: string, error?: React.ReactNode, id?: string, accept?: string, documentMode?: boolean }} props
  */
 export default function DocUploader({
   label,
@@ -50,6 +50,8 @@ export default function DocUploader({
   replaceLabel,
   error: externalError,
   id,
+  accept = "image/*",
+  documentMode = false,
 }) {
   const { t } = useTranslation("shared");
   const inputRef = useRef(null);
@@ -117,14 +119,20 @@ export default function DocUploader({
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept={accept}
         capture={capture}
         className="hidden"
         onChange={(e) => handleFile(e.target.files?.[0])}
       />
       {value ? (
         <div className={cn("relative overflow-hidden rounded-2xl border border-border bg-muted", aspectClassName)}>
-          {previewUrl ? (
+          {documentMode ? (
+            <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center text-primary">
+              <FileText className="h-9 w-9" />
+              <span className="text-sm font-bold">Document uploaded securely</span>
+              <span className="text-xs text-muted-foreground">Image or PDF evidence</span>
+            </div>
+          ) : previewUrl ? (
             <Image src={previewUrl} fittingType={fittingType} className="w-full h-full" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
