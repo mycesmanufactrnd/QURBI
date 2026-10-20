@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  AlertCircle, ArrowLeft, Building2, CalendarDays, CheckCircle2, ChevronRight, Eye, EyeOff, Hash, Loader2, Mail, MapPin,
+  AlertCircle, ArrowLeft, Building2, CalendarDays, CheckCircle2, ChevronRight, ClipboardCheck, Eye, EyeOff, Hash, Loader2, Mail, MapPin,
   FileText, Palette, Phone, Ruler, ShieldCheck, Star, Tag, UserRound, Utensils, Weight, XCircle,
 } from "lucide-react";
 import { qurbi } from "@/api/qurbiClient";
@@ -182,6 +182,17 @@ export default function AdminLivestockDetail() {
             </div>
           </section>
 
+          {item.marketplaceCompliance?.policyVersion && (
+            <ComplianceReviewCard
+              compliance={item.marketplaceCompliance}
+              note={complianceNote}
+              setNote={setComplianceNote}
+              reviewing={reviewingCompliance}
+              onReview={reviewCompliance}
+              onOpenEvidence={openPrivateEvidence}
+            />
+          )}
+
           <section className="soft-card p-4 sm:p-5" aria-labelledby="admin-actions-heading">
             <h2 id="admin-actions-heading" className="text-base font-extrabold">Marketplace controls</h2>
             <div className={cn("mt-3 flex items-start gap-2.5 rounded-2xl p-3 text-sm", onMarketplace ? "bg-emerald-50 text-emerald-900" : "bg-muted/60 text-foreground")}>
@@ -203,17 +214,6 @@ export default function AdminLivestockDetail() {
             </div>
             <p className="mt-2 text-xs text-muted-foreground">Featured listings are highlighted on the buyer home page.</p>
           </section>
-
-          {item.marketplaceCompliance?.policyVersion && (
-            <ComplianceReviewCard
-              compliance={item.marketplaceCompliance}
-              note={complianceNote}
-              setNote={setComplianceNote}
-              reviewing={reviewingCompliance}
-              onReview={reviewCompliance}
-              onOpenEvidence={openPrivateEvidence}
-            />
-          )}
 
           <ApprovalMessages item={item} />
 
@@ -262,41 +262,52 @@ export default function AdminLivestockDetail() {
 
 function ComplianceReviewCard({ compliance, note, setNote, reviewing, onReview, onOpenEvidence }) {
   const evidenceComplete = Boolean(compliance.earTagId && compliance.healthCertificateUrl && compliance.vaccinationRecordUrl);
+  const evidenceCount = [compliance.earTagId, compliance.healthCertificateUrl, compliance.vaccinationRecordUrl].filter(Boolean).length;
   const assistance = compliance.assistance || {};
   const tone = compliance.reviewStatus === "approved" ? "text-emerald-800 bg-emerald-50" : compliance.reviewStatus === "rejected" ? "text-destructive bg-destructive/10" : "text-amber-900 bg-amber-50";
+  const statusLabel = compliance.reviewStatus === "approved" ? "Approved" : compliance.reviewStatus === "rejected" ? "Changes requested" : compliance.reviewStatus === "pending" ? "Needs review" : "Incomplete";
+  const awaitingDecision = compliance.reviewStatus === "pending";
   return (
-    <section className="soft-card p-4 sm:p-5" aria-labelledby="compliance-review-heading">
+    <section className={cn("overflow-hidden rounded-[1.5rem] border bg-card shadow-sm", awaitingDecision ? "border-amber-300 ring-2 ring-amber-100" : "border-border")} aria-labelledby="compliance-review-heading">
+      {awaitingDecision && <div className="flex items-center gap-2 bg-amber-600 px-4 py-2 text-xs font-extrabold uppercase tracking-[0.1em] text-white"><ClipboardCheck className="h-4 w-4" />Admin action required</div>}
+      <div className="p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
-        <div><h2 id="compliance-review-heading" className="flex items-center gap-2 text-base font-extrabold"><ShieldCheck className="h-5 w-5" />Marketplace compliance</h2><p className="mt-1 text-xs text-muted-foreground">QURBI policy {compliance.policyVersion}</p></div>
-        <span className={cn("rounded-full px-2.5 py-1 text-xs font-extrabold capitalize", tone)}>{compliance.reviewStatus || "incomplete"}</span>
+        <div><h2 id="compliance-review-heading" className="flex items-center gap-2 text-base font-extrabold"><ShieldCheck className="h-5 w-5" />Marketplace compliance</h2><p className="mt-1 text-xs text-muted-foreground">{evidenceCount}/3 requirements supplied · Requested status: {compliance.requestedStatus || "Draft"}</p></div>
+        <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-xs font-extrabold", tone)}>{statusLabel}</span>
       </div>
-      <dl className="mt-4 divide-y divide-border/60 rounded-2xl bg-muted/40 px-4 text-sm">
-        <ReviewFact label="Ear tag / animal ID" value={compliance.earTagId || "Missing"} />
-        <ReviewFact label="Veterinary health evidence" value={compliance.healthCertificateUrl ? "Submitted" : "Missing"} action={compliance.healthCertificateUrl ? () => onOpenEvidence(compliance.healthCertificateUrl) : null} />
-        <ReviewFact label="Vaccination record" value={compliance.vaccinationRecordUrl ? "Submitted" : "Missing"} action={compliance.vaccinationRecordUrl ? () => onOpenEvidence(compliance.vaccinationRecordUrl) : null} />
+      <dl className="mt-4 grid gap-2 text-sm">
+        <ReviewFact label="Ear tag / animal ID" value={compliance.earTagId || "Missing"} complete={Boolean(compliance.earTagId)} />
+        <ReviewFact label="Veterinary health evidence" value={compliance.healthCertificateUrl ? "Document supplied" : "Missing"} complete={Boolean(compliance.healthCertificateUrl)} action={compliance.healthCertificateUrl ? () => onOpenEvidence(compliance.healthCertificateUrl) : null} />
+        <ReviewFact label="Vaccination record" value={compliance.vaccinationRecordUrl ? "Document supplied" : "Missing"} complete={Boolean(compliance.vaccinationRecordUrl)} action={compliance.vaccinationRecordUrl ? () => onOpenEvidence(compliance.vaccinationRecordUrl) : null} />
       </dl>
 
       {assistance.requested && <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
         <p className="font-extrabold">Registration assistance requested</p>
         <p className="mt-1 flex items-center gap-1.5"><Phone className="h-4 w-4" />{assistance.contactName || "Farmer"} · {assistance.phone || "No phone"}</p>
+        {assistance.identityOrCompanyNumber && <p className="mt-1">IC / company number: {assistance.identityOrCompanyNumber}</p>}
         <p className="mt-1">{assistance.farmAddress || "No farm address"}</p>
         <p className="mt-1">Animals: {assistance.animalCount || 1}{assistance.premiseId ? ` · Premise ID: ${assistance.premiseId}` : " · Premise not registered"}</p>
         {assistance.notes && <p className="mt-2 whitespace-pre-wrap text-xs leading-5">{assistance.notes}</p>}
       </div>}
 
-      {compliance.reviewNote && <p className="mt-3 rounded-xl bg-muted p-3 text-sm"><span className="font-bold">Previous review note:</span> {compliance.reviewNote}</p>}
-      <Textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Review note for the farmer (required when rejecting)" rows={3} className="mt-4 resize-none" />
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <button type="button" onClick={() => onReview("rejected")} disabled={reviewing || !note.trim()} className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-destructive/10 px-3 text-sm font-bold text-destructive disabled:opacity-50"><XCircle className="h-4 w-4" />Request changes</button>
-        <button type="button" onClick={() => onReview("approved")} disabled={reviewing || !evidenceComplete} className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-3 text-sm font-bold text-white disabled:opacity-50">{reviewing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}Approve</button>
-      </div>
+      {compliance.reviewNote && <p className="mt-3 rounded-xl bg-muted p-3 text-sm"><span className="font-bold">Review note:</span> {compliance.reviewNote}</p>}
+      {awaitingDecision && <>
+        <Textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Optional approval note · required when requesting changes" rows={3} className="mt-4 resize-none" />
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button type="button" onClick={() => onReview("rejected")} disabled={reviewing || !note.trim()} className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-destructive/10 px-3 text-sm font-bold text-destructive disabled:opacity-50"><XCircle className="h-4 w-4" />Request changes</button>
+          <button type="button" onClick={() => onReview("approved")} disabled={reviewing || !evidenceComplete} className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-3 text-sm font-bold text-white disabled:opacity-50">{reviewing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}Approve & notify</button>
+        </div>
+      </>}
+      {compliance.reviewStatus === "approved" && <p className="mt-4 flex items-start gap-2 rounded-2xl bg-emerald-50 p-3 text-sm font-semibold text-emerald-900"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />Review completed. The farmer was notified and the requested listing status was restored when eligible.</p>}
+      {compliance.reviewStatus === "rejected" && <p className="mt-4 flex items-start gap-2 rounded-2xl bg-destructive/10 p-3 text-sm font-semibold text-destructive"><XCircle className="mt-0.5 h-4 w-4 shrink-0" />Waiting for the farmer to update and resubmit the evidence.</p>}
       {!evidenceComplete && <p className="mt-2 text-xs font-medium text-amber-800">Approval stays disabled until all three evidence items are present.</p>}
+      </div>
     </section>
   );
 }
 
-function ReviewFact({ label, value, action }) {
-  return <div className="flex items-center justify-between gap-3 py-3"><dt className="text-muted-foreground">{label}</dt><dd className="flex items-center gap-2 text-right font-bold">{value}{action && <button type="button" onClick={action} className="flex min-h-8 items-center gap-1 rounded-lg bg-card px-2 text-xs text-primary ring-1 ring-border"><FileText className="h-3.5 w-3.5" />Open</button>}</dd></div>;
+function ReviewFact({ label, value, complete, action }) {
+  return <div className={cn("flex items-center gap-3 rounded-2xl border p-3", complete ? "border-emerald-200 bg-emerald-50/60" : "border-amber-200 bg-amber-50")}><span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full", complete ? "bg-emerald-600 text-white" : "bg-amber-100 text-amber-800")}>{complete ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}</span><dt className="min-w-0 flex-1"><span className="block text-xs text-muted-foreground">{label}</span><span className="mt-0.5 block break-all font-bold">{value}</span></dt>{action && <dd><button type="button" onClick={action} className="flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl bg-card px-3 text-xs font-extrabold text-primary shadow-sm ring-1 ring-border"><FileText className="h-4 w-4" />Open</button></dd>}</div>;
 }
 
 function ApprovalMessages({ item }) {

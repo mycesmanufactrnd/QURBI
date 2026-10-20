@@ -1,5 +1,5 @@
 import React from "react";
-import { ChevronRight, EyeOff, Star } from "lucide-react";
+import { ChevronRight, Clock3, EyeOff, ShieldCheck, Star, XCircle } from "lucide-react";
 import { Image } from "@/components/ui/image";
 import StatusBadge from "@/components/agri/StatusBadge";
 import CowSilhouetteIcon from "@/components/agri/CowSilhouetteIcon";
@@ -30,6 +30,7 @@ export function livestockView(item) {
     featured: Boolean(item.featured ?? item.isFeatured),
     cover: item.coverImage || item.images?.[0] || "",
     tag: item.tagNumber || flat.earTag || "",
+    complianceStatus: flat.marketplaceCompliance?.reviewStatus || "",
   };
 }
 
@@ -47,6 +48,9 @@ export function LivestockChips({ view, className }) {
   return (
     <span className={cn("flex flex-wrap items-center gap-1.5", className)}>
       <StatusBadge tone={view.status.tone} dot>{view.status.label}</StatusBadge>
+      {view.complianceStatus === "pending" && <StatusBadge tone="warning"><Clock3 className="h-3.5 w-3.5" />Needs review</StatusBadge>}
+      {view.complianceStatus === "rejected" && <StatusBadge tone="danger"><XCircle className="h-3.5 w-3.5" />Changes requested</StatusBadge>}
+      {view.complianceStatus === "approved" && <StatusBadge tone="success"><ShieldCheck className="h-3.5 w-3.5" />Compliant</StatusBadge>}
       {view.hidden && <StatusBadge tone="danger"><EyeOff className="h-3.5 w-3.5" />Hidden</StatusBadge>}
       {view.featured && <StatusBadge tone="primary"><Star className="h-3.5 w-3.5" />Featured</StatusBadge>}
     </span>
