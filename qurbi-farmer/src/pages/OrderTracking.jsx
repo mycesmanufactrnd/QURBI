@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import { qurbi } from "@/api/qurbiClient";
-import { resolveApiAssetUrl, uploadApi } from "@/api/apiClient";
+import { courierJobApi, resolveApiAssetUrl, uploadApi } from "@/api/apiClient";
+import CourierDeliveryPanel from "@/components/agri/CourierDeliveryPanel";
 import {
   ArrowLeft,
   CalendarDays,
@@ -146,6 +147,7 @@ export default function OrderTracking() {
   const { orderId } = useParams();
   const navigate = useNavigate();
   const [order, setOrder] = useState(null);
+  const [courierSummary, setCourierSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState("");
   const [pendingUpload, setPendingUpload] = useState(null);
@@ -162,6 +164,8 @@ export default function OrderTracking() {
       const packageOrder = response.data?.order;
       if (!packageOrder) throw new Error(t("tracking.packageNotFound"));
       setOrder(packageOrder);
+      // Only delivery orders have a courier. A failure here must not hide the order itself.
+      setCourierSummary(packageOrder.fulfillment_method === "pickup" ? null : await courierJobApi.orderSummary(packageOrder.id).catch(() => null));
     } catch (loadError) {
       setOrder(null);
       setError(errorMessage(loadError, t("tracking.packageLoadFailed")));
@@ -223,7 +227,13 @@ export default function OrderTracking() {
   const hasIssue = ISSUE_STATUSES.includes(order.status);
   // The backend moves an order one step per photo (paid -> preparing -> in transit -> delivered),
   // so the stage the farmer can upload is decided by the order status.
-  const nextStage = order.tracking_enabled !== false && !hasIssue ? orderPhotoStage(order.status) : "";
+  const isDelivery = order.fulfillment_method !== "pickup";
+  // Couriers, not farmers, take the on-the-road and handover photos on delivery orders. Orders
+  // that were already on the road before couriers existed (no courier ever involved) keep the old flow.
+  const legacyOnTheRoad = order.status === "shipped" && (courierSummary?.state || "not_requested") === "not_requested";
+  const courierManaged = isDelivery && !legacyOnTheRoad && order.status !== "completed" && order.status !== "cancelled";
+  const rawNextStage = order.tracking_enabled !== false && !hasIssue ? orderPhotoStage(order.status) : "";
+  const nextStage = courierManaged && rawNextStage !== "before" ? "" : rawNextStage;
   const nextStageInfo = STAGES.find((stage) => stage.key === nextStage);
   const nextIndex = STAGES.findIndex((stage) => stage.key === nextStage);
   const statusIndex = meta.group === "buyer" ? 3 : meta.group === "done" ? 4 : nextIndex;
@@ -231,7 +241,6 @@ export default function OrderTracking() {
   const receivedProof = (order.receivedProofImages || []).map((url) => resolveApiAssetUrl(url));
   const orderNo = order.order_number || order.id;
   const isCancelled = order.status === "cancelled";
-  const isDelivery = order.fulfillment_method !== "pickup";
   const paymentStatus = String(order.payment_status || "").toLowerCase();
   const refundStatus = String(order.refund_status || "").toLowerCase();
   const canRevealDelivery = isDelivery && paymentStatus === "paid" && !isCancelled && refundStatus !== "refunded";
@@ -280,7 +289,7 @@ export default function OrderTracking() {
             <p className="text-sm font-semibold text-muted-foreground">{t("tracking.orderStatus")}</p>
             <StatusBadge kind="order" status={order.status} dot />
           </div>
-          {meta.next && <p className={cn("mt-3 text-base font-bold leading-snug", nextStage ? "text-amber-950" : "text-foreground")}>{t(`next.${order.status}`, { defaultValue: meta.next })}</p>}
+          {meta.next && !(courierManaged && ["processing", "shipped"].includes(order.status)) && <p className={cn("mt-3 text-base font-bold leading-snug", nextStage ? "text-amber-950" : "text-foreground")}>{t(`next.${order.status}`, { defaultValue: meta.next })}</p>}
           <ol className="mt-4 grid grid-cols-4 gap-1.5" aria-label={t("tracking.progressAria")}>
             {STAGES.map((stage, index) => {
               const done = stage.key === "received" ? meta.group === "done" : Boolean(tracking[stage.key]?.image_url) || index < statusIndex;
@@ -294,6 +303,10 @@ export default function OrderTracking() {
             })}
           </ol>
         </section>
+
+        {isDelivery && !isCancelled && (courierManaged || courierSummary?.courier) && (
+          <CourierDeliveryPanel order={order} summary={courierSummary} events={order.courier_events} ProofImage={AuthenticatedProofImage} formatDateTime={formatDateTime} onChanged={load} />
+        )}
 
         <section className="rounded-2xl border border-border bg-card p-4">
           <h2 className="text-lg font-extrabold">{t("tracking.animal")}</h2>
@@ -376,7 +389,7 @@ export default function OrderTracking() {
               <div className="min-w-0 flex-1 border-b border-border pb-4 last:border-0">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0"><p className="text-base font-extrabold">{stageLabel(stage.key)}</p><p className="mt-0.5 text-sm text-muted-foreground">{t(`tracking.stages.${stage.key}.description`)}</p></div>
-                  <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">{t(`tracking.owner.${stage.owner}`)}</span>
+                  <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">{proof?.by_courier || (courierManaged && ["during", "after"].includes(stage.key)) ? t("tracking.owner.Courier") : t(`tracking.owner.${stage.owner}`)}</span>
                 </div>
                 {proof?.image_url ? (
                   <div className="mt-3 flex flex-wrap items-end gap-3"><AuthenticatedProofImage url={proof.image_url} alt={t("tracking.proofAlt", { stage: stageLabel(stage.key) })} /><p className="flex items-center gap-1 text-sm text-muted-foreground"><Clock3 className="h-3.5 w-3.5" />{formatDateTime(proof.uploaded_at)}</p></div>
@@ -384,6 +397,8 @@ export default function OrderTracking() {
                   <div className="mt-3 flex flex-wrap gap-2">{receivedProof.map((url) => <AuthenticatedProofImage key={url} url={url} alt={t("tracking.buyerProofAlt")} />)}</div>
                 ) : current ? (
                   <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">{uploading === stage.key ? t("tracking.uploading") : t("tracking.waitingPhoto")}</p>
+                ) : courierManaged && ["during", "after"].includes(stage.key) ? (
+                  <p className="mt-3 text-sm text-muted-foreground">{t("tracking.byCourier")}</p>
                 ) : (
                   <p className="mt-3 text-sm text-muted-foreground">
                     {stage.key === "received" ? (meta.group === "done" ? t("tracking.receivedDone") : t("tracking.receivedWaiting"))

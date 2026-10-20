@@ -199,7 +199,6 @@ function SwipeableNotificationRow({
     };
     didSwipe.current = false;
     setDragging(true);
-    event.currentTarget.setPointerCapture?.(event.pointerId);
   };
 
   const handlePointerMove = (event) => {
@@ -209,6 +208,9 @@ function SwipeableNotificationRow({
 
     if (!gesture.current.axis && (Math.abs(distanceX) > 7 || Math.abs(distanceY) > 7)) {
       gesture.current.axis = Math.abs(distanceX) > Math.abs(distanceY) ? "x" : "y";
+      if (gesture.current.axis === "x") {
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+      }
     }
     if (gesture.current.axis !== "x") return;
 
@@ -557,11 +559,12 @@ export default function Notifications() {
     setOpeningId(notification.id);
 
     try {
-      const readSaved = notification.is_read
-        ? true
-        : await markAsRead(notification.id);
-
-      if (!readSaved) return;
+      // Opening a notification must not be blocked by a slow or failed
+      // mark-as-read request. The context applies the read state optimistically
+      // and handles any API failure separately.
+      if (!notification.is_read) {
+        void markAsRead(notification.id);
+      }
 
       if (notification.order_id) {
         navigateFromIconPage(

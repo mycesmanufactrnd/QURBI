@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 const MAX_VIDEOS = 2;
 const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 
-export default function VideoUploader({ value = [], onChange, buttonLabel }) {
+export default function VideoUploader({ value = [], onChange, buttonLabel = undefined }) {
   const { t } = useTranslation("livestock");
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(false);

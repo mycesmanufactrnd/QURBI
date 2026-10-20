@@ -1,0 +1,45 @@
+{
+  "verify": {
+    "title": "Verify your identity",
+    "subtitle": "QURBI checks every courier before they can take jobs. Upload clear photos of these four documents.",
+    "photoTip": "Make sure all four corners are visible and the text is sharp and readable.",
+    "docs": {
+      "icFront": { "label": "Front of IC", "hint": "The side with your photo and IC number." },
+      "icBack": { "label": "Back of IC", "hint": "The side with your address." },
+      "selfie": { "label": "Selfie", "hint": "Take a clear photo of your face, no mask or sunglasses." },
+      "licence": { "label": "Driving licence", "hint": "The valid licence for the vehicle you registered." }
+    },
+    "takePhoto": "Take photo",
+    "choosePhoto": "Choose file",
+    "replace": "Replace",
+    "uploading": "Uploading…",
+    "uploaded": "Uploaded",
+    "uploadFailed": "That upload failed. Please try again.",
+    "submit": "Submit for review",
+    "submitting": "Submitting…",
+    "missing": "Upload all four documents to continue.",
+    "failed": "Could not submit your documents. Please try again."
+  },
+  "pending": {
+    "title": "We are reviewing your documents",
+    "body": "This usually takes up to one working day. We will notify you the moment you are approved.",
+    "stepsTitle": "What happens next",
+    "step1": "QURBI checks your IC, selfie and driving licence.",
+    "step2": "You get a notification with the result.",
+    "step3": "Once approved you can go online and accept jobs.",
+    "refresh": "Check status"
+  },
+  "rejected": {
+    "title": "We could not approve your documents",
+    "body": "Please fix the problem below and submit your documents again.",
+    "reasonLabel": "Reason from QURBI",
+    "resubmit": "Upload documents again"
+  },
+  "suspended": {
+    "title": "Your account is suspended",
+    "body": "You cannot go online or accept jobs right now. Jobs already assigned to you stay with you until QURBI reassigns them.",
+    "reasonLabel": "Reason from QURBI",
+    "contact": "If you think this is a mistake, please contact QURBI support.",
+    "refresh": "Check status"
+  }
+}

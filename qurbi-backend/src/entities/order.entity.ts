@@ -17,6 +17,7 @@ import { User } from './user.entity';
 import { OrderItem } from './order-item.entity';
 import { OrderTrackingEvent } from './order-tracking-event.entity';
 import { Reservation } from './reservation.entity';
+import { DeliveryAssignment } from './delivery-assignment.entity';
 
 // Frozen at checkout on purpose: it is NOT a FK to addresses. If the buyer
 // later edits or deletes that address, the order must still show exactly
@@ -155,6 +156,15 @@ export class Order extends BaseEntity {
   @Column({ type: 'boolean', default: false })
   hiddenFromBuyerHistory: boolean;
 
+  // Set when the farmer hands a DELIVERY order to the courier pool. A null
+  // value on a preparing order means the legacy farmer-delivers flow.
+  @Column({ type: 'datetime', precision: 6, nullable: true })
+  readyForPickupAt: Date | null;
+
+  // Set once the "nobody accepted this job" alert has gone out.
+  @Column({ type: 'datetime', precision: 6, nullable: true })
+  poolAlertedAt: Date | null;
+
   @OneToMany(() => OrderItem, (item) => item.order, { cascade: true })
   items: OrderItem[];
 
@@ -163,4 +173,7 @@ export class Order extends BaseEntity {
 
   @OneToMany(() => Reservation, (reservation) => reservation.order)
   reservations: Reservation[];
+
+  @OneToMany(() => DeliveryAssignment, (assignment) => assignment.order)
+  deliveryAssignments: DeliveryAssignment[];
 }

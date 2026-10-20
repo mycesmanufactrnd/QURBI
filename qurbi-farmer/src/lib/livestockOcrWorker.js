@@ -70,7 +70,7 @@ export async function recognizeLivestockFiles(files, onProgress, { maxPages = 10
       }
       await worker.setParameters({
         preserve_interword_spaces: "1",
-        tessedit_pageseg_mode: "3",
+        tessedit_pageseg_mode: /** @type {any} */ ("3"),
       });
     }
     const results = [];
@@ -85,7 +85,7 @@ export async function recognizeLivestockFiles(files, onProgress, { maxPages = 10
 
       stageStart = 0;
       stageSpan = 0.6;
-      await worker.setParameters({ tessedit_pageseg_mode: "3" });
+      await worker.setParameters({ tessedit_pageseg_mode: /** @type {any} */ ("3") });
       const original = await worker.recognize(input.source);
       let selected = original.data;
 
@@ -95,7 +95,7 @@ export async function recognizeLivestockFiles(files, onProgress, { maxPages = 10
           try {
             stageStart = 0.6;
             stageSpan = 0.4;
-            await worker.setParameters({ tessedit_pageseg_mode: "6" });
+            await worker.setParameters({ tessedit_pageseg_mode: /** @type {any} */ ("6") });
             const enhancedResult = await worker.recognize(enhanced);
             if (ocrQuality(enhancedResult.data) > ocrQuality(original.data)) {
               selected = enhancedResult.data;
@@ -199,7 +199,7 @@ async function renderPdfPage(page) {
 }
 
 function pdfError(code) {
-  const error = new Error(code);
+  const error = /** @type {Error & { code?: string }} */ (new Error(code));
   error.code = code;
   return error;
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { BadgeCheck, CheckCircle2, ChevronRight, RotateCcw, ShoppingBag, Tags, UserCheck, Users } from "lucide-react";
-import { farmVerificationApi, farmerProfileApi, livestockApi, orderApi, userApi } from "@/api/apiClient";
+import { BadgeCheck, Bike, CheckCircle2, ChevronRight, Flag, RotateCcw, ShoppingBag, Tags, UserCheck, Users } from "lucide-react";
+import { courierApi, courierJobApi, farmVerificationApi, farmerProfileApi, livestockApi, orderApi, userApi } from "@/api/apiClient";
 import { qurbi } from "@/api/qurbiClient";
 import { useAuth } from "@/lib/AuthContext";
 import CowSilhouetteIcon from "@/components/agri/CowSilhouetteIcon";
@@ -18,6 +18,8 @@ export default function AdminDashboard() {
   const [orderCount, setOrderCount] = useState(0);
   const [refundCount, setRefundCount] = useState(0);
   const [breedRequestCount, setBreedRequestCount] = useState(0);
+  const [courierCount, setCourierCount] = useState(0);
+  const [flaggedDeliveryCount, setFlaggedDeliveryCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,8 +30,11 @@ export default function AdminDashboard() {
       livestockApi.list({ page: 1, limit: 1 }),
       orderApi.adminList({ page: 1, limit: 100 }),
       qurbi.entities.BreedRequest.filter({ status: "Pending" }).catch(() => []),
+      // Courier widgets must never take the whole dashboard down if they fail.
+      courierApi.adminList({ page: 1, limit: 100 }).catch(() => ({ data: [] })),
+      courierJobApi.adminList({ flagged: true }).catch(() => []),
     ])
-      .then(([userPage, profileRows, verificationPage, livestockPage, orderPage, breedRequests]) => {
+      .then(([userPage, profileRows, verificationPage, livestockPage, orderPage, breedRequests, courierPage, flaggedDeliveries]) => {
         const usersById = new Map((userPage.data || []).map((item) => [item.id, item]));
         const profilesById = new Map((profileRows || []).map((item) => [item.id, item]));
         const pending = (verificationPage.data || []).map((verification) => {
@@ -42,12 +47,14 @@ export default function AdminDashboard() {
         setOrderCount(orderPage.total || 0);
         setRefundCount((orderPage.data || []).filter((order) => order.refundStatus === "requested").length);
         setBreedRequestCount((breedRequests || []).filter((request) => request.status === "Pending").length);
+        setCourierCount((courierPage.data || []).filter((courier) => courier.verificationStatus === "pending" || courier.rateStatus === "pending").length);
+        setFlaggedDeliveryCount((flaggedDeliveries || []).filter((row) => row.flags.length > 0 || (row.status === "failed" && !row.resolutionNote)).length);
       })
       .finally(() => setLoading(false));
   }, []);
 
   const adminName = user?.fullName || user?.data?.name || user?.full_name || user?.email?.split("@")[0] || "Admin";
-  const attentionTotal = farmers.length + refundCount + breedRequestCount;
+  const attentionTotal = farmers.length + refundCount + breedRequestCount + courierCount + flaggedDeliveryCount;
 
   return (
     <div className="animate-fade-in">
@@ -67,8 +74,10 @@ export default function AdminDashboard() {
 
       <section aria-labelledby="attention-heading" className="relative z-20 -mx-4 -mt-6 rounded-t-[2rem] bg-background px-4 pt-5 lg:mx-0 lg:mt-6 lg:rounded-none lg:bg-transparent lg:px-0 lg:pt-0">
         <SectionHeader title={<span id="attention-heading">Needs your attention</span>} />
-        <div className="mt-3 grid gap-2.5 sm:grid-cols-3">
+        <div className="mt-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
           <AttentionTile icon={UserCheck} label="Farmer verifications" hint="Approve or reject new farmers" count={farmers.length} loading={loading} onClick={() => navigate("/admin/farmers?status=pending")} />
+          <AttentionTile icon={Bike} label="Courier approvals" hint="New couriers and rate requests" count={courierCount} loading={loading} onClick={() => navigate("/admin/couriers?status=pending")} />
+          <AttentionTile icon={Flag} label="Delivery problems" hint="Flagged photos and failed deliveries" count={flaggedDeliveryCount} loading={loading} tone="danger" onClick={() => navigate("/admin/deliveries")} />
           <AttentionTile icon={RotateCcw} label="Refund requests" hint="Buyer refunds to review" count={refundCount} loading={loading} tone="danger" onClick={() => navigate("/admin/orders?filter=refunds")} />
           <AttentionTile icon={Tags} label="Breed requests" hint="New breeds proposed by farmers" count={breedRequestCount} loading={loading} onClick={() => navigate("/admin/breeds")} />
         </div>

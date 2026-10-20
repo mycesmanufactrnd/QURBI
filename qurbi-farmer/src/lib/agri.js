@@ -3,7 +3,8 @@ import i18n from "@/i18n";
 
 // Display text below is resolved lazily (getters / functions) so it follows the
 // language the farmer picks without a reload. Stored values never change.
-const tr = (key, options) => i18n.t(`agri:${key}`, options);
+/** @type {(key: string, options?: Record<string, any>) => string} */
+const tr = (key, options) => /** @type {string} */ (i18n.t(`agri:${key}`, options));
 const dateLocale = () => (i18n.language === "ms" ? "ms-MY" : "en-MY");
 
 export const MALAYSIA_STATES = [

@@ -1,0 +1,45 @@
+{
+  "verify": {
+    "title": "Sahkan identiti anda",
+    "subtitle": "QURBI menyemak setiap kurier sebelum mereka boleh mengambil tugasan. Muat naik gambar jelas empat dokumen ini.",
+    "photoTip": "Pastikan keempat-empat penjuru kelihatan dan tulisan tajam serta boleh dibaca.",
+    "docs": {
+      "icFront": { "label": "Depan IC", "hint": "Bahagian yang ada gambar dan nombor IC anda." },
+      "icBack": { "label": "Belakang IC", "hint": "Bahagian yang ada alamat anda." },
+      "selfie": { "label": "Swafoto", "hint": "Ambil gambar muka anda dengan jelas, tanpa pelitup atau cermin mata hitam." },
+      "licence": { "label": "Lesen memandu", "hint": "Lesen sah untuk kenderaan yang anda daftarkan." }
+    },
+    "takePhoto": "Ambil gambar",
+    "choosePhoto": "Pilih fail",
+    "replace": "Tukar",
+    "uploading": "Memuat naik…",
+    "uploaded": "Dimuat naik",
+    "uploadFailed": "Muat naik gagal. Sila cuba lagi.",
+    "submit": "Hantar untuk semakan",
+    "submitting": "Menghantar…",
+    "missing": "Muat naik kesemua empat dokumen untuk teruskan.",
+    "failed": "Dokumen tidak dapat dihantar. Sila cuba lagi."
+  },
+  "pending": {
+    "title": "Kami sedang menyemak dokumen anda",
+    "body": "Ini biasanya mengambil masa sehingga satu hari bekerja. Kami akan memaklumkan anda sebaik sahaja anda diluluskan.",
+    "stepsTitle": "Apa yang berlaku seterusnya",
+    "step1": "QURBI menyemak IC, swafoto dan lesen memandu anda.",
+    "step2": "Anda menerima notifikasi tentang keputusan.",
+    "step3": "Setelah diluluskan, anda boleh log masuk dalam talian dan menerima tugasan.",
+    "refresh": "Semak status"
+  },
+  "rejected": {
+    "title": "Kami tidak dapat meluluskan dokumen anda",
+    "body": "Sila betulkan masalah di bawah dan hantar semula dokumen anda.",
+    "reasonLabel": "Sebab daripada QURBI",
+    "resubmit": "Muat naik dokumen semula"
+  },
+  "suspended": {
+    "title": "Akaun anda digantung",
+    "body": "Anda tidak boleh dalam talian atau menerima tugasan sekarang. Tugasan yang sudah diberikan kekal dengan anda sehingga QURBI menugaskan semula.",
+    "reasonLabel": "Sebab daripada QURBI",
+    "contact": "Jika anda rasa ini satu kesilapan, sila hubungi sokongan QURBI.",
+    "refresh": "Semak status"
+  }
+}

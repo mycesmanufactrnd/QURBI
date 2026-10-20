@@ -175,6 +175,26 @@ export const livestockApi = {
 
 export const orderApi = {
   adminList: (params = {}) => unwrap(apiClient.get("/orders/admin", { params })),
+  // Farmer hands a delivery order to the courier pool.
+  readyForPickup: (orderId) => unwrap(apiClient.patch(`/orders/${orderId}/ready-for-pickup`)),
+};
+
+export const courierApi = {
+  adminList: (params = {}) => unwrap(apiClient.get("/couriers/admin", { params })),
+  adminGet: (id) => unwrap(apiClient.get(`/couriers/admin/${id}`)),
+  review: (verificationId, details) => unwrap(apiClient.patch(`/couriers/admin/verifications/${verificationId}/review`, details)),
+  suspend: (id, reason) => unwrap(apiClient.patch(`/couriers/admin/${id}/suspend`, { reason })),
+  reactivate: (id) => unwrap(apiClient.patch(`/couriers/admin/${id}/reactivate`)),
+  reviewRate: (id, details) => unwrap(apiClient.patch(`/couriers/admin/${id}/rate-review`, details)),
+};
+
+export const courierJobApi = {
+  adminList: (params = {}) => unwrap(apiClient.get("/courier-jobs/admin", { params })),
+  adminAssign: (orderId, courierProfileId) => unwrap(apiClient.post(`/courier-jobs/admin/${orderId}/assign`, { courierProfileId })),
+  adminResolve: (assignmentId, note) => unwrap(apiClient.patch(`/courier-jobs/admin/assignments/${assignmentId}/resolve`, { note })),
+  // What the farmer / buyer / admin see about the courier on an order.
+  orderSummary: (orderId) => unwrap(apiClient.get(`/courier-jobs/order/${orderId}/summary`)),
+  farmerHandover: (orderId) => unwrap(apiClient.patch(`/courier-jobs/order/${orderId}/farmer-handover`)),
 };
 
 export default apiClient;

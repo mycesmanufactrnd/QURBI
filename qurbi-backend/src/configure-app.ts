@@ -7,7 +7,7 @@ export function configureApp(app: NestExpressApplication): void {
   const apiPrefix = process.env.API_PREFIX || 'api';
   const allowedOrigins = (
     process.env.FRONTEND_ORIGINS ||
-    'http://localhost:5173,http://localhost:5174,http://localhost:5137'
+    'http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5137'
   )
     .split(',')
     .map((origin) => origin.trim())

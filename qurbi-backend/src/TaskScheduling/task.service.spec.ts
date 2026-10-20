@@ -19,6 +19,8 @@ describe('TasksService listing expiry scheduling', () => {
     const service = new TasksService(
       dataSource as never,
       {} as never,
+      {} as never,
+      {} as never,
       livestockService as never,
     );
 

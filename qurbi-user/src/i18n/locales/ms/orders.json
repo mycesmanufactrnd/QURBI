@@ -93,7 +93,8 @@
       "after": "Selepas",
       "received": "Diterima",
       "ownerFarmer": "Penternak",
-      "ownerYou": "Anda"
+      "ownerYou": "Anda",
+      "ownerCourier": "Kurier"
     },
     "proofAlt": "Bukti pesanan {{stage}}",
     "legacyTracking": {
@@ -173,6 +174,49 @@
     "signIn": "Log Masuk",
     "paymentError": {
       "stayOnOrder": "Kekal di Pesanan Perlu Bayar"
+    },
+    "courier": {
+      "title": "Kurier anda",
+      "photosTitle": "Gambar langsung daripada kurier",
+      "photoAlt": "Gambar kurier: {{stage}}",
+      "stage": {
+        "pickup": "Diambil dari ladang",
+        "transit": "Di jalan",
+        "delivery": "Diserahkan kepada anda",
+        "failed": "Laporan masalah"
+      },
+      "codeTitle": "Kod serahan anda",
+      "codeHint": "Beri kod ini kepada kurier hanya apabila mereka berada di pintu anda bersama haiwan. Ia membuktikan anda telah menerimanya.",
+      "state": {
+        "not_requested": {
+          "title": "Ladang sedang menyediakan pesanan anda",
+          "body": "Kurier akan menghantarnya selepas penternak menyerahkannya."
+        },
+        "waiting_for_courier": {
+          "title": "Mencari kurier",
+          "body": "Penternak sudah menyediakan haiwan. Kurier di kawasan itu boleh menerima tugasan sekarang."
+        },
+        "accepted": {
+          "title": "Kurier dalam perjalanan ke ladang",
+          "body": "Mereka akan mengambil haiwan anda sebentar lagi."
+        },
+        "picked_up": {
+          "title": "Diambil dari ladang",
+          "body": "Kurier sudah memegang haiwan anda dan akan bertolak."
+        },
+        "in_transit": {
+          "title": "Dalam perjalanan kepada anda",
+          "body": "Sediakan kod anda. Gambar ditambah semasa kurier bergerak."
+        },
+        "delivered": {
+          "title": "Dihantar",
+          "body": "Kurier telah menyerahkan haiwan anda. Sila semak dan sahkan penerimaan di bawah."
+        },
+        "failed": {
+          "title": "Ada masalah dengan penghantaran",
+          "body": "Kurier melaporkan isu. QURBI telah dimaklumkan dan akan menghubungi anda."
+        }
+      }
     }
   },
   "notifications": {

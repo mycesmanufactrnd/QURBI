@@ -70,6 +70,44 @@ export function verificationInfo(status) {
   return VERIFICATION[String(status || "unverified").toLowerCase()] || VERIFICATION.unverified;
 }
 
+// ---------- couriers ----------
+export const COURIER_STANDING = {
+  pending: { label: "Pending review", short: "Pending", tone: "warning" },
+  approved: { label: "Approved", short: "Approved", tone: "success" },
+  rejected: { label: "Rejected", short: "Rejected", tone: "danger" },
+  suspended: { label: "Suspended", short: "Suspended", tone: "danger" },
+  unverified: { label: "Not submitted", short: "Not submitted", tone: "muted" },
+};
+
+export function courierStandingInfo(status) {
+  return COURIER_STANDING[String(status || "unverified").toLowerCase()] || COURIER_STANDING.unverified;
+}
+
+const ASSIGNMENT = {
+  accepted: { label: "Accepted", tone: "info" },
+  picked_up: { label: "Picked up", tone: "info" },
+  in_transit: { label: "In transit", tone: "primary" },
+  delivered: { label: "Delivered", tone: "success" },
+  failed: { label: "Failed", tone: "danger" },
+  cancelled: { label: "Released", tone: "muted" },
+};
+
+export function assignmentStatusInfo(status) {
+  return ASSIGNMENT[status] || { label: status ? titleCase(status) : "Unknown", tone: "muted" };
+}
+
+// Anomalies the server records on proof photos (see CourierJobsService).
+export const PROOF_FLAG_LABELS = {
+  gps_mismatch: "Photo taken away from the address",
+  late_upload: "Uploaded long after it was taken",
+  no_destination_coords: "No coordinates for the address",
+  farmer_unconfirmed: "Farmer did not confirm the handover",
+};
+
+export function proofFlagLabel(flag) {
+  return PROOF_FLAG_LABELS[flag] || titleCase(flag);
+}
+
 // ---------- livestock ----------
 const LIVESTOCK = {
   available: { label: "Available", tone: "success" },

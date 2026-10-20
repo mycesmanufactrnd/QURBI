@@ -1,0 +1,124 @@
+{
+  "title": "Jobs",
+  "tabs": {
+    "available": "Available",
+    "active": "My jobs",
+    "history": "History"
+  },
+  "offline": {
+    "title": "You are offline",
+    "body": "Go online to see jobs from farms in your service area.",
+    "action": "Go online"
+  },
+  "empty": {
+    "available": "No jobs right now",
+    "availableHint": "New jobs appear here the moment a farmer releases an order in your area. This list refreshes by itself.",
+    "active": "No active jobs",
+    "activeHint": "Accept a job from the Available tab to start.",
+    "history": "No finished jobs yet",
+    "historyHint": "Delivered and cancelled jobs show up here."
+  },
+  "loadFailed": "Could not load jobs.",
+  "card": {
+    "earning": "You earn",
+    "distance": "{{km}} km",
+    "from": "Pick up",
+    "to": "Deliver to",
+    "ready": "Ready {{time}}",
+    "open": "View job"
+  },
+  "status": {
+    "accepted": "Accepted",
+    "picked_up": "Picked up",
+    "in_transit": "On the way",
+    "delivered": "Delivered",
+    "failed": "Problem reported",
+    "cancelled": "Released"
+  },
+  "steps": {
+    "accepted": "Accepted",
+    "picked_up": "Picked up",
+    "in_transit": "On the way",
+    "delivered": "Delivered"
+  },
+  "detail": {
+    "notFound": "This job is no longer available.",
+    "loadFailed": "Could not load this job.",
+    "pickup": "Pick up from",
+    "dropoff": "Deliver to",
+    "areaOnly": "Full address and phone numbers are shown after you accept.",
+    "items": "Livestock",
+    "tag": "Tag {{tag}}",
+    "weight": "{{kg}} kg",
+    "quantity": "×{{count}}",
+    "earning": "You earn",
+    "approvedRate": "Your approved rate",
+    "orderFee": "The order's delivery fee",
+    "navigate": "Navigate",
+    "callFarmer": "Call farmer",
+    "callBuyer": "Call buyer",
+    "whatsapp": "WhatsApp",
+    "farmerConfirmed": "Farmer confirmed the handover",
+    "farmerNotConfirmed": "Waiting for the farmer to confirm the handover",
+    "timeline": "Proof so far",
+    "photoTaken": "Taken {{time}}",
+    "flagged": "Flagged for review"
+  },
+  "actions": {
+    "accept": "Accept job",
+    "accepting": "Accepting…",
+    "acceptFailed": "Could not accept this job.",
+    "release": "Release job",
+    "releaseTitle": "Release this job?",
+    "releaseBody": "It goes straight back to the pool for other couriers. Only do this before you collect the animal.",
+    "releaseReason": "Reason (optional)",
+    "releaseConfirm": "Release job",
+    "releasing": "Releasing…",
+    "startPickup": "I'm at the farm: collect",
+    "startTransit": "Start the trip",
+    "startDelivery": "I've arrived: hand over",
+    "reportProblem": "Report a problem",
+    "next": {
+      "accepted": "Head to the farm",
+      "acceptedHint": "Check the animal against the ear tag, then take your pickup photo.",
+      "picked_up": "Ready to leave?",
+      "picked_upHint": "Take a photo as you set off. The buyer is told you are on the way.",
+      "in_transit": "Deliver to the buyer",
+      "in_transitHint": "Ask the buyer for their 6-digit code, then take the two handover photos."
+    }
+  },
+  "problem": {
+    "title": "Report a problem",
+    "subtitle": "The buyer, the farmer and QURBI are told straight away.",
+    "category": "What happened?",
+    "categories": {
+      "buyer_unreachable": "Buyer cannot be reached",
+      "wrong_address": "Wrong or unclear address",
+      "livestock_issue": "Problem with the animal",
+      "vehicle_issue": "Vehicle breakdown",
+      "other": "Something else"
+    },
+    "reason": "Describe it",
+    "reasonHint": "Be specific so QURBI can decide the next step.",
+    "submit": "Send report"
+  },
+  "pickupFlow": {
+    "title": "Collect the livestock",
+    "checklistTitle": "Check before you take it",
+    "earTag": "The ear tag matches the order",
+    "healthy": "The animal looks healthy",
+    "secured": "The animal is safely secured in my vehicle",
+    "blocked": "Do not collect the animal until all three are true. Report a problem instead.",
+    "submit": "Confirm pickup"
+  },
+  "transitFlow": {
+    "title": "Start the trip",
+    "submit": "Send photo and start"
+  },
+  "deliverFlow": {
+    "title": "Hand over to the buyer",
+    "codeLabel": "Buyer's 6-digit code",
+    "codeHint": "The buyer finds it on their order page while you are on the way.",
+    "submit": "Confirm delivery"
+  }
+}

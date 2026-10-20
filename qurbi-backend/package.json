@@ -21,7 +21,8 @@
     "test:e2e": "npm run build && node scripts/smoke-e2e.cjs",
     "seed:reference-data": "ts-node -r tsconfig-paths/register scripts/seed-reference-data.ts",
     "seed:admin": "ts-node -r tsconfig-paths/register scripts/seed-admin.ts",
-    "seed:demo-users": "ts-node -r tsconfig-paths/register scripts/seed-demo-users.ts"
+    "seed:demo-users": "ts-node -r tsconfig-paths/register scripts/seed-demo-users.ts",
+    "seed:demo-courier": "ts-node -r tsconfig-paths/register scripts/seed-demo-courier.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

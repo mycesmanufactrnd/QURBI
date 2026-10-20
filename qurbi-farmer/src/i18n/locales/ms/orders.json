@@ -119,7 +119,8 @@
     },
     "owner": {
       "You": "Anda",
-      "Buyer": "Pembeli"
+      "Buyer": "Pembeli",
+      "Courier": "Kurier"
     },
     "packageNotFound": "Bungkusan tidak dijumpai.",
     "packageLoadFailed": "Bungkusan tidak dapat dimuatkan.",
@@ -134,7 +135,11 @@
     "tryAgain": "Cuba lagi",
     "title": "Butiran pesanan",
     "sectionTabsAria": "Bahagian butiran pesanan",
-    "tabs": { "overview": "Ringkasan", "delivery": "Penghantaran", "evidence": "Bukti" },
+    "tabs": {
+      "overview": "Ringkasan",
+      "delivery": "Penghantaran",
+      "evidence": "Bukti"
+    },
     "refreshAria": "Muat semula pesanan",
     "multiNotice": "Pesanan ini mengandungi bungkusan daripada beberapa penternak. Muat naik gambar dikunci supaya seorang penternak tidak boleh mengubah status penghantaran penternak lain.",
     "issueNotice": "Langkah penghantaran dihentikan sementara kerana pesanan ini mempunyai pemulangan atau bayaran balik yang sedang diproses.",
@@ -199,6 +204,59 @@
     "dialogTitle": "Simpan gambar penghantaran ini?",
     "dialogDescription": "Ini akan menyimpan <1>{{file}}</1> sebagai gambar <3>{{stage}}</3> untuk pesanan ini. Gambar tidak boleh diubah selepas itu, jadi pastikan ia jelas dan menunjukkan haiwan yang betul.",
     "cancel": "Batal",
-    "savePhoto": "Simpan gambar"
+    "savePhoto": "Simpan gambar",
+    "byCourier": "Diambil oleh kurier semasa menghantar."
+  },
+  "courier": {
+    "title": "Penghantaran kurier",
+    "vehicle": "{{type}} · {{plate}}",
+    "problem": "Masalah dilaporkan:",
+    "proofTitle": "Gambar daripada kurier",
+    "proofAlt": "Gambar bukti kurier",
+    "release": "Sedia untuk diambil kurier",
+    "releasing": "Melepaskan…",
+    "releaseHint": "Tekan apabila haiwan sedia untuk diambil. Kurier di negeri anda akan nampak tugasan ini dan seorang akan menerimanya.",
+    "releaseFailed": "Pesanan tidak dapat dilepaskan. Sila cuba lagi.",
+    "confirmHandover": "Saya telah menyerahkan haiwan kepada kurier",
+    "confirming": "Mengesahkan…",
+    "handoverHint": "Sahkan apabila kurier sudah memegang haiwan. QURBI menyimpannya sebagai rekod.",
+    "handoverConfirmed": "Anda telah mengesahkan serahan kepada kurier.",
+    "handoverFailed": "Serahan tidak dapat disahkan. Sila cuba lagi.",
+    "stage": {
+      "pickup": "Diambil dari ladang anda",
+      "transit": "Di jalan",
+      "delivery": "Diserahkan kepada pembeli",
+      "failed": "Laporan masalah"
+    },
+    "state": {
+      "not_requested": {
+        "title": "Belum dilepaskan kepada kurier",
+        "body": "Kurier menghantar pesanan ini. Lepaskannya apabila haiwan sedia."
+      },
+      "waiting_for_courier": {
+        "title": "Menunggu kurier",
+        "body": "Kurier di kawasan anda boleh nampak tugasan ini. Anda akan dimaklumkan sebaik sahaja seorang menerimanya."
+      },
+      "accepted": {
+        "title": "Kurier dalam perjalanan ke ladang anda",
+        "body": "Sediakan haiwan untuk diserahkan."
+      },
+      "picked_up": {
+        "title": "Telah diambil oleh kurier",
+        "body": "Kurier sudah memegang haiwan dan akan memulakan perjalanan."
+      },
+      "in_transit": {
+        "title": "Dalam perjalanan kepada pembeli",
+        "body": "Kurier sedang menghantar pesanan. Pembeli boleh menjejakinya."
+      },
+      "delivered": {
+        "title": "Dihantar",
+        "body": "Kurier menyerahkan haiwan kepada pembeli dengan gambar dan kod pembeli."
+      },
+      "failed": {
+        "title": "Masalah penghantaran",
+        "body": "Kurier melaporkan masalah. QURBI telah dimaklumkan dan akan menghubungi anda."
+      }
+    }
   }
 }

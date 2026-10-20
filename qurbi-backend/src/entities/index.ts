@@ -25,6 +25,10 @@ export * from './cart-item.entity';
 export * from './address.entity';
 export * from './uploaded-file.entity';
 export * from './buyer-activity.entity';
+export * from './courier-profile.entity';
+export * from './courier-verification.entity';
+export * from './delivery-assignment.entity';
+export * from './courier-audit-log.entity';
 
 import { User } from './user.entity';
 import { RefreshToken } from './refresh-token.entity';
@@ -50,6 +54,10 @@ import { CartItem } from './cart-item.entity';
 import { Address } from './address.entity';
 import { UploadedFile } from './uploaded-file.entity';
 import { BuyerActivity } from './buyer-activity.entity';
+import { CourierProfile } from './courier-profile.entity';
+import { CourierVerification } from './courier-verification.entity';
+import { DeliveryAssignment } from './delivery-assignment.entity';
+import { CourierAuditLog } from './courier-audit-log.entity';
 
 // Passed straight to TypeOrmModule.forRoot({ entities: ALL_ENTITIES }).
 export const ALL_ENTITIES = [
@@ -77,4 +85,8 @@ export const ALL_ENTITIES = [
   Address,
   UploadedFile,
   BuyerActivity,
+  CourierProfile,
+  CourierVerification,
+  DeliveryAssignment,
+  CourierAuditLog,
 ];

@@ -47,7 +47,9 @@ function ApplicationRoutes() {
     ? location.state.backgroundLocation
     : null;
   const profileFlow =
-    location.pathname === "/profile" || location.state?.profileFlow === true;
+    location.pathname === "/profile" ||
+    (location.state?.profileFlow === true &&
+      location.pathname !== "/transaction-history");
 
   return (
     <>

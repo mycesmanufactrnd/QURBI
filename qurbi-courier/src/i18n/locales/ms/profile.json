@@ -1,0 +1,26 @@
+{
+  "title": "Profil",
+  "account": "Akaun",
+  "vehicle": "Kenderaan",
+  "serviceArea": "Kawasan perkhidmatan",
+  "bank": "Butiran pembayaran",
+  "standing": {
+    "approved": "Diluluskan",
+    "pending": "Dalam semakan",
+    "rejected": "Ditolak",
+    "suspended": "Digantung",
+    "unverified": "Belum dihantar"
+  },
+  "stats": {
+    "deliveries": "Penghantaran",
+    "rating": "Penilaian",
+    "noRating": "Belum ada penilaian"
+  },
+  "edit": "Sunting",
+  "saved": "Disimpan",
+  "saveFailed": "Tidak dapat disimpan. Sila cuba lagi.",
+  "noBank": "Belum ada butiran bank. Tambahkannya supaya QURBI boleh membayar anda.",
+  "language": "Bahasa",
+  "languages": { "en": "English", "ms": "Bahasa Melayu" },
+  "stateRequired": "Pilih sekurang-kurangnya satu negeri."
+}

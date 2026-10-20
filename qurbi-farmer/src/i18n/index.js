@@ -31,7 +31,7 @@ const storedLanguage = (() => {
 
 const enResources = buildResources(enModules);
 
-i18n.use(initReactI18next).init({
+i18n.use(initReactI18next).init(/** @type {any} */ ({
   resources: { en: enResources, ms: buildResources(msModules) },
   lng: SUPPORTED_LANGUAGES.includes(storedLanguage) ? storedLanguage : DEFAULT_LANGUAGE,
   fallbackLng: "en",
@@ -39,7 +39,7 @@ i18n.use(initReactI18next).init({
   defaultNS: "common",
   interpolation: { escapeValue: false },
   react: { useSuspense: false },
-});
+}));
 
 const applyLanguage = (lng) => {
   document.documentElement.lang = lng;

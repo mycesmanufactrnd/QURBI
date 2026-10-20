@@ -1,0 +1,58 @@
+{
+  "stage": {
+    "pickup": "Pengambilan",
+    "transit": "Di jalan",
+    "delivery": "Serahan",
+    "failed": "Masalah"
+  },
+  "photoLabels": {
+    "pickup": "Ternakan di ladang",
+    "transit": "Di jalan",
+    "deliveryAnimal": "Ternakan di alamat",
+    "deliveryHandover": "Serahan kepada pembeli",
+    "failed": "Apa yang berlaku"
+  },
+  "camera": {
+    "title": "Ambil gambar langsung",
+    "step": "Gambar {{current}} daripada {{total}}",
+    "capture": "Ambil gambar",
+    "retake": "Ambil semula",
+    "usePhoto": "Guna gambar ini",
+    "close": "Tutup kamera",
+    "starting": "Memulakan kamera…",
+    "liveOnly": "Gambar diambil secara langsung. Anda tidak boleh memilih daripada galeri.",
+    "gps": {
+      "searching": "Mencari lokasi anda…",
+      "good": "Lokasi dikunci (±{{meters}} m)",
+      "weak": "Lokasi terlalu lemah (±{{meters}} m). Pergi ke kawasan lapang.",
+      "needed": "Lokasi ±{{max}} m atau lebih baik diperlukan untuk mengambil gambar."
+    },
+    "errors": {
+      "unsupported": "Pelayar ini tidak dapat membuka kamera. Guna Chrome atau Safari terkini pada telefon anda.",
+      "denied": "Akses kamera disekat. Benarkan kamera untuk laman ini dalam tetapan pelayar, kemudian cuba lagi.",
+      "notFound": "Tiada kamera dijumpai pada peranti ini.",
+      "inUse": "Kamera sedang digunakan oleh aplikasi lain. Tutupnya dan cuba lagi.",
+      "generic": "Kamera tidak dapat dimulakan. Sila cuba lagi.",
+      "gpsDenied": "Akses lokasi disekat. Benarkan lokasi untuk laman ini dalam tetapan pelayar, kemudian cuba lagi.",
+      "gpsUnavailable": "Lokasi anda tidak tersedia sekarang. Pergi ke kawasan lapang dan cuba lagi.",
+      "gpsUnsupported": "Pelayar ini tidak dapat membaca lokasi anda.",
+      "capture": "Gambar tidak dapat diambil. Sila cuba lagi."
+    }
+  },
+  "review": {
+    "title": "Semak gambar anda",
+    "hint": "Pastikan haiwan dan tempat kelihatan jelas. Masa dan lokasi dicetak pada setiap gambar.",
+    "retake": "Ambil semula",
+    "missing": "Ambil semua gambar untuk teruskan."
+  },
+  "submit": {
+    "sending": "Menghantar…",
+    "sent": "Dihantar",
+    "queuedTitle": "Disimpan dalam telefon ini",
+    "queuedBody": "Tiada isyarat sekarang. Gambar anda mengekalkan masa dan lokasi asal dan dimuat naik secara automatik apabila anda kembali dalam talian. Jangan padam data laman ini.",
+    "rejectedTitle": "Tidak diterima",
+    "rejectedBody": "Pelayan tidak menerima langkah ini:",
+    "tryAgain": "Betulkan dan cuba lagi",
+    "backToJob": "Kembali ke tugasan"
+  }
+}
