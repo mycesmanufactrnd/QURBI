@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
-  AlertCircle, ArrowLeft, RefreshCw, CalendarDays, Hash, Loader2, MapPin, Palette, Pencil, Ruler, Tag, Trash2, UserRound, Utensils, Weight,
+  AlertCircle, ArrowLeft, RefreshCw, CalendarDays, Hash, Loader2, MapPin, Palette, Pencil, Ruler, ShieldCheck, Tag, Trash2, UserRound, Utensils, Weight,
 } from "lucide-react";
 import { qurbi } from "@/api/qurbiClient";
 import { resolveApiAssetUrl } from "@/api/apiClient";
@@ -164,10 +164,11 @@ export default function LivestockDetail() {
           </section>
 
           <ApprovalMessages item={item} />
+          {item.marketplaceCompliance?.policyVersion && <ComplianceStatus compliance={item.marketplaceCompliance} onEdit={() => navigate(`/livestock/${id}/edit`)} />}
 
           {!paymentReserved && listingExpired && <section className="rounded-2xl bg-destructive/10 p-4 text-destructive"><p className="text-sm font-extrabold">{t("detail.expiredTitle")}</p><p className="mt-1 text-sm leading-6">{t("detail.expiredText", { date: display.expiryLabel(item) })}</p></section>}
 
-          {!paymentReserved && item.status === "Draft" && <section className="rounded-2xl bg-sky-50 p-4 text-sky-900"><p className="text-sm font-extrabold">{t("detail.draftTitle")}</p><p className="mt-1 text-sm leading-6">{t("detail.draftText")}</p></section>}
+          {!paymentReserved && item.status === "Draft" && !item.marketplaceCompliance?.policyVersion && <section className="rounded-2xl bg-sky-50 p-4 text-sky-900"><p className="text-sm font-extrabold">{t("detail.draftTitle")}</p><p className="mt-1 text-sm leading-6">{t("detail.draftText")}</p></section>}
           {!paymentReserved && item.status === "Unavailable" && <section className="rounded-2xl bg-muted p-4"><p className="text-sm font-extrabold">{t("detail.hiddenTitle")}</p><p className="mt-1 text-sm leading-6 text-muted-foreground">{t("detail.hiddenText")}</p></section>}
           {!paymentReserved && item.status === "Available" && waitingForMinimumAge && <section className="rounded-2xl bg-amber-100/75 p-4 text-amber-900"><p className="text-sm font-extrabold">{t("detail.minimumAgeTitle")}</p><p className="mt-1 text-sm leading-6">{t("detail.minimumAgeText", { date: eligibleFromLabel })}</p></section>}
           {!paymentReserved && item.status === "Available" && !waitingForMinimumAge && !expiry.expired && expiry.expiresAt && <section className="soft-card p-4"><p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">{t("detail.visibleTitle")}</p><p className="mt-1 text-sm font-semibold">{t("detail.visibleText", { date: display.expiryLabel(item), count: expiry.daysRemaining })}</p></section>}
@@ -202,6 +203,22 @@ export default function LivestockDetail() {
 
       <ConfirmDialog open={confirmDelete} onOpenChange={setConfirmDelete} title={t("myLivestock.deleteTitle")} description={t("myLivestock.deleteDescription", { name: title })} confirmText={t("myLivestock.deleteConfirm")} destructive loading={deleting} onConfirm={doDelete} />
     </div>
+  );
+}
+
+function ComplianceStatus({ compliance, onEdit }) {
+  const { t } = useTranslation("livestock");
+  const status = compliance.reviewStatus || "incomplete";
+  const approved = status === "approved";
+  const rejected = status === "rejected";
+  const assistance = compliance.assistance?.requested;
+  return (
+    <section className={cn("rounded-2xl border p-4", approved ? "border-emerald-200 bg-emerald-50 text-emerald-950" : rejected ? "border-destructive/30 bg-destructive/10 text-destructive" : "border-amber-200 bg-amber-50 text-amber-950")}>
+      <p className="flex items-center gap-2 text-sm font-extrabold"><ShieldCheck className="h-5 w-5" />{t(`detail.compliance.${status}Title`, { defaultValue: t("detail.compliance.incompleteTitle") })}</p>
+      <p className="mt-1 text-sm leading-6">{assistance && !approved ? t("detail.compliance.assistanceText") : t(`detail.compliance.${status}Text`, { defaultValue: t("detail.compliance.incompleteText") })}</p>
+      {compliance.reviewNote && <p className="mt-2 text-sm font-semibold">{t("detail.compliance.reviewNote", { note: compliance.reviewNote })}</p>}
+      {!approved && <button type="button" onClick={onEdit} className="mt-3 min-h-10 rounded-xl bg-card px-3 text-sm font-bold text-primary ring-1 ring-border">{t("detail.compliance.update")}</button>}
+    </section>
   );
 }
 

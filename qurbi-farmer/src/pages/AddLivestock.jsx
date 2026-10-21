@@ -54,6 +54,10 @@ export default function AddLivestock() {
           registeredState={registeredState}
           enableOcr
           onSubmit={handleNext}
+          onRequestRegistrationAssistance={(data) => {
+            setDraft(data);
+            navigate("/livestock/add/registration-assistance", { state: { draft: data } });
+          }}
           submitting={false}
           submitLabel={t("add.next")}
         />

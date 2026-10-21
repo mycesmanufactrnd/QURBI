@@ -7,6 +7,9 @@ import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, FindOptionsWhere, Repository } from 'typeorm';
 import {
   Livestock,
+  Notification,
+  NotificationAudience,
+  NotificationType,
   RequestStatus,
   Species,
   SpeciesRequest,
@@ -114,7 +117,22 @@ export class SpeciesRequestsService extends BaseCrudService<SpeciesRequest> {
         request.status = RequestStatus.REJECTED;
       }
 
-      return manager.save(request);
+      const savedRequest = await manager.save(request);
+      const decision = input.approve ? 'approved' : 'rejected';
+      const reviewNote = input.reviewNote ? ` Note: ${input.reviewNote}` : '';
+      await manager.save(
+        manager.create(Notification, {
+          userId: request.requestedByUserId,
+          audience: NotificationAudience.FARMER,
+          type: NotificationType.REQUEST_UPDATE,
+          title: `Species request ${decision}`,
+          body: `Your request to add ${request.proposedName} was ${decision}.${reviewNote}`,
+          linkUrl: '/livestock',
+          relatedType: 'species_request',
+          relatedId: request.id,
+        }),
+      );
+      return savedRequest;
     });
   }
 }

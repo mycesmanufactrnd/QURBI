@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { qurbi } from "@/api/qurbiClient";
 import { ArrowLeft, Loader2 } from "lucide-react";
@@ -12,6 +12,7 @@ export default function EditLivestock() {
   const { id } = useParams();
   const { t } = useTranslation("livestock");
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [livestock, setLivestock] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -21,10 +22,10 @@ export default function EditLivestock() {
     qurbi.functions.invoke("checkLivestockReservation", { livestockId: id })
       .catch(() => null)
       .then(() => qurbi.entities.Livestock.get(id))
-      .then(setLivestock)
+      .then((data) => setLivestock(location.state?.registrationDraft ? { ...data, ...location.state.registrationDraft } : data))
       .catch(() => navigate("/livestock", { replace: true }))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, location.state]);
 
   const handleSubmit = async (data) => {
     setSubmitting(true);
@@ -75,7 +76,13 @@ export default function EditLivestock() {
         </div>
       </div>
       <div className="mt-6">
-        <LivestockForm initial={livestock} onSubmit={handleSubmit} submitting={submitting} submitLabel={listingExpired ? t("edit.submitRenew") : t("edit.submit")} />
+        <LivestockForm
+          initial={livestock}
+          onSubmit={handleSubmit}
+          onRequestRegistrationAssistance={(data) => navigate(`/livestock/${id}/registration-assistance`, { state: { draft: data } })}
+          submitting={submitting}
+          submitLabel={listingExpired ? t("edit.submitRenew") : t("edit.submit")}
+        />
       </div>
     </div>
   );

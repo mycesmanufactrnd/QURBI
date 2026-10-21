@@ -47,9 +47,9 @@ export default function ReviewSummary({ species, breed, price, farmLocation, del
       <Row label={t("reviewSummary.sellingPrice")} value={price !== "" && price != null ? formatMYR(Number(price)) : ""} />
       {rows.map(([label, value]) => <Row key={label} label={label} value={value} />)}
       <Row label={t("reviewSummary.state")} value={farmLocation} />
-      <Row label={t("reviewSummary.deliveryMethod")} value={deliveryMethod} />
-      <Row label={t("reviewSummary.signerName")} value={signerName} />
-      <Row label={t("reviewSummary.signedDate")} value={signedDate ? formatDate(signedDate, signedDate) : ""} />
+      {deliveryMethod && <Row label={t("reviewSummary.deliveryMethod")} value={deliveryMethod} />}
+      {signerName && <Row label={t("reviewSummary.signerName")} value={signerName} />}
+      {signedDate && <Row label={t("reviewSummary.signedDate")} value={formatDate(signedDate, signedDate)} />}
     </div>
   );
 }

@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThan, Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
@@ -85,7 +89,11 @@ export class AnalyticsService {
       dto.eventType === BuyerActivityType.LISTING_VIEW &&
       dto.targetType === BuyerActivityTargetType.LIVESTOCK
     ) {
-      await this.livestockRepository.increment({ id: dto.targetId }, 'viewCount', 1);
+      await this.livestockRepository.increment(
+        { id: dto.targetId },
+        'viewCount',
+        1,
+      );
     }
   }
 
@@ -184,7 +192,8 @@ export class AnalyticsService {
     const listingViews = counts[BuyerActivityType.LISTING_VIEW] || 0;
     const addToCart = counts[BuyerActivityType.ADD_TO_CART] || 0;
     const buyNow = counts[BuyerActivityType.BUY_NOW] || 0;
-    const farmerProfileViews = counts[BuyerActivityType.FARMER_PROFILE_VIEW] || 0;
+    const farmerProfileViews =
+      counts[BuyerActivityType.FARMER_PROFILE_VIEW] || 0;
 
     const targets = await this.targetDetails(farmerId, [
       ...topRows.map((row) => ({ type: row.targetType, id: row.targetId })),
@@ -215,7 +224,8 @@ export class AnalyticsService {
         viewToBuyRate: percent(buyNow, listingViews),
       },
       daily: dateKeys(from, days).map(
-        (date) => dailyByDate.get(date) || { date, views: 0, addToCart: 0, buyNow: 0 },
+        (date) =>
+          dailyByDate.get(date) || { date, views: 0, addToCart: 0, buyNow: 0 },
       ),
       topListings: topRows.map((row) => ({
         targetType: row.targetType,
@@ -274,25 +284,30 @@ export class AnalyticsService {
       targets.filter((row) => row.type === BuyerActivityTargetType.LIVESTOCK),
     );
     const bulkIds = uniqueIds(
-      targets.filter((row) => row.type === BuyerActivityTargetType.BULK_LISTING),
+      targets.filter(
+        (row) => row.type === BuyerActivityTargetType.BULK_LISTING,
+      ),
     );
     const livestockPromise: Promise<Livestock[]> = livestockIds.length
-        ? this.livestockRepository
-            .createQueryBuilder('listing')
-            .where('listing.farmerId = :farmerId', { farmerId })
-            .andWhere('listing.id IN (:...ids)', { ids: livestockIds })
-            .select(['listing.id', 'listing.title', 'listing.images'])
-            .getMany()
-        : Promise.resolve([]);
+      ? this.livestockRepository
+          .createQueryBuilder('listing')
+          .where('listing.farmerId = :farmerId', { farmerId })
+          .andWhere('listing.id IN (:...ids)', { ids: livestockIds })
+          .select(['listing.id', 'listing.title', 'listing.images'])
+          .getMany()
+      : Promise.resolve([]);
     const bulkPromise: Promise<BulkListing[]> = bulkIds.length
-        ? this.bulkListingRepository
-            .createQueryBuilder('listing')
-            .where('listing.farmerId = :farmerId', { farmerId })
-            .andWhere('listing.id IN (:...ids)', { ids: bulkIds })
-            .select(['listing.id', 'listing.title', 'listing.images'])
-            .getMany()
-        : Promise.resolve([]);
-    const [livestock, bulk] = await Promise.all([livestockPromise, bulkPromise]);
+      ? this.bulkListingRepository
+          .createQueryBuilder('listing')
+          .where('listing.farmerId = :farmerId', { farmerId })
+          .andWhere('listing.id IN (:...ids)', { ids: bulkIds })
+          .select(['listing.id', 'listing.title', 'listing.images'])
+          .getMany()
+      : Promise.resolve([]);
+    const [livestock, bulk] = await Promise.all([
+      livestockPromise,
+      bulkPromise,
+    ]);
     const result = new Map<string, { title: string; image: string | null }>();
     livestock.forEach((row) =>
       result.set(`${BuyerActivityTargetType.LIVESTOCK}:${row.id}`, {

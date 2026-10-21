@@ -44,6 +44,8 @@ export class PaymentSession extends BaseEntity {
   @Column({ type: 'boolean', default: true })
   isTest: boolean;
 
-  @OneToMany(() => PaymentSessionOrder, (link) => link.paymentSession, { cascade: true })
+  @OneToMany(() => PaymentSessionOrder, (link) => link.paymentSession, {
+    cascade: true,
+  })
   orderLinks: PaymentSessionOrder[];
 }

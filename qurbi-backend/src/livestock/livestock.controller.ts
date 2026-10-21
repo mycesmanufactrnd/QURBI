@@ -19,6 +19,7 @@ import { CreateLivestockDto } from './dto/create-livestock.dto';
 import { UpdateLivestockDto } from './dto/update-livestock.dto';
 import { SetMarketplaceBlockDto } from './dto/set-marketplace-visibility.dto';
 import { SetFeaturedDto } from './dto/set-featured.dto';
+import { ReviewMarketplaceComplianceDto } from './dto/review-marketplace-compliance.dto';
 import { toPageInt } from '../common/pagination';
 import { Public } from '../auth/decorators/public.decorator';
 
@@ -120,6 +121,20 @@ export class LivestockController {
   @Patch(':id/featured')
   setFeatured(@Param('id') id: string, @Body() body: SetFeaturedDto) {
     return this.livestockService.setFeatured(id, body.featured);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @UseGuards(RolesGuard)
+  @Patch(':id/compliance-review')
+  reviewMarketplaceCompliance(
+    @Param('id') id: string,
+    @Body() body: ReviewMarketplaceComplianceDto,
+  ) {
+    return this.livestockService.reviewMarketplaceCompliance(
+      id,
+      body.decision,
+      body.note ?? null,
+    );
   }
 
   @Delete(':id')

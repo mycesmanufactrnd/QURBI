@@ -5,7 +5,9 @@ import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([BuyerActivity, Livestock, BulkListing, User])],
+  imports: [
+    TypeOrmModule.forFeature([BuyerActivity, Livestock, BulkListing, User]),
+  ],
   controllers: [AnalyticsController],
   providers: [AnalyticsService],
 })

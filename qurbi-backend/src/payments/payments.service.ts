@@ -41,7 +41,8 @@ export class PaymentsService {
 
   async createChipCheckout(buyerId: string, requestedOrderIds: string[]) {
     const orderIds = [...new Set(requestedOrderIds)].sort();
-    if (!orderIds.length) throw new BadRequestException('At least one order is required');
+    if (!orderIds.length)
+      throw new BadRequestException('At least one order is required');
 
     // Fail with a clear message before any payment session is created, instead
     // of a bare 500 from a missing CHIP setting.
@@ -58,15 +59,22 @@ export class PaymentsService {
         relations: { items: true, buyer: true, reservations: true },
         order: { createdAt: 'ASC' },
       });
-      if (orders.length !== orderIds.length) throw new NotFoundException('One or more orders were not found');
+      if (orders.length !== orderIds.length)
+        throw new NotFoundException('One or more orders were not found');
       if (orders.some((order) => order.buyerId !== buyerId)) {
         throw new ForbiddenException('You can only pay for your own orders');
       }
-      if (orders.some((order) => order.status !== OrderStatus.PENDING_PAYMENT)) {
-        throw new ConflictException('One or more orders are no longer awaiting payment');
+      if (
+        orders.some((order) => order.status !== OrderStatus.PENDING_PAYMENT)
+      ) {
+        throw new ConflictException(
+          'One or more orders are no longer awaiting payment',
+        );
       }
       if (orders.some((order) => order.currency !== 'MYR')) {
-        throw new BadRequestException('CHIP checkout currently supports MYR orders only');
+        throw new BadRequestException(
+          'CHIP checkout currently supports MYR orders only',
+        );
       }
 
       const reusable = await manager.find(PaymentSession, {
@@ -75,34 +83,52 @@ export class PaymentsService {
         order: { createdAt: 'DESC' },
         take: 10,
       });
-      const existing = reusable.find((session) =>
-        Boolean(session.checkoutUrl) &&
-        (!session.expiresAt || session.expiresAt > new Date()) &&
-        sameIds(session.orderLinks.map((link) => link.orderId), orderIds),
+      const existing = reusable.find(
+        (session) =>
+          Boolean(session.checkoutUrl) &&
+          (!session.expiresAt || session.expiresAt > new Date()) &&
+          sameIds(
+            session.orderLinks.map((link) => link.orderId),
+            orderIds,
+          ),
       );
       if (existing) return { session: existing, orders, existing: true };
 
-      const totalCents = orders.reduce((sum, order) => sum + moneyToCents(order.total), 0);
-      if (totalCents <= 0) throw new BadRequestException('Payment amount must be greater than zero');
+      const totalCents = orders.reduce(
+        (sum, order) => sum + moneyToCents(order.total),
+        0,
+      );
+      if (totalCents <= 0)
+        throw new BadRequestException(
+          'Payment amount must be greater than zero',
+        );
       const expiryMinutes = positiveInteger(
         this.config.get<string>('CHIP_PAYMENT_EXPIRY_MINUTES'),
         60,
       );
       const expiresAt = new Date(Date.now() + expiryMinutes * 60_000);
-      const session = await manager.save(manager.create(PaymentSession, {
-        buyerId,
-        provider: 'chip',
-        status: PaymentStatus.UNPAID,
-        providerStatus: 'creating',
-        amount: centsToMoney(totalCents),
-        currency: 'MYR',
-        expiresAt,
-        isTest: (this.config.get<string>('CHIP_MODE') || 'test').toLowerCase() !== 'live',
-      }));
-      await manager.save(orderIds.map((orderId) => manager.create(PaymentSessionOrder, {
-        paymentSessionId: session.id,
-        orderId,
-      })));
+      const session = await manager.save(
+        manager.create(PaymentSession, {
+          buyerId,
+          provider: 'chip',
+          status: PaymentStatus.UNPAID,
+          providerStatus: 'creating',
+          amount: centsToMoney(totalCents),
+          currency: 'MYR',
+          expiresAt,
+          isTest:
+            (this.config.get<string>('CHIP_MODE') || 'test').toLowerCase() !==
+            'live',
+        }),
+      );
+      await manager.save(
+        orderIds.map((orderId) =>
+          manager.create(PaymentSessionOrder, {
+            paymentSessionId: session.id,
+            orderId,
+          }),
+        ),
+      );
       return { session, orders, existing: false };
     });
 
@@ -110,14 +136,17 @@ export class PaymentsService {
 
     const { session, orders } = prepared;
     try {
-      const buyer = orders[0].buyer as User;
+      const buyer = orders[0].buyer;
       const providerPurchase = await this.chipClient.createPurchase({
         brand_id: this.config.getOrThrow<string>('CHIP_BRAND_ID'),
         reference: `QURBI-${session.id}`,
         client: {
           email: buyer.email,
           full_name: buyer.fullName,
-          phone: buyer.phone || orders[0].deliveryAddress?.recipientPhone || undefined,
+          phone:
+            buyer.phone ||
+            orders[0].deliveryAddress?.recipientPhone ||
+            undefined,
         },
         purchase: {
           currency: 'MYR',
@@ -131,9 +160,24 @@ export class PaymentsService {
             qurbi_order_ids: orderIds,
           },
         },
-        success_redirect: returnUrl(this.config, 'CHIP_SUCCESS_REDIRECT_URL', session.id, orderIds),
-        failure_redirect: returnUrl(this.config, 'CHIP_FAILURE_REDIRECT_URL', session.id, orderIds),
-        cancel_redirect: returnUrl(this.config, 'CHIP_CANCEL_REDIRECT_URL', session.id, orderIds),
+        success_redirect: returnUrl(
+          this.config,
+          'CHIP_SUCCESS_REDIRECT_URL',
+          session.id,
+          orderIds,
+        ),
+        failure_redirect: returnUrl(
+          this.config,
+          'CHIP_FAILURE_REDIRECT_URL',
+          session.id,
+          orderIds,
+        ),
+        cancel_redirect: returnUrl(
+          this.config,
+          'CHIP_CANCEL_REDIRECT_URL',
+          session.id,
+          orderIds,
+        ),
         success_callback: requiredHttpsUrl(this.config, 'CHIP_WEBHOOK_URL'),
       });
       if (!providerPurchase.id || !providerPurchase.checkout_url) {
@@ -146,16 +190,24 @@ export class PaymentsService {
         session.checkoutUrl = providerPurchase.checkout_url;
         session.isTest = providerPurchase.is_test;
         await manager.save(session);
-        await manager.update(Payment, { orderId: In(orderIds) }, {
-          provider: 'chip',
-          providerReference: providerPurchase.id,
-          status: PaymentStatus.UNPAID,
-        });
-        await manager.update(Order, { id: In(orderIds) }, {
-          paymentMethod: 'chip',
-          paymentReference: providerPurchase.id,
-          paymentStatus: PaymentStatus.UNPAID,
-        });
+        await manager.update(
+          Payment,
+          { orderId: In(orderIds) },
+          {
+            provider: 'chip',
+            providerReference: providerPurchase.id,
+            status: PaymentStatus.UNPAID,
+          },
+        );
+        await manager.update(
+          Order,
+          { id: In(orderIds) },
+          {
+            paymentMethod: 'chip',
+            paymentReference: providerPurchase.id,
+            paymentStatus: PaymentStatus.UNPAID,
+          },
+        );
       });
       return checkoutResponse(session, orderIds);
     } catch (error) {
@@ -179,15 +231,22 @@ export class PaymentsService {
       return sessionResponse(session);
     }
 
-    const purchase = await this.chipClient.retrievePurchase(session.providerReference);
+    const purchase = await this.chipClient.retrievePurchase(
+      session.providerReference,
+    );
     await this.reconcilePurchase(session, purchase);
     const refreshed = await this.loadBuyerSession(id, buyerId);
     return sessionResponse(refreshed);
   }
 
-  async handleChipWebhook(rawBody: Buffer | undefined, signature: string | undefined, payload: ChipPurchase) {
+  async handleChipWebhook(
+    rawBody: Buffer | undefined,
+    signature: string | undefined,
+    payload: ChipPurchase,
+  ) {
     this.chipSignature.verify(rawBody, signature);
-    if (!payload?.id) throw new BadRequestException('Invalid CHIP webhook payload');
+    if (!payload?.id)
+      throw new BadRequestException('Invalid CHIP webhook payload');
 
     const session = await this.sessions.findOne({
       where: { provider: 'chip', providerReference: payload.id },
@@ -197,21 +256,27 @@ export class PaymentsService {
     // so CHIP does not retry an event that QURBI intentionally does not own.
     if (!session) return { received: true, ignored: true };
 
-    const purchase = payload.event_type === 'purchase.paid' || payload.status === 'paid'
-      ? await this.chipClient.retrievePurchase(payload.id)
-      : payload;
+    const purchase =
+      payload.event_type === 'purchase.paid' || payload.status === 'paid'
+        ? await this.chipClient.retrievePurchase(payload.id)
+        : payload;
     const status = await this.reconcilePurchase(session, purchase);
     return { received: true, status };
   }
 
-  private async loadBuyerSession(id: string, buyerId: string): Promise<PaymentSession> {
+  private async loadBuyerSession(
+    id: string,
+    buyerId: string,
+  ): Promise<PaymentSession> {
     const session = await this.sessions.findOne({
       where: { id },
       relations: { orderLinks: true },
     });
     if (!session) throw new NotFoundException('Payment session not found');
     if (session.buyerId !== buyerId) {
-      throw new ForbiddenException('This payment session belongs to another buyer');
+      throw new ForbiddenException(
+        'This payment session belongs to another buyer',
+      );
     }
     return session;
   }
@@ -223,7 +288,11 @@ export class PaymentsService {
     if (purchase.status === 'paid') {
       this.assertPurchaseMatches(session, purchase);
       const orderIds = session.orderLinks.map((link) => link.orderId).sort();
-      await this.ordersService.completePaymentsFromProvider(orderIds, purchase.id, 'chip');
+      await this.ordersService.completePaymentsFromProvider(
+        orderIds,
+        purchase.id,
+        'chip',
+      );
       await this.sessions.update(session.id, {
         status: PaymentStatus.PAID,
         providerStatus: purchase.status,
@@ -235,7 +304,11 @@ export class PaymentsService {
 
     if (FAILED_CHIP_STATUSES.has(purchase.status)) {
       const orderIds = session.orderLinks.map((link) => link.orderId);
-      await this.ordersService.markPaymentsFailedFromProvider(orderIds, purchase.id, 'chip');
+      await this.ordersService.markPaymentsFailedFromProvider(
+        orderIds,
+        purchase.id,
+        'chip',
+      );
       await this.sessions.update(session.id, {
         status: PaymentStatus.FAILED,
         providerStatus: purchase.status,
@@ -250,23 +323,34 @@ export class PaymentsService {
     return session.status;
   }
 
-  private assertPurchaseMatches(session: PaymentSession, purchase: ChipPurchase): void {
-    if (purchase.status !== 'paid') throw new ConflictException('CHIP purchase is not paid');
+  private assertPurchaseMatches(
+    session: PaymentSession,
+    purchase: ChipPurchase,
+  ): void {
+    if (purchase.status !== 'paid')
+      throw new ConflictException('CHIP purchase is not paid');
     if (purchase.purchase?.currency !== session.currency) {
-      throw new ConflictException('CHIP payment currency does not match the order');
+      throw new ConflictException(
+        'CHIP payment currency does not match the order',
+      );
     }
     if (purchase.purchase?.total !== moneyToCents(session.amount)) {
-      throw new ConflictException('CHIP payment amount does not match the order');
+      throw new ConflictException(
+        'CHIP payment amount does not match the order',
+      );
     }
     if (session.isTest !== Boolean(purchase.is_test)) {
-      throw new ConflictException('CHIP payment environment does not match this session');
+      throw new ConflictException(
+        'CHIP payment environment does not match this session',
+      );
     }
   }
 }
 
 function moneyToCents(value: string | number): number {
   const normalized = String(value).trim();
-  if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) throw new BadRequestException('Invalid order amount');
+  if (!/^\d+(?:\.\d{1,2})?$/.test(normalized))
+    throw new BadRequestException('Invalid order amount');
   const [whole, fraction = ''] = normalized.split('.');
   return Number(whole) * 100 + Number(fraction.padEnd(2, '0'));
 }
@@ -281,10 +365,18 @@ function positiveInteger(value: string | undefined, fallback: number): number {
 }
 
 function sameIds(left: string[], right: string[]): boolean {
-  return left.length === right.length && [...left].sort().every((id, index) => id === [...right].sort()[index]);
+  return (
+    left.length === right.length &&
+    [...left].sort().every((id, index) => id === [...right].sort()[index])
+  );
 }
 
-function returnUrl(config: ConfigService, key: string, sessionId: string, orderIds: string[]): string {
+function returnUrl(
+  config: ConfigService,
+  key: string,
+  sessionId: string,
+  orderIds: string[],
+): string {
   const configured = config.get<string>(key)?.trim();
   if (!configured) throw new BadRequestException(`${key} is not configured`);
   const url = parseConfiguredUrl(key, configured);
@@ -306,7 +398,9 @@ function requiredHttpsUrl(config: ConfigService, key: string): string {
   if (!configured) throw new BadRequestException(`${key} is not configured`);
   const url = parseConfiguredUrl(key, configured);
   if (url.protocol !== 'https:' || url.port) {
-    throw new BadRequestException(`${key} must use HTTPS without an explicit port`);
+    throw new BadRequestException(
+      `${key} must use HTTPS without an explicit port`,
+    );
   }
   return url.toString();
 }

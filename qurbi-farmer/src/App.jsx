@@ -19,6 +19,7 @@ import Home from "@/pages/Home";
 import MyLivestock from "@/pages/MyLivestock";
 import AddLivestock from "@/pages/AddLivestock";
 import LivestockPolicy from "@/pages/LivestockPolicy";
+import RegistrationAssistance from "@/pages/RegistrationAssistance";
 import EditLivestock from "@/pages/EditLivestock";
 import LivestockDetail from "@/pages/LivestockDetail";
 import Orders from "@/pages/Orders";
@@ -44,9 +45,10 @@ import AdminOrders from "@/pages/admin/AdminOrders";
 import AdminBreeds from "@/pages/admin/AdminBreeds";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminLivestockDetail from "@/pages/admin/AdminLivestockDetail";
+import NotificationPopup from "@/components/agri/NotificationPopup";
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated, user } = useAuth();
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -66,7 +68,9 @@ const AuthenticatedApp = () => {
 
   // Render the main app
   return (
-    <Routes>
+    <>
+      {isAuthenticated && user?.role === "farmer" && <NotificationPopup />}
+      <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/switch-session" element={<SwitchSession />} />
@@ -86,8 +90,10 @@ const AuthenticatedApp = () => {
             <Route path="/livestock" element={<MyLivestock />} />
             <Route path="/livestock/add" element={<AddLivestock />} />
             <Route path="/livestock/add/policy" element={<LivestockPolicy />} />
+            <Route path="/livestock/add/registration-assistance" element={<RegistrationAssistance />} />
             <Route path="/livestock/:id" element={<LivestockDetail />} />
             <Route path="/livestock/:id/edit" element={<EditLivestock />} />
+            <Route path="/livestock/:id/registration-assistance" element={<RegistrationAssistance />} />
             <Route path="/bulk" element={<BulkListings />} />
             <Route path="/bulk/add" element={<AddBulkListing />} />
             <Route path="/bulk/:id" element={<BulkListingDetail />} />
@@ -119,8 +125,9 @@ const AuthenticatedApp = () => {
         </Route>
       </Route>
 
-      <Route path="*" element={<PageNotFound />} />
-    </Routes>
+        <Route path="*" element={<PageNotFound />} />
+      </Routes>
+    </>
   );
 };
 

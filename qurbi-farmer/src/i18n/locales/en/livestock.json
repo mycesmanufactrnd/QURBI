@@ -187,6 +187,19 @@
       "breedPending": "This breed is waiting for superadmin approval. The listing is saved but remains hidden from buyers.",
       "breedRejected": "The proposed breed was rejected and remains Unspecified until you select another breed."
     },
+    "compliance": {
+      "incompleteTitle": "Compliance information incomplete",
+      "incompleteText": "This listing stays as a draft until the animal ID, health evidence and vaccination record are submitted.",
+      "pendingTitle": "Compliance review pending",
+      "pendingText": "QURBI is reviewing the submitted animal ID, health and vaccination evidence.",
+      "approvedTitle": "Marketplace compliance approved",
+      "approvedText": "The submitted evidence has been approved for QURBI marketplace publication.",
+      "rejectedTitle": "Compliance changes required",
+      "rejectedText": "Update the evidence requested by the reviewer and submit again.",
+      "assistanceText": "Your QURBI registration assistance request is pending. The team will contact you using the details supplied.",
+      "reviewNote": "Reviewer note: {{note}}",
+      "update": "Update compliance"
+    },
     "specs": {
       "heading": "Animal information",
       "weight": "Weight",
@@ -227,6 +240,7 @@
     "wizard": {
       "animal": "Animal",
       "listing": "Listing",
+      "compliance": "Compliance",
       "media": "Photos",
       "review": "Review",
       "step": "Step {{current}} of {{total}}",
@@ -247,7 +261,44 @@
       "priceTitle": "Price & visibility",
       "moreTitle": "More details",
       "moreOptional": "(optional)",
-      "moreDescription": "Weight, size, tag number and feeding"
+      "moreDescription": "Weight, size, RFID and feeding"
+    },
+    "compliance": {
+      "title": "Marketplace compliance",
+      "description": "Identification, veterinary health and vaccination evidence for this animal.",
+      "policyTitle": "Required before marketplace publication",
+      "policyText": "QURBI uses these checks to support DVS traceability and animal-movement requirements. Exact government requirements can vary by state, species and movement purpose.",
+      "dvsLink": "View official DVS guidance",
+      "earTagLabel": "Official ear tag / animal ID",
+      "earTagHint": "Enter the visible ear-tag, RFID or microchip identification number.",
+      "earTagPlaceholder": "e.g. DVS-SGR-012345",
+      "healthCertificateLabel": "Veterinary health evidence",
+      "healthCertificateHint": "Upload the relevant veterinary health certificate or health declaration as a clear image or PDF.",
+      "vaccinationLabel": "Vaccination / farm treatment record",
+      "vaccinationHint": "Upload the vaccination or treatment record relevant to this animal. Requirements can differ by movement route.",
+      "uploadEvidence": "Upload image or PDF",
+      "completeTitle": "Evidence ready for admin review",
+      "completeText": "The listing will remain a draft until QURBI approves the submitted evidence.",
+      "incompleteTitle": "Listing will be saved as a draft",
+      "incompleteText": "Buyers cannot see this animal until all three items are provided and approved.",
+      "requestHelp": "Request QURBI registration assistance",
+      "requestHelpText": "Use this if the animal or farm is not registered, or you need help preparing the DVS-related information. QURBI will contact you; approval is not automatic.",
+      "openRequestPage": "Open request form",
+      "editRequest": "Edit request details",
+      "select": "Select",
+      "selected": "Selected",
+      "contactName": "Contact name",
+      "phone": "Phone number",
+      "identityNumber": "IC / company registration number",
+      "premiseId": "DVS premise ID",
+      "premiseIdPlaceholder": "Leave blank if not registered",
+      "farmAddress": "Full farm address",
+      "animalCount": "Number of animals requiring assistance",
+      "notes": "What help do you need?",
+      "reviewLabel": "Compliance",
+      "readyForReview": "Evidence submitted — admin review required",
+      "assistanceRequested": "QURBI assistance requested — saved as draft",
+      "savedAsDraft": "Incomplete — saved as draft"
     },
     "agePolicy": {
       "title": "Buyer marketplace minimum age",
@@ -318,7 +369,32 @@
         "messageAge": "Enter the animal's current age."
       },
       "price": { "label": "Price", "message": "Enter your selling price in RM." },
-      "status": { "label": "Listing status", "message": "Choose how this listing should be saved." }
+      "status": { "label": "Listing status", "message": "Choose how this listing should be saved." },
+      "assistanceContact": { "label": "Contact name", "message": "Enter the person QURBI should contact." },
+      "assistancePhone": { "label": "Phone number", "message": "Enter a phone number for the assistance request." },
+      "assistanceAddress": { "label": "Farm address", "message": "Enter the complete farm address." },
+      "assistanceCount": { "label": "Animal count", "message": "Enter at least one animal." }
+    }
+  },
+  "registrationAssistance": {
+    "eyebrow": "QURBI service",
+    "title": "Registration assistance",
+    "backAria": "Back to livestock compliance",
+    "heroTitle": "Tell us what you need",
+    "heroText": "Provide the details below so the QURBI team can review your case and contact you.",
+    "notesPlaceholder": "e.g. Animal not registered, no premise ID, or help needed to prepare DVS information",
+    "notice": "Saving these details does not register the animal automatically. Your listing remains a draft until the required evidence is completed and approved.",
+    "missing_one": "{{count}} required item still needs attention.",
+    "missing_other": "{{count}} required items still need attention.",
+    "ready": "These details will be attached to this livestock request.",
+    "save": "Save request details",
+    "errors": {
+      "contactName": "Enter the person QURBI should contact.",
+      "phone": "Enter a phone number for this request.",
+      "identity": "Enter an IC or company registration number.",
+      "address": "Enter the full farm address.",
+      "state": "Select the farm state.",
+      "count": "Enter at least one animal."
     }
   },
   "breedSelector": {

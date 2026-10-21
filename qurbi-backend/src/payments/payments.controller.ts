@@ -44,7 +44,10 @@ export class PaymentsController {
   @Roles(UserRole.BUYER)
   @UseGuards(RolesGuard)
   @Post('sessions/:id/reconcile')
-  reconcileSession(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+  reconcileSession(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.paymentsService.reconcileSessionForBuyer(id, user.id);
   }
 
@@ -55,6 +58,10 @@ export class PaymentsController {
     @Headers('x-signature') signature: string | undefined,
     @Body() payload: ChipPurchase,
   ) {
-    return this.paymentsService.handleChipWebhook(request.rawBody, signature, payload);
+    return this.paymentsService.handleChipWebhook(
+      request.rawBody,
+      signature,
+      payload,
+    );
   }
 }

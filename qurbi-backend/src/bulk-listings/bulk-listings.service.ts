@@ -5,8 +5,19 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, DeepPartial, EntityManager, FindOptionsWhere, Repository } from 'typeorm';
-import { BulkListing, BulkListingStatus, OrderItem, UserRole } from '../entities';
+import {
+  DataSource,
+  DeepPartial,
+  EntityManager,
+  FindOptionsWhere,
+  Repository,
+} from 'typeorm';
+import {
+  BulkListing,
+  BulkListingStatus,
+  OrderItem,
+  UserRole,
+} from '../entities';
 import { BaseCrudService } from '../common/base-crud.service';
 import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 
@@ -63,13 +74,13 @@ export class BulkListingsService extends BaseCrudService<BulkListing> {
     const listing = await this.findOne(id);
     const buyerOwnsOrderItem =
       viewer?.role === UserRole.BUYER &&
-      await this.dataSource
+      (await this.dataSource
         .getRepository(OrderItem)
         .createQueryBuilder('orderItem')
         .innerJoin('orderItem.order', 'buyerOrder')
         .where('orderItem.bulkListingId = :id', { id })
         .andWhere('buyerOrder.buyerId = :buyerId', { buyerId: viewer.id })
-        .getExists();
+        .getExists());
     const canSeeHidden =
       viewer?.role === UserRole.ADMIN ||
       (viewer?.role === UserRole.FARMER && listing.farmerId === viewer.id) ||

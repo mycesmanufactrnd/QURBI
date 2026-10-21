@@ -6,7 +6,7 @@ import CowSilhouetteIcon from "@/components/agri/CowSilhouetteIcon";
 import ConfirmDialog from "@/components/agri/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { AlertCircle, ChevronRight, Eye, EyeOff, Loader2, Star } from "lucide-react";
+import { AlertCircle, ChevronRight, ClipboardCheck, Eye, EyeOff, Loader2, Star } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LIVESTOCK_STATUSES } from "@/lib/agri";
 import { cn } from "@/lib/utils";
@@ -27,7 +27,7 @@ export default function AdminLivestock() {
   const [genderFilter, setGenderFilter] = useState("All");
   const [search, setSearch] = useState("");
   const statusParam = searchParams.get("status") || "All";
-  const statusFilter = ["All", "Hidden", ...LIVESTOCK_STATUSES].includes(statusParam) ? statusParam : "All";
+  const statusFilter = ["All", "Needs review", "Changes requested", "Hidden", ...LIVESTOCK_STATUSES].includes(statusParam) ? statusParam : "All";
 
   const load = () => {
     setLoading(true);
@@ -46,15 +46,22 @@ export default function AdminLivestock() {
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return items.filter((item) =>
-      (statusFilter === "All" || (statusFilter === "Hidden" ? item.disabled : item.status === statusFilter)) &&
+      (statusFilter === "All" ||
+        (statusFilter === "Needs review" ? item.marketplaceCompliance?.reviewStatus === "pending" :
+          statusFilter === "Changes requested" ? item.marketplaceCompliance?.reviewStatus === "rejected" :
+            statusFilter === "Hidden" ? item.disabled : item.status === statusFilter)) &&
       (breedFilter === "All" || item.breed === breedFilter) &&
       (genderFilter === "All" || item.gender === genderFilter) &&
       (!term || `${item.title || ""} ${item.species || ""} ${item.breed || ""} ${item.tagNumber || ""}`.toLowerCase().includes(term))
     );
   }, [items, statusFilter, breedFilter, genderFilter, search]);
 
+  const pendingReviewCount = items.filter((item) => item.marketplaceCompliance?.reviewStatus === "pending").length;
+  const changesRequestedCount = items.filter((item) => item.marketplaceCompliance?.reviewStatus === "rejected").length;
   const statusOptions = [
     { value: "All", label: "All", count: items.length },
+    { value: "Needs review", label: "Needs review", count: pendingReviewCount, attention: true },
+    { value: "Changes requested", label: "Changes requested", count: changesRequestedCount },
     ...LIVESTOCK_STATUSES.map((status) => ({ value: status, label: status, count: items.filter((item) => item.status === status).length }))
       .filter((option) => option.count > 0 || option.value === statusFilter),
     { value: "Hidden", label: "Hidden", count: items.filter((item) => item.disabled).length, attention: true },
@@ -98,8 +105,15 @@ export default function AdminLivestock() {
     setSearch("");
   };
 
-  const actionButtons = (item, compact = false) => (
-    <>
+  const actionButtons = (item, compact = false) => {
+    if (item.marketplaceCompliance?.reviewStatus === "pending") {
+      return (
+        <Button size={compact ? "sm" : "default"} onClick={() => navigate(`/admin/livestock/${item.id}`)} className={cn(compact ? "h-10" : "w-full flex-1", "bg-amber-600 text-white hover:bg-amber-700")}>
+          <ClipboardCheck />Review now
+        </Button>
+      );
+    }
+    return <>
       <Button
         variant="outline"
         size={compact ? "sm" : "default"}
@@ -121,12 +135,20 @@ export default function AdminLivestock() {
         {busy === `hide-${item.id}` ? <Loader2 className="animate-spin" /> : item.disabled ? <Eye /> : <EyeOff />}
         {item.disabled ? "Show" : "Hide"}
       </Button>
-    </>
-  );
+    </>;
+  };
 
   return (
     <div className="animate-fade-in">
-      <AdminPageHeader eyebrow="Marketplace management" title="Livestock" description="Every farmer listing. Feature the best ones or hide listings from buyers." />
+      <AdminPageHeader eyebrow="Marketplace management" title="Livestock" description="Review compliance submissions, then manage approved marketplace listings." />
+
+      {!loading && !error && pendingReviewCount > 0 && (
+        <button type="button" onClick={() => setStatusFilter("Needs review")} className="mt-5 flex w-full items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-left text-amber-950 transition-colors hover:bg-amber-100">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-600 text-white"><ClipboardCheck className="h-5 w-5" /></span>
+          <span className="min-w-0 flex-1"><strong className="block text-sm">{pendingReviewCount} compliance {pendingReviewCount === 1 ? "submission" : "submissions"} waiting</strong><span className="mt-0.5 block text-xs text-amber-800">Review these before they can appear in the marketplace.</span></span>
+          <span className="flex items-center gap-1 text-xs font-extrabold">View queue<ChevronRight className="h-4 w-4" /></span>
+        </button>
+      )}
 
       <div className="mt-5 space-y-3">
         <FilterChips label="Filter by listing status" options={statusOptions} value={statusFilter} onChange={setStatusFilter} />

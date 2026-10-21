@@ -69,7 +69,9 @@ function normalizeBulk(item, breeds = []) {
 function normalizeNotification(item) {
   if (!item) return item;
   const isNewPaidOrder = item.audience === "farmer" && item.type === "payment" && item.relatedType === "order";
-  return { ...item, message: item.body, orderId: item.relatedType === "order" ? item.relatedId : null, livestockId: item.relatedType === "livestock" ? item.relatedId : null, created_date: item.createdAt, priority: item.type === "refund" ? "Important" : "Normal", type: isNewPaidOrder ? "New Order" : titleCase(item.type) };
+  const isRefund = String(item.title || "").toLowerCase().includes("refund");
+  const targetUrl = String(item.linkUrl || "").startsWith("/") ? item.linkUrl : null;
+  return { ...item, message: item.body, orderId: item.relatedType === "order" ? item.relatedId : null, livestockId: item.relatedType === "livestock" ? item.relatedId : null, targetUrl, created_date: item.createdAt, priority: isRefund ? "Important" : "Normal", type: isNewPaidOrder ? "New Order" : isRefund && String(item.title || "").toLowerCase().includes("requested") ? "Refund Requested" : titleCase(item.type) };
 }
 
 function normalizeOrderItem(orderItem) {
@@ -127,7 +129,7 @@ async function livestockPayload(input, partial = false) {
     ? null
     : input.breedId || await resolveBreedId(input.breed, speciesId);
   const ageMonths = input.ageInputMode === "Age" && input.ageValue !== "" && input.ageValue != null ? Math.round(Number(input.ageValue) * (input.ageUnit === "Years" ? 12 : 1)) : input.ageMonths;
-  const excluded = new Set(["ownerId", "speciesId", "breedId", "title", "tagNumber", "description", "gender", "sex", "ageMonths", "birthDate", "weightKg", "price", "currency", "images", "videos", "status", "marketplaceEligibleFrom", "attributes"]);
+  const excluded = new Set(["ownerId", "speciesId", "breedId", "title", "tagNumber", "description", "gender", "sex", "ageMonths", "birthDate", "weightKg", "price", "currency", "images", "videos", "status", "marketplaceEligibleFrom", "attributes", "healthCertificateUrl", "vaccinationRecordUrl", "requestRegistrationAssistance", "assistanceContactName", "assistancePhone", "assistanceIdentityNumber", "assistancePremiseId", "assistanceFarmAddress", "assistanceAnimalCount", "assistanceNotes"]);
   const legacy = Object.fromEntries(Object.entries(input).filter(([key]) => !excluded.has(key)));
   const requestedStatus = input.status ? STATUS_TO_API[input.status] || input.status : undefined;
   return Object.fromEntries(Object.entries({ speciesId, breedId, title: input.title || (input.species ? `${input.species}${input.breed && input.breed !== "Unspecified" ? ` - ${input.breed}` : ""}` : undefined), tagNumber: input.tagNumber, description: input.description, sex: input.sex || (input.gender ? String(input.gender).toLowerCase() : undefined), ageMonths, birthDate: input.birthDate || undefined, weightKg: input.weightKg || (input.weight ? String(input.weight) : undefined), price: input.price != null ? String(input.price) : undefined, currency: input.currency || (partial ? undefined : "MYR"), images: input.images, videos: input.videos, status: !partial && input.breedRequestId ? "draft" : requestedStatus, attributes: { ...(input.attributes || {}), ...legacy, originalStatus: !partial && input.breedRequestId ? requestedStatus : input.originalStatus, species: input.species, breed: input.breed } }).filter(([, value]) => value !== undefined && value !== ""));
@@ -192,6 +194,7 @@ const Livestock = {
     return normalizeLivestock(updated || await data(apiClient.get(`/livestock/${id}`)));
   },
   delete: (id) => data(apiClient.delete(`/livestock/${id}`)),
+  reviewCompliance: async (id, decision, note = "") => normalizeLivestock(await data(apiClient.patch(`/livestock/${id}/compliance-review`, { decision, note: note || undefined }))),
 };
 
 const BulkListing = {
@@ -254,7 +257,7 @@ const FarmerNotification = {
   /** @type {SubscribeFn} */ subscribe: (callback) => {
     if (typeof window === "undefined" || !callback) return () => {};
     const refresh = () => callback();
-    const timer = window.setInterval(refresh, 15_000);
+    const timer = window.setInterval(refresh, 5_000);
     window.addEventListener("focus", refresh);
     return () => {
       window.clearInterval(timer);

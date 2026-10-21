@@ -1,8 +1,11 @@
-import { IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import {
-  BuyerActivityTargetType,
-  BuyerActivityType,
-} from '../../entities';
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
+import { BuyerActivityTargetType, BuyerActivityType } from '../../entities';
 
 export class TrackBuyerActivityDto {
   @IsEnum(BuyerActivityType)

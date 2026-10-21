@@ -4,6 +4,9 @@ import { DeepPartial, FindOptionsWhere, Repository } from 'typeorm';
 import {
   FarmerProfile,
   FarmVerification,
+  Notification,
+  NotificationAudience,
+  NotificationType,
   User,
   UserRole,
   VerificationStatus,
@@ -36,6 +39,8 @@ export class FarmVerificationsService extends BaseCrudService<FarmVerification> 
     private readonly farmerProfileRepository: Repository<FarmerProfile>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Notification)
+    private readonly notificationRepository: Repository<Notification>,
   ) {
     super(repository);
   }
@@ -172,6 +177,23 @@ export class FarmVerificationsService extends BaseCrudService<FarmVerification> 
     }
     profile.verificationStatus = status;
     await this.farmerProfileRepository.save(profile);
+
+    await this.notificationRepository.save(
+      this.notificationRepository.create({
+        userId: profile.userId,
+        audience: NotificationAudience.FARMER,
+        type: NotificationType.VERIFICATION,
+        title: input.approve
+          ? 'Farm verification approved'
+          : 'Farm verification rejected',
+        body: input.approve
+          ? 'Your farm has been verified. You can now access the farmer marketplace tools.'
+          : `Your farm verification needs attention.${verification.rejectionReason ? ` Reason: ${verification.rejectionReason}` : ''}`,
+        linkUrl: input.approve ? '/' : '/rejected',
+        relatedType: 'farm_verification',
+        relatedId: verification.id,
+      }),
+    );
 
     return verification;
   }

@@ -88,8 +88,16 @@ export const FARMER_LISTING_STATUSES = ["Available", "Unavailable", "Draft"];
 export const LISTING_DURATION_MS = 14 * 24 * 60 * 60 * 1000;
 
 export function listingExpiry(livestock, now = new Date()) {
-  const explicitExpiry = Date.parse(livestock?.listingExpiresAt || "");
-  const createdAt = Date.parse(livestock?.created_date || "");
+  const explicitExpiry = Date.parse(
+    livestock?.marketplaceExpiresAt ||
+    livestock?.marketplace_expires_at ||
+    livestock?.listingExpiresAt ||
+    livestock?.listing_expires_at ||
+    "",
+  );
+  const createdAt = Date.parse(
+    livestock?.createdAt || livestock?.created_at || livestock?.created_date || "",
+  );
   const expiresAt = Number.isFinite(explicitExpiry)
     ? explicitExpiry
     : Number.isFinite(createdAt) ? createdAt + LISTING_DURATION_MS : null;
