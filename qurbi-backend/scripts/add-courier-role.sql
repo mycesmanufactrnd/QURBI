@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS `courier_profiles` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `UQ_courier_profiles_userId` (`userId`),
   CONSTRAINT `FK_courier_profiles_user` FOREIGN KEY (`userId`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `courier_verifications` (
   `id` VARCHAR(36) NOT NULL,
@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS `courier_verifications` (
   KEY `IDX_courier_verifications_profile` (`courierProfileId`),
   CONSTRAINT `FK_courier_verifications_profile` FOREIGN KEY (`courierProfileId`) REFERENCES `courier_profiles` (`id`) ON DELETE CASCADE,
   CONSTRAINT `FK_courier_verifications_reviewer` FOREIGN KEY (`reviewedByUserId`) REFERENCES `users` (`id`) ON DELETE SET NULL
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- 5. One row per courier attempt at an order (failed / released attempts stay
 -- as history; the app guarantees at most one live row per order).
@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS `delivery_assignments` (
   KEY `FK_delivery_assignments_profile` (`courierProfileId`),
   CONSTRAINT `FK_delivery_assignments_order` FOREIGN KEY (`orderId`) REFERENCES `orders` (`id`) ON DELETE CASCADE,
   CONSTRAINT `FK_delivery_assignments_profile` FOREIGN KEY (`courierProfileId`) REFERENCES `courier_profiles` (`id`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- 6. Append-only record of admin actions on couriers.
 CREATE TABLE IF NOT EXISTS `courier_audit_logs` (
@@ -124,4 +124,9 @@ CREATE TABLE IF NOT EXISTS `courier_audit_logs` (
   `detail` JSON NULL,
   PRIMARY KEY (`id`),
   KEY `IDX_courier_audit_logs_profile` (`courierProfileId`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- Keep a partially-created audit table consistent when this script is rerun
+-- after an older version failed while adding the foreign-key-backed tables.
+ALTER TABLE `courier_audit_logs`
+  CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
